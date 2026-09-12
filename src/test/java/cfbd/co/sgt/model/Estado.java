@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
+import java.util.UUID;
 import java.util.ArrayList;
 import java.util.List;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
@@ -22,10 +22,11 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 public class Estado {
     @Id
     @Column(name = "id_estado")
-    String id_estado;
+    @GeneratedValue (strategy = GenerationType.UUID)
+    private UUID id_estado;
 
     @Column(name = "nombre")
-    String nombre;
+    private String nombre;
 
     // Relación con la entidad Requerimiento (un estado puede tener muchos requerimientos)
     @OneToMany(mappedBy = "id_estado", fetch = FetchType.LAZY)

@@ -5,12 +5,11 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
+import java.util.UUID;
 import java.util.ArrayList;
 import java.util.List;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
-import java.util.UUID;
 
 @Entity
 @Table(name = "usuario")
@@ -22,7 +21,8 @@ import java.util.UUID;
 public class Usuario {
     @Id
     @Column(name = "id_usuario")
-    private String id_usuario;
+    @GeneratedValue (strategy = GenerationType.UUID)
+    private UUID id_usuario;
 
     // Relación con la entidad Rol (muchos usuarios pertenecen a un rol)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -79,12 +79,4 @@ public class Usuario {
     // Relación con la entidad Solicitud (un usuario puede tener muchas solicitudes)
     @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY)
     private List<Solicitud> solicitudes = new ArrayList<>();
-
-    // Generación de UUID automaticamente
-    @PrePersist
-    private void generarId(){
-        if (id_usuario == null){
-            id_usuario = UUID.randomUUID().toString();
-        }
-    }
 }

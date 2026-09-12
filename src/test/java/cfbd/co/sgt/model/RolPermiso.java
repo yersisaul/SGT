@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
+import java.util.UUID;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
@@ -20,7 +20,8 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 public class RolPermiso {
     @Id
     @Column(name = "id_rol_permiso")
-    private String id_rol_permiso;
+    @GeneratedValue (strategy = GenerationType.UUID)
+    private UUID id_rol_permiso;
 
     // Relación con la entidad Rol (muchos permisos pertenecen a un rol)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

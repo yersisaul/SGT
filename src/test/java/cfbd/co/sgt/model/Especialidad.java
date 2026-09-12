@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
+import java.util.UUID;
 import java.util.ArrayList;
 import java.util.List;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
@@ -22,13 +22,14 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 public class Especialidad {
     @Id
     @Column(name = "id_especialidad")
-    String id_especialidad;
+    @GeneratedValue (strategy = GenerationType.UUID)
+    private UUID id_especialidad;
 
     @Column (name = "nombre")
-    String nombre;
+    private String nombre;
 
     @Column(name = "descripcion")
-    String descripcion;
+    private String descripcion;
 
     // Relación con la entidad Activo (una especialidad puede tener muchos activos)
     @OneToMany(mappedBy = "id_especialidad", fetch = FetchType.LAZY)

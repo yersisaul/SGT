@@ -5,9 +5,10 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
+import java.util.UUID;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import java.time.Instant;
 
 @Entity
 @Table(name = "aprobacion")
@@ -20,7 +21,8 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 public class Aprobacion {
     @Id
     @Column(name = "id_aprobacion")
-    String id_aprobacion;
+    @GeneratedValue (strategy = GenerationType.UUID)
+    private UUID id_aprobacion;
 
     // Relación con la entidad Requerimiento (muchas aprobaciones pueden pertenecer a un requerimiento)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -33,15 +35,15 @@ public class Aprobacion {
     private Usuario usuario;
 
     @Column(name = "aprobado")
-    Boolean aprobado;
+    private Boolean aprobado;
 
     @Column (name = "comentario")
-    String comentario;
+    private String comentario;
 
     @Column(name = "fecha_aprobacion")
-    String fecha_aprobacion;
+    private Instant fecha_aprobacion;
 
     @Column (name = "url_adjunto")
-    String url_adjunto;
+    private String url_adjunto;
     
 }

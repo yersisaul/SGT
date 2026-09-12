@@ -5,11 +5,12 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
+import java.util.UUID;
 import java.util.ArrayList;
 import java.util.List;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import java.time.Instant;
 
 @Entity
 @Table(name = "solicitud")
@@ -22,7 +23,8 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 public class Solicitud {
     @Id
     @Column(name = "id_solicitud")
-    String id_solicitud;
+    @GeneratedValue (strategy = GenerationType.UUID)
+    private UUID id_solicitud;
 
     // Relación con la entidad Usuario (muchas solicitudes pertenecen a un usuario)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -44,17 +46,20 @@ public class Solicitud {
     @JoinColumn(name = "id_especialidad", nullable = false)
     private Especialidad especialidad;
 
+    @Column (name = "numero_solicitud")
+    private String numeroSolicitud;
+
     @Column (name = "prioridad")
-    String prioridad;
+    private String prioridad;
 
     @Column (name = "fecha_registro")
-    String fecha_registro;
+    private Instant fecha_registro;
 
     @Column (name = "descripcion")
-    String descripcion;
+    private String descripcion;
 
     @Column (name = "url_adjunto")
-    String url_adjunto;
+    private String url_adjunto;
 
     // Relación con la entidad Derivacion (una solicitud puede tener muchas derivaciones)
     @OneToMany(mappedBy = "solicitud", fetch = FetchType.LAZY)

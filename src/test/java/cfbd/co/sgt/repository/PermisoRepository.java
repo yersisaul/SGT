@@ -3,15 +3,12 @@ package cfbd.co.sgt.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;
+import cfbd.co.sgt.model.Permiso;
 import java.util.UUID;
 
-import cfbd.co.sgt.model.Activo;
-
 @Repository 
-public interface ActivoRepository extends  JpaRepository<Activo, UUID>  {
+public interface PermisoRepository extends JpaRepository<Permiso, UUID> {
 
-    Optional<Activo> findByNombre(String nombre);
-
-    Optional<Activo> findByCodigo(String codigo);
+    Optional<Permiso> findByCodigo(String codigo);
 
 }

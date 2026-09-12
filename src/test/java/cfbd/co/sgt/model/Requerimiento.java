@@ -5,11 +5,12 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
+import java.util.UUID;
 import java.util.ArrayList;
 import java.util.List;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import java.time.Instant;
 
 @Entity
 @Table(name = "requerimiento")
@@ -22,7 +23,8 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 public class Requerimiento {
     @Id
     @Column(name = "id_requerimiento")
-    String id_requerimiento;
+    @GeneratedValue (strategy = GenerationType.UUID)
+    private UUID id_requerimiento;
 
     // Relación con la entidad Usuario (muchos requerimientos pertenecen a un usuario)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -39,14 +41,17 @@ public class Requerimiento {
     @JoinColumn(name = "id_especialidad", nullable = false)
     private Especialidad especialidad;
 
+    @Column (name = "numero_requerimiento")
+    private String numeroRequerimiento;
+
     @Column (name = "fecha_registro")
-    String fecha_registro;
+    private Instant fecha_registro;
 
     @Column (name = "descripcion")
-    String descripcion;
+    private String descripcion;
 
     @Column (name = "url_adjunto")
-    String url_adjunto;
+    private String url_adjunto;
 
     // Relación con la entidad Aprobacion (un requerimiento puede tener muchas aprobaciones)
     @OneToMany(mappedBy = "id_requerimiento", fetch = FetchType.LAZY)
@@ -59,4 +64,5 @@ public class Requerimiento {
     // Relación con la entidad Orden (un requerimiento puede tener muchas órdenes)
     @OneToMany(mappedBy = "requerimiento", fetch = FetchType.LAZY)
     private List<Orden> ordenes = new ArrayList<>();
+
 }

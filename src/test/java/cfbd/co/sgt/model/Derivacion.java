@@ -5,9 +5,10 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
+import java.util.UUID;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import java.time.Instant;
 
 @Entity
 @Table(name = "derivacion")
@@ -20,7 +21,8 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 public class Derivacion {
     @Id
     @Column(name = "id_derivacion")
-    String id_derivacion;
+    @GeneratedValue (strategy = GenerationType.UUID)
+    private UUID id_derivacion;
 
     // Relación con la entidad Solicitud (una derivación pertenece a una solicitud)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -37,12 +39,12 @@ public class Derivacion {
     private Usuario usuario_destino;
 
     @Column(name = "fecha_derivacion")
-    String fecha_derivacion;
+    private Instant fecha_derivacion;
 
     @Column (name = "motivo")
-    String motivo;
+    private String motivo;
 
     @Column (name = "observacion") 
-    String observacion;
+    private String observacion;
 
 }

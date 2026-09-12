@@ -5,9 +5,10 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
+import java.util.UUID;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import java.time.Instant;
 
 @Entity
 @Table(name = "historial_orden")
@@ -20,7 +21,8 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 public class HistorialOrden {
     @Id
     @Column(name = "id_historial_orden")
-    String id_historial_orden;
+    @GeneratedValue (strategy = GenerationType.UUID)
+    private UUID id_historial_orden;
 
     // Relación con la entidad Orden (un historial de orden pertenece a una orden)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -42,9 +44,9 @@ public class HistorialOrden {
     private Estado estado_nuevo;
     
     @Column(name = "fecha")
-    String fecha;
+    private Instant fecha;
 
     @Column (name = "comentario")
-    String comentario;
+    private String comentario;
 
 }
