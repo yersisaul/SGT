@@ -21,7 +21,25 @@
     <button class="btn-registro">Registrarse</button>
   </div>
 </nav>
+<!-- Slider -->
+  <div class="slider-container">
+   <div class="slider"
+   [style.transform]="'translateX(-' + (currentIndex * 100) + '%)'">
+    <div class="slide"><img src="images/img3.jpg" alt=""></div>
+    <div class="slide"><img src="images/img2.jpg" alt=""></div>
+    <div class="slide"><img src="images/img1.jpg" alt=""></div>
+    <div class="slide"><img src="images/img4.jpg" alt=""></div>
+   </div>
 
+    <div class="slider-buttons">
+      <button (click)="btnPrev()">&#10094;</button>
+      <button (click)="btnNext()">&#10095;</button>
+    </div>
+    <div class="dots-container">
+
+    </div>
+
+   </div>
 <!-- footer -->
 <footer class="footer">
   <div class="footer-top">
