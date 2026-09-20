@@ -1,0 +1,35 @@
+:host {
+  display: inline-flex;
+}
+
+.badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+.badge-neutral {
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+}
+.badge-info {
+  background: var(--status-info-bg);
+  color: var(--status-info-fg);
+}
+.badge-success {
+  background: var(--status-success-bg);
+  color: var(--status-success-fg);
+}
+.badge-warning {
+  background: var(--status-warning-bg);
+  color: var(--status-warning-fg);
+}
+.badge-danger {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
+}

@@ -1,0 +1,93 @@
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(260px, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.kanban-column {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 260px);
+  min-height: 200px;
+}
+
+.kanban-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  flex-shrink: 0;
+}
+
+.kanban-column-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted-foreground);
+}
+
+.kanban-column-terminal {
+  background: var(--color-card);
+  border-style: dashed;
+}
+
+.kanban-column-hint {
+  font-size: 11px;
+  color: var(--color-subtle-foreground);
+  padding: 0 var(--space-4) var(--space-3) var(--space-4);
+  margin-top: -8px;
+}
+
+.kanban-column-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 0 var(--space-3) var(--space-3) var(--space-3);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 80px;
+}
+
+.kanban-column-body.cdk-drop-list-dragging .cdk-drag {
+  transition: transform 200ms ease;
+}
+
+.kanban-column-body.cdk-drop-list-receiving {
+  background: var(--status-info-bg);
+  border-radius: var(--radius-md);
+}
+
+.kanban-empty {
+  font-size: 12px;
+  color: var(--color-subtle-foreground);
+  text-align: center;
+  padding: var(--space-4) 0;
+}
+
+.cdk-drag-preview {
+  box-shadow: var(--shadow-elevated);
+  border-radius: var(--radius-md);
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.4;
+}
+
+@media (max-width: 1100px) {
+  .kanban-board {
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .kanban-board {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kanban-column {
+    max-height: none;
+  }
+}

@@ -1,0 +1,44 @@
+<div class="login-page">
+  <app-card class="login-card">
+    <div class="login-header">
+      <div class="login-logo" aria-hidden="true">S</div>
+      <h1 class="login-title">Ingresar a SGT</h1>
+      <p class="login-subtitle">Sistema de Gestión de Tickets</p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="login-form" novalidate>
+      <app-input
+        label="Correo electrónico"
+        type="email"
+        placeholder="usuario@sgt.com"
+        autocomplete="username"
+        formControlName="email"
+        [errorMessage]="
+          form.controls.email.touched && form.controls.email.invalid
+            ? (form.controls.email.hasError('required') ? 'El correo es obligatorio' : 'Ingresa un correo válido')
+            : null
+        "
+      />
+      <app-input
+        label="Contraseña"
+        type="password"
+        placeholder="••••••••"
+        autocomplete="current-password"
+        formControlName="password"
+        [errorMessage]="
+          form.controls.password.touched && form.controls.password.invalid
+            ? 'La contraseña es obligatoria'
+            : null
+        "
+      />
+
+      @if (errorMessage()) {
+        <div class="login-error" role="alert">{{ errorMessage() }}</div>
+      }
+
+      <app-button type="submit" variant="primary" [loading]="submitting()" [fullWidth]="true">
+        Ingresar
+      </app-button>
+    </form>
+  </app-card>
+</div>

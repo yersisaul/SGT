@@ -1,0 +1,31 @@
+@if (grupos().length === 0) {
+  <p class="ficha-nota">No hay permisos en el catálogo.</p>
+} @else {
+  @for (grupo of grupos(); track grupo.recurso) {
+    <div class="admin-permisos-grupo">
+      <div class="admin-permisos-grupo-titulo">{{ grupo.recurso }}</div>
+      <div class="admin-permisos-lista">
+        @for (permiso of grupo.items; track permiso.id_permiso) {
+          <div class="admin-permiso-item">
+            <input
+              type="checkbox"
+              [id]="'permiso-' + permiso.id_permiso"
+              [checked]="estaAsignado(permiso.id_permiso)"
+              [disabled]="!canManage() || estaPendiente(permiso.id_permiso)"
+              (change)="toggle(permiso, $any($event.target).checked)"
+            />
+            <label [for]="'permiso-' + permiso.id_permiso">
+              <span class="admin-permiso-codigo">{{ permiso.codigo }}</span>
+              @if (permiso.descripcion) {
+                <span class="admin-tabla-secundario"> — {{ permiso.descripcion }}</span>
+              }
+            </label>
+            @if (estaPendiente(permiso.id_permiso)) {
+              <app-spinner size="sm" label="Guardando" />
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+}

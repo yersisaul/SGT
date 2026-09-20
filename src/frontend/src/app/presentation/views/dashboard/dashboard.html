@@ -1,0 +1,213 @@
+<div class="dashboard">
+  @if (user(); as currentUser) {
+    <div class="dashboard-header">
+      <div>
+        <h1 class="dashboard-title">Bienvenido, {{ currentUser.nombres }}</h1>
+        <p class="dashboard-subtitle">Sistema de Gestión de Tickets</p>
+      </div>
+      <app-badge variant="info">{{ currentUser.rol }}</app-badge>
+    </div>
+  }
+
+  @if (tieneResumenes()) {
+    <section aria-labelledby="kpi-heading">
+      <h2 id="kpi-heading" class="section-title">Resumen ejecutivo</h2>
+      <div class="kpi-grid">
+        @if (canViewSolicitudes) {
+          <a routerLink="/app/solicitudes" class="kpi-link">
+            <app-card class="kpi-card">
+              <span class="kpi-value">{{ kpiSolicitudesActivas() }}</span>
+              <span class="kpi-label">Solicitudes activas</span>
+            </app-card>
+          </a>
+        }
+        @if (canViewRequerimientos) {
+          <a routerLink="/app/requerimientos" class="kpi-link">
+            <app-card class="kpi-card">
+              <span class="kpi-value">{{ kpiRequerimientosPendientes() }}</span>
+              <span class="kpi-label">Requerimientos por aprobar</span>
+            </app-card>
+          </a>
+        }
+        @if (canViewOrdenes) {
+          <a routerLink="/app/ordenes" class="kpi-link">
+            <app-card class="kpi-card">
+              <span class="kpi-value">{{ kpiOrdenesActivas() }}</span>
+              <span class="kpi-label">Órdenes en ejecución</span>
+            </app-card>
+          </a>
+          <a routerLink="/app/ordenes" class="kpi-link">
+            <app-card class="kpi-card">
+              <span class="kpi-value">{{ kpiOrdenesFinalizadas() }}</span>
+              <span class="kpi-label">Órdenes finalizadas</span>
+            </app-card>
+          </a>
+        }
+      </div>
+    </section>
+
+    @if (tieneAtencion()) {
+      <section aria-labelledby="atencion-heading">
+        <h2 id="atencion-heading" class="section-title">Requiere atención</h2>
+        <div class="atencion-list">
+          @if (canViewSolicitudes && solicitudesPorClasificar() > 0) {
+            <a routerLink="/app/solicitudes" class="atencion-item">
+              <svg lucideClipboardList [size]="18" aria-hidden="true"></svg>
+              <span class="atencion-texto">
+                <strong>{{ solicitudesPorClasificar() }}</strong> solicitud(es) pendientes de clasificar
+              </span>
+              <app-badge variant="warning">Pendiente</app-badge>
+            </a>
+          }
+          @if (canViewRequerimientos && kpiRequerimientosPendientes() > 0) {
+            <a routerLink="/app/requerimientos" class="atencion-item">
+              <svg lucideClipboardList [size]="18" aria-hidden="true"></svg>
+              <span class="atencion-texto">
+                <strong>{{ kpiRequerimientosPendientes() }}</strong> requerimiento(s) esperan decisión del Administrador
+              </span>
+              <app-badge variant="warning">Por aprobar</app-badge>
+            </a>
+          }
+          @if (canViewOrdenes && ordenesPorIniciar() > 0) {
+            <a routerLink="/app/ordenes" class="atencion-item">
+              <svg lucideClipboardList [size]="18" aria-hidden="true"></svg>
+              <span class="atencion-texto">
+                <strong>{{ ordenesPorIniciar() }}</strong> orden(es) de trabajo pendientes de iniciar
+              </span>
+              <app-badge variant="warning">Pendiente</app-badge>
+            </a>
+          }
+        </div>
+      </section>
+    }
+
+    <section aria-labelledby="resumen-heading">
+      <h2 id="resumen-heading" class="section-title">Estado actual del flujo</h2>
+      <div class="summary-grid">
+        @if (canViewSolicitudes) {
+          <app-status-summary
+            title="Solicitudes"
+            [total]="solicitudesTotal()"
+            [items]="solicitudesItems()"
+            [loading]="solicitudesLoading()"
+            [errorMessage]="solicitudesError()"
+            (retry)="loadSolicitudes()"
+          />
+        }
+        @if (canViewRequerimientos) {
+          <app-status-summary
+            title="Requerimientos"
+            [total]="requerimientosTotal()"
+            [items]="requerimientosItems()"
+            [loading]="requerimientosLoading()"
+            [errorMessage]="requerimientosError()"
+            (retry)="loadRequerimientos()"
+          />
+        }
+        @if (canViewOrdenes) {
+          <app-status-summary
+            title="Órdenes de trabajo"
+            [total]="ordenesTotal()"
+            [items]="ordenesItems()"
+            [loading]="ordenesLoading()"
+            [errorMessage]="ordenesError()"
+            (retry)="loadOrdenes()"
+          />
+        }
+      </div>
+    </section>
+
+    <section aria-labelledby="distribucion-heading">
+      <h2 id="distribucion-heading" class="section-title">Distribución y actividad</h2>
+      <div class="distribucion-grid">
+        @if (canViewSolicitudes && solicitudesPorPrioridad().length > 0) {
+          <app-card class="distribucion-card">
+            <h3 class="distribucion-title">
+              <svg lucideTrendingUp [size]="16" aria-hidden="true"></svg>
+              Solicitudes por prioridad
+            </h3>
+            @for (item of solicitudesPorPrioridad(); track item.prioridad) {
+              <div class="distribucion-row">
+                <app-badge [variant]="prioridadBadgeVariant(item.prioridad)">{{ item.prioridad }}</app-badge>
+                <span>{{ item.cantidad }}</span>
+              </div>
+            }
+          </app-card>
+        }
+
+        @if (canViewOrdenes && ordenesTotal() > 0) {
+          <app-card class="distribucion-card">
+            <h3 class="distribucion-title">
+              <svg lucideTrendingUp [size]="16" aria-hidden="true"></svg>
+              Origen de las órdenes
+            </h3>
+            <div class="distribucion-row">
+              <span>Desde Solicitud (bajo contrato)</span>
+              <span>{{ ordenesOrigenSolicitud() }}</span>
+            </div>
+            <div class="distribucion-row">
+              <span>Desde Requerimiento (aprobado)</span>
+              <span>{{ ordenesOrigenRequerimiento() }}</span>
+            </div>
+          </app-card>
+        }
+
+        @if (canViewOrdenes && tiempoPromedioCierreHoras() !== null) {
+          <app-card class="distribucion-card">
+            <h3 class="distribucion-title">
+              <svg lucideClock [size]="16" aria-hidden="true"></svg>
+              Tiempo promedio de cierre
+            </h3>
+            <p class="distribucion-destacado">{{ tiempoPromedioCierreHoras()! | number: '1.0-1' }} horas</p>
+            <p class="distribucion-nota">Calculado sobre las {{ kpiOrdenesFinalizadas() }} órdenes ya cerradas.</p>
+          </app-card>
+        }
+      </div>
+    </section>
+
+    @if (actividadReciente().length > 0) {
+      <section aria-labelledby="actividad-heading">
+        <h2 id="actividad-heading" class="section-title">Actividad reciente</h2>
+        <app-card class="actividad-card">
+          <ul class="actividad-list">
+            @for (item of actividadReciente(); track item.fecha + item.texto) {
+              <li class="actividad-item">
+                <svg lucideActivity [size]="14" aria-hidden="true"></svg>
+                <a [routerLink]="item.route" class="actividad-texto">{{ item.texto }}</a>
+                <span class="actividad-fecha">{{ item.fecha | date: 'd MMM, HH:mm' }}</span>
+              </li>
+            }
+          </ul>
+        </app-card>
+      </section>
+    }
+  }
+
+  @if (adminAtajos().length > 0) {
+    <section aria-labelledby="admin-heading">
+      <h2 id="admin-heading" class="section-title">Administración</h2>
+      <div class="modules-grid">
+        @for (atajo of adminAtajos(); track atajo.route) {
+          <a [routerLink]="atajo.route" class="admin-atajo-link">
+            <app-card class="module-card">
+              @if (atajo.icon === 'usuarios') {
+                <svg lucideUsers [size]="20" aria-hidden="true"></svg>
+              } @else if (atajo.icon === 'roles') {
+                <svg lucideShieldCheck [size]="20" aria-hidden="true"></svg>
+              } @else if (atajo.icon === 'permisos') {
+                <svg lucideKeyRound [size]="20" aria-hidden="true"></svg>
+              } @else if (atajo.icon === 'activos') {
+                <svg lucideBoxes [size]="20" aria-hidden="true"></svg>
+              } @else if (atajo.icon === 'especialidades') {
+                <svg lucideLayers [size]="20" aria-hidden="true"></svg>
+              } @else if (atajo.icon === 'estados') {
+                <svg lucideListChecks [size]="20" aria-hidden="true"></svg>
+              }
+              <div class="module-name">{{ atajo.label }}</div>
+            </app-card>
+          </a>
+        }
+      </div>
+    </section>
+  }
+</div>

@@ -1,0 +1,256 @@
+<div class="ordenes-page">
+  <header class="ordenes-header">
+    <div>
+      <h1 class="ordenes-title">Órdenes de trabajo</h1>
+      <p class="ordenes-subtitle">Centro de operaciones — ejecución y cierre de OT</p>
+    </div>
+
+    <div class="ordenes-header-actions">
+      <div class="view-toggle" role="group" aria-label="Cambiar vista">
+        <button
+          type="button"
+          class="view-toggle-btn"
+          [class.view-toggle-active]="viewMode() === 'kanban'"
+          [disabled]="!estadosDisponibles()"
+          [title]="estadosDisponibles() ? '' : 'No tienes permiso para ver el catálogo de estados (estado.read)'"
+          (click)="viewMode.set('kanban')"
+        >
+          <svg lucideLayoutGrid [size]="16" aria-hidden="true"></svg>
+          Kanban
+        </button>
+        <button
+          type="button"
+          class="view-toggle-btn"
+          [class.view-toggle-active]="viewMode() === 'tabla'"
+          (click)="viewMode.set('tabla')"
+        >
+          <svg lucideTable [size]="16" aria-hidden="true"></svg>
+          Tabla
+        </button>
+      </div>
+    </div>
+  </header>
+
+  @if (!estadosDisponibles() && !loading()) {
+    <div class="ordenes-warning" role="status">
+      <svg lucideCircleAlert [size]="16" aria-hidden="true"></svg>
+      No se pudo cargar el catálogo de estados (requiere el permiso <strong>estado.read</strong>). Se muestra la vista de
+      tabla; los estados aparecerán como "Desconocido".
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="ordenes-state">
+      <app-spinner label="Cargando órdenes" />
+      <span>Cargando órdenes…</span>
+    </div>
+  } @else if (loadError()) {
+    <div class="ordenes-state ordenes-state-error" role="alert">
+      <svg lucideCircleAlert [size]="20" aria-hidden="true"></svg>
+      <span>{{ loadError() }}</span>
+      <app-button variant="secondary" (click)="reload()">Reintentar</app-button>
+    </div>
+  } @else if (views().length === 0) {
+    <div class="ordenes-state">
+      <svg lucideInbox [size]="28" aria-hidden="true"></svg>
+      <span>Aún no hay órdenes de trabajo generadas.</span>
+    </div>
+  } @else if (viewMode() === 'kanban' && estadosDisponibles()) {
+    <app-orden-kanban
+      [columns]="kanbanColumns()"
+      [canUpdate]="canUpdate"
+      [canDelete]="canDelete"
+      (cardOpen)="openDetail($event)"
+      (cardDelete)="requestDelete($event.raw)"
+      (moved)="handleMoved($event)"
+    />
+  } @else {
+    <app-orden-tabla
+      [items]="views()"
+      [canDelete]="canDelete"
+      (open)="openDetail($event)"
+      (delete)="requestDelete($event.raw)"
+    />
+  }
+</div>
+
+<app-dialog
+  variant="drawer"
+  [title]="dialogView() ? 'Orden ' + dialogView()!.raw.numeroOrden : 'Detalle de orden'"
+  [open]="dialogTarget() !== null"
+  (closed)="closeDialog()"
+>
+  @if (dialogView(); as view) {
+    <div class="ficha-info">
+      <div class="ficha-info-row">
+        <span class="ficha-info-label">Estado</span>
+        <app-badge [variant]="estadoBadgeVariant(view.estadoNombre)">{{ view.estadoNombre }}</app-badge>
+      </div>
+      <div class="ficha-info-row">
+        <span class="ficha-info-label">Especialidad</span>
+        <span>{{ view.especialidadNombre }}</span>
+      </div>
+      <div class="ficha-info-row">
+        <span class="ficha-info-label">Fecha de registro</span>
+        <span>{{ view.raw.fecha_registro | date: 'd MMM yyyy, HH:mm' }}</span>
+      </div>
+      @if (view.raw.fecha_cierre) {
+        <div class="ficha-info-row">
+          <span class="ficha-info-label">Fecha de cierre</span>
+          <span>{{ view.raw.fecha_cierre | date: 'd MMM yyyy, HH:mm' }}</span>
+        </div>
+      }
+      @if (view.raw.url_adjunto) {
+        <div class="ficha-info-row">
+          <span class="ficha-info-label">Adjunto</span>
+          <a [href]="view.raw.url_adjunto" target="_blank" rel="noopener">Ver adjunto</a>
+        </div>
+      }
+    </div>
+
+    <!-- Origen: distingue Solicitud vs Requerimiento según id_solicitud/id_requerimiento.
+         No hay una tercera opción ni un enlace simulado. -->
+    <div class="ficha-origen">
+      <h3 class="ficha-historial-title">Origen</h3>
+      @if (origenLoading()) {
+        <div class="ficha-historial-loading">
+          <app-spinner size="sm" label="Cargando origen" />
+        </div>
+      } @else if (origen(); as ctx) {
+        @if (ctx.tipo === 'sin-acceso') {
+          <p class="ficha-nota">
+            <svg lucideLock [size]="12" aria-hidden="true"></svg>
+            No tienes permiso para ver el contexto de origen de esta orden.
+          </p>
+        } @else if (ctx.tipo === 'solicitud') {
+          <div class="ficha-origen-card">
+            <app-badge variant="info">Desde Solicitud</app-badge>
+            <p class="ficha-origen-numero">{{ ctx.data.numeroSolicitud }}</p>
+            <p class="ficha-historial-comentario">{{ ctx.data.descripcion }}</p>
+          </div>
+        } @else if (ctx.tipo === 'requerimiento') {
+          <div class="ficha-origen-card">
+            <app-badge variant="info">Desde Requerimiento</app-badge>
+            <p class="ficha-origen-numero">{{ ctx.data.numeroRequerimiento }}</p>
+            <p class="ficha-historial-comentario">{{ ctx.data.descripcion }}</p>
+          </div>
+        }
+      } @else {
+        <p class="ficha-nota">Esta orden no tiene un origen registrado.</p>
+      }
+    </div>
+
+    @if ((canUpdate && !dialogEstaCerrada()) || (canCerrar && !dialogEstaCerrada()) || canDelete) {
+      <div class="ficha-acciones ficha-acciones-columna">
+        @if (canUpdate && !dialogEstaCerrada()) {
+          <app-orden-ejecutar
+            [initial]="view.raw"
+            [estados]="estadosCatalogo()"
+            [submitting]="ejecutarSubmitting()"
+            (submitForm)="handleEjecutar($event)"
+          />
+        }
+        <div class="ficha-acciones">
+          @if (canCerrar && !dialogEstaCerrada()) {
+            <app-button variant="primary" (click)="requestCerrar(view.raw)">Cerrar Orden</app-button>
+          }
+          @if (canDelete) {
+            <app-button variant="danger" (click)="requestDelete(view.raw)">Eliminar</app-button>
+          }
+        </div>
+      </div>
+    }
+
+    @if (dialogEstaCerrada()) {
+      <p class="ficha-nota">Esta orden ya está cerrada; no admite más cambios.</p>
+    }
+
+    @if (canReadHistorial) {
+      <div class="ficha-historial">
+        <h3 class="ficha-historial-title">Historial</h3>
+        @if (historialLoading()) {
+          <div class="ficha-historial-loading">
+            <app-spinner size="sm" label="Cargando historial" />
+          </div>
+        } @else if (historial().length === 0) {
+          <p class="ficha-nota">Sin movimientos registrados todavía.</p>
+        } @else {
+          <ol class="ficha-historial-list">
+            @for (registro of historial(); track registro.id_historial_orden) {
+              <li class="ficha-historial-item">
+                <div class="ficha-historial-transicion">
+                  {{ estadoNombreHistorial(registro.id_estado_anterior) }}
+                  →
+                  {{ estadoNombreHistorial(registro.id_estado_nuevo) }}
+                </div>
+                <div class="ficha-historial-fecha">
+                  {{ nombreUsuarioPorId(registro.id_usuario) }} · {{ registro.fecha | date: 'd MMM yyyy, HH:mm' }}
+                </div>
+                @if (registro.comentario) {
+                  <p class="ficha-historial-comentario">{{ registro.comentario }}</p>
+                }
+              </li>
+            }
+          </ol>
+        }
+      </div>
+    }
+  }
+</app-dialog>
+
+<app-dialog
+  variant="modal"
+  title="Eliminar orden"
+  [open]="confirmTarget() !== null"
+  (closed)="cancelDelete()"
+>
+  @if (confirmTarget(); as target) {
+    <p class="confirm-text">
+      ¿Seguro que deseas eliminar la orden <strong>{{ target.numeroOrden }}</strong>? Esta acción no se puede deshacer.
+    </p>
+    <div class="confirm-actions">
+      <app-button variant="secondary" (click)="cancelDelete()">Cancelar</app-button>
+      <app-button variant="danger" [loading]="deleteSubmitting()" (click)="confirmDeleteAction()">Eliminar</app-button>
+    </div>
+  }
+</app-dialog>
+
+<app-dialog
+  variant="modal"
+  title="Cerrar Orden de Trabajo"
+  [open]="cerrarTarget() !== null"
+  (closed)="cancelCerrar()"
+>
+  @if (cerrarTarget(); as target) {
+    <p class="confirm-text">
+      Vas a cerrar la orden <strong>{{ target.numeroOrden }}</strong>. Quedará en estado
+      <strong>Finalizado</strong> con la fecha de cierre de hoy. Esta acción no se puede deshacer.
+      @if (target.id_solicitud) {
+        La Solicitud de origen también pasará a <strong>Finalizado</strong>.
+      }
+    </p>
+
+    <div class="field">
+      <label for="cerrar-comentario" class="field-label">Comentario (opcional)</label>
+      <textarea
+        id="cerrar-comentario"
+        class="textarea"
+        rows="3"
+        [ngModel]="cerrarComentario()"
+        (ngModelChange)="cerrarComentario.set($event)"
+        placeholder="Notas de cierre…"
+      ></textarea>
+    </div>
+
+    @if (cerrarError()) {
+      <div class="confirm-error" role="alert">{{ cerrarError() }}</div>
+    }
+
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="cerrarSubmitting()" (click)="cancelCerrar()">Cancelar</app-button>
+      <app-button variant="primary" [loading]="cerrarSubmitting()" (click)="confirmCerrarAction()">
+        Cerrar Orden
+      </app-button>
+    </div>
+  }
+</app-dialog>

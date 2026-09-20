@@ -1,0 +1,61 @@
+<aside class="sidebar" [class.sidebar-open]="open()">
+  <div class="sidebar-brand">
+    <div class="sidebar-logo">S</div>
+    <span class="sidebar-title">SGT</span>
+  </div>
+
+  <nav class="sidebar-nav" aria-label="Navegación principal">
+    <div class="sidebar-section">General</div>
+    @for (item of navItems(); track item.route) {
+      <a
+        class="nav-item"
+        [routerLink]="item.route"
+        routerLinkActive="nav-item-active"
+        (click)="onNavigate()"
+      >
+        @if (item.icon === 'dashboard') {
+          <svg lucideLayoutDashboard [size]="18" class="nav-icon" aria-hidden="true"></svg>
+        } @else if (item.icon === 'solicitudes') {
+          <svg lucideClipboardList [size]="18" class="nav-icon" aria-hidden="true"></svg>
+        } @else if (item.icon === 'requerimientos') {
+          <svg lucideClipboardCheck [size]="18" class="nav-icon" aria-hidden="true"></svg>
+        } @else if (item.icon === 'ordenes') {
+          <svg lucideWrench [size]="18" class="nav-icon" aria-hidden="true"></svg>
+        }
+        {{ item.label }}
+      </a>
+    }
+
+    @if (adminNavItems().length > 0) {
+      <div class="sidebar-section">Administración</div>
+      @for (item of adminNavItems(); track item.route) {
+        <a
+          class="nav-item"
+          [routerLink]="item.route"
+          routerLinkActive="nav-item-active"
+          (click)="onNavigate()"
+        >
+          @if (item.icon === 'usuarios') {
+            <svg lucideUsers [size]="18" class="nav-icon" aria-hidden="true"></svg>
+          } @else if (item.icon === 'roles') {
+            <svg lucideShieldCheck [size]="18" class="nav-icon" aria-hidden="true"></svg>
+          } @else if (item.icon === 'permisos') {
+            <svg lucideKeyRound [size]="18" class="nav-icon" aria-hidden="true"></svg>
+          } @else if (item.icon === 'activos') {
+            <svg lucideBoxes [size]="18" class="nav-icon" aria-hidden="true"></svg>
+          } @else if (item.icon === 'especialidades') {
+            <svg lucideLayers [size]="18" class="nav-icon" aria-hidden="true"></svg>
+          } @else if (item.icon === 'estados') {
+            <svg lucideListChecks [size]="18" class="nav-icon" aria-hidden="true"></svg>
+          }
+          {{ item.label }}
+        </a>
+      }
+    }
+  </nav>
+
+  <button type="button" class="nav-item logout-btn" (click)="logout()">
+    <svg lucideLogOut [size]="18" class="nav-icon" aria-hidden="true"></svg>
+    Cerrar sesión
+  </button>
+</aside>

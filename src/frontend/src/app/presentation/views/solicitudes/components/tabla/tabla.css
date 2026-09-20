@@ -1,0 +1,164 @@
+.tabla-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.tabla-toolbar {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.tabla-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-3);
+  height: 40px;
+  flex: 1;
+  min-width: 220px;
+  color: var(--color-subtle-foreground);
+}
+
+.tabla-search input {
+  border: none;
+  outline: none;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  width: 100%;
+  color: var(--color-foreground);
+}
+
+.tabla-filtro {
+  height: 40px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  padding: 0 var(--space-3);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--color-foreground);
+}
+
+.tabla-empty {
+  font-size: 13px;
+  color: var(--color-muted-foreground);
+  text-align: center;
+  padding: var(--space-6) 0;
+}
+
+.tabla-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tabla thead {
+  background: var(--color-bg);
+}
+
+.tabla th {
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  font-weight: 600;
+  color: var(--color-muted-foreground);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.tabla-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+}
+
+.tabla-row {
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.tabla-row:hover {
+  background: var(--color-bg);
+}
+
+.tabla-row td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.tabla-row:last-child td {
+  border-bottom: none;
+}
+
+.tabla-numero {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tabla-descripcion {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabla-fecha {
+  white-space: nowrap;
+  color: var(--color-muted-foreground);
+}
+
+.tabla-col-acciones {
+  width: 48px;
+  text-align: right;
+}
+
+.tabla-delete {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-subtle-foreground);
+  display: inline-flex;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.tabla-delete:hover {
+  color: var(--status-danger-fg);
+  background: var(--status-danger-bg);
+}
+
+.tabla-paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.tabla-paginacion-info {
+  font-size: 12px;
+  color: var(--color-muted-foreground);
+}
+
+.tabla-paginacion-actions {
+  display: flex;
+  gap: var(--space-2);
+}

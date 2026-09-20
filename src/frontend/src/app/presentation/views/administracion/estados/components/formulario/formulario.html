@@ -1,0 +1,22 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="admin-form" novalidate>
+  @if (esCritico) {
+    <div class="admin-warning" role="alert">
+      Este estado es usado por nombre en las reglas de Solicitudes, Requerimientos y/o Órdenes (transiciones y
+      colores). Renombrarlo puede romper esos flujos aunque el sistema lo permita.
+    </div>
+  }
+
+  <app-input
+    label="Nombre"
+    formControlName="nombre"
+    placeholder="Ej. En revisión"
+    [errorMessage]="form.controls.nombre.touched && form.controls.nombre.invalid ? 'El nombre es obligatorio' : null"
+  />
+
+  <div class="admin-form-actions">
+    <app-button type="button" variant="secondary" (click)="cancel.emit()">Cancelar</app-button>
+    <app-button type="submit" variant="primary" [loading]="submitting()">
+      {{ mode() === 'create' ? 'Crear estado' : 'Guardar cambios' }}
+    </app-button>
+  </div>
+</form>

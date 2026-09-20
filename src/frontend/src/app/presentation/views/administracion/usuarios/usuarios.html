@@ -1,0 +1,133 @@
+<div class="admin-page">
+  <header class="admin-header">
+    <div class="admin-title-group">
+      <div>
+        <h1 class="admin-title">Usuarios</h1>
+        <p class="admin-subtitle">Cuentas del sistema y su rol asignado</p>
+      </div>
+      @if (!loading()) {
+        <span class="admin-count">{{ filtrados().length }}</span>
+      }
+    </div>
+
+    @if (canCreate) {
+      <app-button variant="primary" (click)="openCreate()">
+        <svg lucidePlus [size]="16" aria-hidden="true"></svg>
+        Nuevo usuario
+      </app-button>
+    }
+  </header>
+
+  <div class="admin-toolbar">
+    <div class="admin-search">
+      <svg lucideSearch [size]="16" aria-hidden="true"></svg>
+      <input
+        type="text"
+        placeholder="Buscar por correo o nombre…"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        aria-label="Buscar usuarios"
+      />
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="admin-state">
+      <app-spinner label="Cargando usuarios" />
+      <span>Cargando usuarios…</span>
+    </div>
+  } @else if (loadError()) {
+    <div class="admin-state admin-state-error" role="alert">
+      <svg lucideCircleAlert [size]="20" aria-hidden="true"></svg>
+      <span>{{ loadError() }}</span>
+      <app-button variant="secondary" (click)="reload()">Reintentar</app-button>
+    </div>
+  } @else {
+    <div class="admin-tabla-wrapper">
+      @if (filtrados().length === 0) {
+        <p class="admin-tabla-empty">No hay usuarios que coincidan con la búsqueda.</p>
+      } @else {
+        <table class="admin-tabla">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Correo</th>
+              <th>Rol</th>
+              <th class="admin-tabla-col-acciones">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of filtrados(); track item.id_usuario) {
+              <tr class="admin-tabla-row" (click)="openEdit(item)">
+                <td>
+                  {{ item.nombres }} {{ item.apellidos }}
+                  @if (item.id_usuario === currentUserId()) {
+                    <span class="admin-tabla-secundario">· tú</span>
+                  }
+                </td>
+                <td class="admin-tabla-secundario">{{ item.email }}</td>
+                <td><app-badge variant="info">{{ item.nombre_rol }}</app-badge></td>
+                <td class="admin-tabla-col-acciones">
+                  @if (canUpdate) {
+                    <button type="button" class="admin-icon-btn" aria-label="Editar usuario" (click)="$event.stopPropagation(); openEdit(item)">
+                      <svg lucidePencil [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                  @if (canDelete) {
+                    <button
+                      type="button"
+                      class="admin-icon-btn"
+                      aria-label="Eliminar usuario"
+                      [disabled]="item.id_usuario === currentUserId()"
+                      [title]="item.id_usuario === currentUserId() ? 'No puedes eliminar tu propia cuenta' : ''"
+                      [style.opacity]="item.id_usuario === currentUserId() ? 0.4 : 1"
+                      [style.cursor]="item.id_usuario === currentUserId() ? 'not-allowed' : 'pointer'"
+                      (click)="$event.stopPropagation(); requestDelete(item)"
+                    >
+                      <svg lucideTrash [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+</div>
+
+<app-dialog
+  variant="modal"
+  [title]="dialogMode() === 'create' ? 'Crear usuario' : 'Editar usuario'"
+  [open]="dialogMode() !== null"
+  (closed)="closeDialog()"
+>
+  @if (dialogMode(); as mode) {
+    <app-usuario-formulario
+      [mode]="mode"
+      [initial]="dialogTarget()"
+      [roles]="roles()"
+      [currentUserId]="currentUserId()"
+      [submitting]="formSubmitting()"
+      (submitForm)="handleFormSubmit($event)"
+      (cancel)="closeDialog()"
+    />
+  }
+</app-dialog>
+
+<app-dialog variant="modal" title="Eliminar usuario" [open]="confirmTarget() !== null" (closed)="cancelDelete()">
+  @if (confirmTarget(); as target) {
+    <p class="confirm-text">
+      ¿Seguro que deseas eliminar al usuario <strong>{{ target.nombres }} {{ target.apellidos }}</strong>? Si tiene
+      solicitudes, requerimientos u órdenes registradas a su nombre, el sistema rechazará la eliminación.
+    </p>
+    @if (deleteError()) {
+      <div class="confirm-error" role="alert">{{ deleteError() }}</div>
+    }
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="deleteSubmitting()" (click)="cancelDelete()">Cancelar</app-button>
+      <app-button variant="danger" [loading]="deleteSubmitting()" (click)="confirmDeleteAction()">Eliminar</app-button>
+    </div>
+  }
+</app-dialog>

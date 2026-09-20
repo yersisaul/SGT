@@ -4,7 +4,82 @@
   box-sizing: border-box;
 }
 
+/*
+ * SGT — Design tokens (aprobados en la propuesta de Design System).
+ * Ver artifact de referencia para el detalle de la decisión de cada valor.
+ */
+:root {
+  /* Color — primitivos */
+  --color-primary: #0f172a;
+  --color-primary-foreground: #ffffff;
+  --color-accent: #0369a1;
+  --color-accent-hover: #075985;
+  --color-accent-foreground: #ffffff;
+  --color-bg: #f8fafc;
+  --color-card: #ffffff;
+  --color-border: #e2e8f0;
+  --color-foreground: #0f172a;
+  --color-muted-foreground: #475569;
+  --color-subtle-foreground: #94a3b8;
+
+  /* Color — semántico de estado */
+  --status-neutral-fg: #475569;
+  --status-neutral-bg: #f1f5f9;
+  --status-info-fg: #1d4ed8;
+  --status-info-bg: #dbeafe;
+  --status-success-fg: #15803d;
+  --status-success-bg: #dcfce7;
+  --status-warning-fg: #b45309;
+  --status-warning-bg: #fef3c7;
+  --status-danger-fg: #b91c1c;
+  --status-danger-bg: #fee2e2;
+
+  /* Tipografía */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Espaciado — escala 8px */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Radios */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  /* Sombra — reservada a elementos flotantes (modal/dropdown) */
+  --shadow-elevated: 0 12px 32px rgba(15, 23, 42, 0.18);
+
+  /* Layout */
+  --header-height: 64px;
+  --sidebar-width: 240px;
+}
+
 body {
   margin: 0;
   padding: 0;
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-foreground);
+}
+
+/* Accesibilidad: foco visible consistente en toda la app */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

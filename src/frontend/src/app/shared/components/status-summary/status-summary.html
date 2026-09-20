@@ -1,0 +1,38 @@
+<app-card>
+  <div class="summary-header">
+    <h3 class="summary-title">{{ title() }}</h3>
+    @if (!loading() && !errorMessage()) {
+      <span class="summary-total" [attr.aria-label]="total() + ' en total'">{{ total() }}</span>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="summary-state">
+      <app-spinner size="sm" label="Cargando resumen" />
+      <span>Cargando…</span>
+    </div>
+  } @else if (errorMessage()) {
+    <div class="summary-state summary-state-error" role="alert">
+      <span>{{ errorMessage() }}</span>
+      <app-button variant="secondary" (click)="retry.emit()">Reintentar</app-button>
+    </div>
+  } @else if (total() === 0) {
+    <p class="summary-empty">Aún no hay registros.</p>
+  } @else {
+    <div class="summary-list">
+      @for (item of items(); track item.estado) {
+        <div class="summary-row">
+          <app-badge class="summary-row-label" [variant]="badgeVariant(item.estado)">{{ item.estado }}</app-badge>
+          <div class="summary-bar-track">
+            <div
+              class="summary-bar-fill"
+              [class]="'fill-' + badgeVariant(item.estado)"
+              [style.width.%]="percent(item.cantidad)"
+            ></div>
+          </div>
+          <span class="summary-row-count">{{ item.cantidad }}</span>
+        </div>
+      }
+    </div>
+  }
+</app-card>

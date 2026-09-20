@@ -1,0 +1,167 @@
+<div class="admin-page">
+  <header class="admin-header">
+    <div class="admin-title-group">
+      <div>
+        <h1 class="admin-title">Roles</h1>
+        <p class="admin-subtitle">Roles del sistema y los permisos asignados a cada uno</p>
+      </div>
+      @if (!loading()) {
+        <span class="admin-count">{{ filtrados().length }}</span>
+      }
+    </div>
+
+    @if (canCreate) {
+      <app-button variant="primary" (click)="openCreate()">
+        <svg lucidePlus [size]="16" aria-hidden="true"></svg>
+        Nuevo rol
+      </app-button>
+    }
+  </header>
+
+  @if (!canReadPermisos || !canReadRolPermiso) {
+    <div class="admin-warning" role="status">
+      <svg lucideCircleAlert [size]="16" aria-hidden="true"></svg>
+      No se puede mostrar la gestión de permisos por rol (requiere <strong>permiso.read</strong> y
+      <strong>rolpermiso.read</strong>).
+    </div>
+  }
+
+  <div class="admin-toolbar">
+    <div class="admin-search">
+      <svg lucideSearch [size]="16" aria-hidden="true"></svg>
+      <input
+        type="text"
+        placeholder="Buscar por nombre o descripción…"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        aria-label="Buscar roles"
+      />
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="admin-state">
+      <app-spinner label="Cargando roles" />
+      <span>Cargando roles…</span>
+    </div>
+  } @else if (loadError()) {
+    <div class="admin-state admin-state-error" role="alert">
+      <svg lucideCircleAlert [size]="20" aria-hidden="true"></svg>
+      <span>{{ loadError() }}</span>
+      <app-button variant="secondary" (click)="reload()">Reintentar</app-button>
+    </div>
+  } @else {
+    <div class="admin-tabla-wrapper">
+      @if (filtrados().length === 0) {
+        <p class="admin-tabla-empty">No hay roles que coincidan con la búsqueda.</p>
+      } @else {
+        <table class="admin-tabla">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Descripción</th>
+              @if (canReadRolPermiso) {
+                <th>Permisos</th>
+              }
+              <th class="admin-tabla-col-acciones">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of filtrados(); track item.id_rol) {
+              <tr class="admin-tabla-row" (click)="openEdit(item)">
+                <td>{{ item.nombre }}</td>
+                <td class="admin-tabla-secundario">{{ item.descripcion || '—' }}</td>
+                @if (canReadRolPermiso) {
+                  <td class="admin-tabla-secundario">{{ contarPermisos(item.id_rol) }}</td>
+                }
+                <td class="admin-tabla-col-acciones">
+                  @if (canDelete) {
+                    <button type="button" class="admin-icon-btn" aria-label="Eliminar rol" (click)="$event.stopPropagation(); requestDelete(item)">
+                      <svg lucideTrash [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+</div>
+
+<app-dialog variant="modal" title="Crear rol" [open]="dialogMode() === 'create'" (closed)="closeDialog()">
+  <app-rol-formulario mode="create" [submitting]="formSubmitting()" (submitForm)="handleFormSubmit($event)" (cancel)="closeDialog()" />
+</app-dialog>
+
+<app-dialog
+  variant="drawer"
+  [title]="dialogTarget() ? 'Rol ' + dialogTarget()!.nombre : 'Detalle de rol'"
+  [open]="dialogMode() === 'edit'"
+  (closed)="closeDialog()"
+>
+  @if (dialogTarget(); as target) {
+    @if (canUpdate) {
+      <app-rol-formulario
+        mode="edit"
+        [initial]="target"
+        [submitting]="formSubmitting()"
+        (submitForm)="handleFormSubmit($event)"
+        (cancel)="closeDialog()"
+      />
+    } @else {
+      <div class="ficha-info">
+        <div class="ficha-info-row">
+          <span class="ficha-info-label">Nombre</span>
+          <span>{{ target.nombre }}</span>
+        </div>
+        <div class="ficha-info-row">
+          <span class="ficha-info-label">Descripción</span>
+          <span>{{ target.descripcion || '—' }}</span>
+        </div>
+      </div>
+    }
+
+    @if (canReadPermisos && canReadRolPermiso) {
+      <div class="ficha-historial">
+        <h3 class="ficha-historial-title">Permisos asignados</h3>
+        @if (!canManagePermisos) {
+          <p class="ficha-nota">
+            Solo lectura (requiere <strong>rolpermiso.create</strong> y <strong>rolpermiso.delete</strong> para
+            modificar).
+          </p>
+        }
+        <app-rol-permisos
+          [idRol]="target.id_rol"
+          [catalogoPermisos]="permisosCatalogo()"
+          [asignados]="permisosDelRolActual()"
+          [canManage]="canManagePermisos"
+          (asignado)="handlePermisoAsignado($event)"
+          (revocado)="handlePermisoRevocado($event)"
+        />
+      </div>
+    }
+
+    @if (canDelete) {
+      <div class="ficha-acciones">
+        <app-button variant="danger" (click)="requestDelete(target)">Eliminar rol</app-button>
+      </div>
+    }
+  }
+</app-dialog>
+
+<app-dialog variant="modal" title="Eliminar rol" [open]="confirmTarget() !== null" (closed)="cancelDelete()">
+  @if (confirmTarget(); as target) {
+    <p class="confirm-text">
+      ¿Seguro que deseas eliminar el rol <strong>{{ target.nombre }}</strong>? Si tiene usuarios o permisos
+      asignados, el sistema rechazará la eliminación.
+    </p>
+    @if (deleteError()) {
+      <div class="confirm-error" role="alert">{{ deleteError() }}</div>
+    }
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="deleteSubmitting()" (click)="cancelDelete()">Cancelar</app-button>
+      <app-button variant="danger" [loading]="deleteSubmitting()" (click)="confirmDeleteAction()">Eliminar</app-button>
+    </div>
+  }
+</app-dialog>

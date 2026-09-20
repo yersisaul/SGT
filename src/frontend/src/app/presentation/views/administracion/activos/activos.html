@@ -1,0 +1,120 @@
+<div class="admin-page">
+  <header class="admin-header">
+    <div class="admin-title-group">
+      <div>
+        <h1 class="admin-title">Activos</h1>
+        <p class="admin-subtitle">Inventario de equipos/activos referenciados por las Solicitudes</p>
+      </div>
+      @if (!loading()) {
+        <span class="admin-count">{{ filtrados().length }}</span>
+      }
+    </div>
+
+    @if (canCreate) {
+      <app-button variant="primary" (click)="openCreate()">
+        <svg lucidePlus [size]="16" aria-hidden="true"></svg>
+        Nuevo activo
+      </app-button>
+    }
+  </header>
+
+  <div class="admin-toolbar">
+    <div class="admin-search">
+      <svg lucideSearch [size]="16" aria-hidden="true"></svg>
+      <input
+        type="text"
+        placeholder="Buscar por código, nombre o ubicación…"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        aria-label="Buscar activos"
+      />
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="admin-state">
+      <app-spinner label="Cargando activos" />
+      <span>Cargando activos…</span>
+    </div>
+  } @else if (loadError()) {
+    <div class="admin-state admin-state-error" role="alert">
+      <svg lucideCircleAlert [size]="20" aria-hidden="true"></svg>
+      <span>{{ loadError() }}</span>
+      <app-button variant="secondary" (click)="reload()">Reintentar</app-button>
+    </div>
+  } @else {
+    <div class="admin-tabla-wrapper">
+      @if (filtrados().length === 0) {
+        <p class="admin-tabla-empty">No hay activos que coincidan con la búsqueda.</p>
+      } @else {
+        <table class="admin-tabla">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nombre</th>
+              <th>Especialidad</th>
+              <th>Ubicación</th>
+              <th class="admin-tabla-col-acciones">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of filtrados(); track item.id_activo) {
+              <tr class="admin-tabla-row" (click)="openEdit(item)">
+                <td>{{ item.codigo }}</td>
+                <td>{{ item.nombre }}</td>
+                <td>{{ nombreEspecialidad(item.id_especialidad) }}</td>
+                <td class="admin-tabla-secundario">{{ item.ubicacion || '—' }}</td>
+                <td class="admin-tabla-col-acciones">
+                  @if (canUpdate) {
+                    <button type="button" class="admin-icon-btn" aria-label="Editar activo" (click)="$event.stopPropagation(); openEdit(item)">
+                      <svg lucidePencil [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                  @if (canDelete) {
+                    <button type="button" class="admin-icon-btn" aria-label="Eliminar activo" (click)="$event.stopPropagation(); requestDelete(item)">
+                      <svg lucideTrash [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+</div>
+
+<app-dialog
+  variant="modal"
+  [title]="dialogMode() === 'create' ? 'Crear activo' : 'Editar activo'"
+  [open]="dialogMode() !== null"
+  (closed)="closeDialog()"
+>
+  @if (dialogMode(); as mode) {
+    <app-activo-formulario
+      [mode]="mode"
+      [initial]="dialogTarget()"
+      [especialidades]="especialidades()"
+      [submitting]="formSubmitting()"
+      (submitForm)="handleFormSubmit($event)"
+      (cancel)="closeDialog()"
+    />
+  }
+</app-dialog>
+
+<app-dialog variant="modal" title="Eliminar activo" [open]="confirmTarget() !== null" (closed)="cancelDelete()">
+  @if (confirmTarget(); as target) {
+    <p class="confirm-text">
+      ¿Seguro que deseas eliminar el activo <strong>{{ target.codigo }} · {{ target.nombre }}</strong>? Si tiene
+      Solicitudes asociadas, el sistema rechazará la eliminación.
+    </p>
+    @if (deleteError()) {
+      <div class="confirm-error" role="alert">{{ deleteError() }}</div>
+    }
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="deleteSubmitting()" (click)="cancelDelete()">Cancelar</app-button>
+      <app-button variant="danger" [loading]="deleteSubmitting()" (click)="confirmDeleteAction()">Eliminar</app-button>
+    </div>
+  }
+</app-dialog>

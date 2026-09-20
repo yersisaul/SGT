@@ -1,0 +1,38 @@
+<div class="kanban-board">
+  @for (column of columns(); track column.estadoId) {
+    <section class="kanban-column" [class.kanban-column-terminal]="!column.transicionable">
+      <header class="kanban-column-header">
+        <app-badge [variant]="estadoBadgeVariant(column.estadoNombre)">{{ column.estadoNombre }}</app-badge>
+        <span class="kanban-column-count">{{ column.items.length }}</span>
+      </header>
+
+      @if (!column.transicionable) {
+        <p class="kanban-column-hint">Se alcanza mediante una acción de negocio, no por arrastre.</p>
+      }
+
+      <div
+        class="kanban-column-body"
+        cdkDropList
+        [id]="column.estadoId"
+        [cdkDropListData]="column.items"
+        [cdkDropListConnectedTo]="columnIds()"
+        [cdkDropListDisabled]="!canUpdate() || !column.transicionable"
+        (cdkDropListDropped)="onDrop($event, column.estadoId)"
+      >
+        @if (column.items.length === 0) {
+          <p class="kanban-empty">Sin solicitudes</p>
+        }
+        @for (item of column.items; track item.raw.id_solicitud) {
+          <div cdkDrag [cdkDragDisabled]="!canUpdate() || !column.transicionable" [cdkDragData]="item">
+            <app-solicitud-card
+              [item]="item"
+              [canDelete]="canDelete()"
+              (open)="cardOpen.emit(item)"
+              (delete)="cardDelete.emit(item)"
+            />
+          </div>
+        }
+      </div>
+    </section>
+  }
+</div>

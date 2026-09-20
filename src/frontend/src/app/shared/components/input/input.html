@@ -1,0 +1,22 @@
+<div class="field">
+  @if (label()) {
+    <label [for]="inputId" class="field-label">{{ label() }}</label>
+  }
+  <input
+    [id]="inputId"
+    [type]="type()"
+    [placeholder]="placeholder()"
+    [autocomplete]="autocomplete()"
+    [value]="value()"
+    [disabled]="disabled()"
+    class="input"
+    [class.input-error]="!!errorMessage()"
+    [attr.aria-invalid]="!!errorMessage()"
+    [attr.aria-describedby]="errorMessage() ? inputId + '-error' : null"
+    (input)="handleInput($event)"
+    (blur)="handleBlur()"
+  />
+  @if (errorMessage()) {
+    <div [id]="inputId + '-error'" class="helper helper-error" role="alert">{{ errorMessage() }}</div>
+  }
+</div>

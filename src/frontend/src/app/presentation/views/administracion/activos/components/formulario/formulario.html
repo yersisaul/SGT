@@ -1,0 +1,57 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="admin-form" novalidate>
+  <div class="admin-form-row">
+    <app-input
+      label="Código"
+      formControlName="codigo"
+      placeholder="Ej. SRV-001"
+      [errorMessage]="form.controls.codigo.touched && form.controls.codigo.invalid ? 'El código es obligatorio' : null"
+    />
+    <app-input
+      label="Nombre"
+      formControlName="nombre"
+      placeholder="Ej. Servidor de aplicaciones"
+      [errorMessage]="form.controls.nombre.touched && form.controls.nombre.invalid ? 'El nombre es obligatorio' : null"
+    />
+  </div>
+
+  <app-select
+    label="Especialidad"
+    placeholder="Selecciona una especialidad"
+    [options]="especialidadOptions"
+    formControlName="id_especialidad"
+    [errorMessage]="
+      form.controls.id_especialidad.touched && form.controls.id_especialidad.invalid
+        ? 'Selecciona la especialidad responsable'
+        : null
+    "
+  />
+
+  <app-input label="Ubicación" formControlName="ubicacion" placeholder="Ej. Sede principal, piso 3" />
+
+  <app-input
+    label="Descripción"
+    formControlName="descripcion"
+    placeholder="Descripción breve (opcional)"
+    [errorMessage]="
+      form.controls.descripcion.touched && form.controls.descripcion.invalid ? 'Máximo 255 caracteres' : null
+    "
+  />
+
+  <app-input
+    label="URL de imagen (opcional)"
+    formControlName="url_img"
+    placeholder="https://…"
+    [errorMessage]="
+      form.controls.url_img.touched && form.controls.url_img.invalid
+        ? 'Ingresa una URL válida (http:// o https://)'
+        : null
+    "
+  />
+
+  <div class="admin-form-actions">
+    <app-button type="button" variant="secondary" (click)="cancel.emit()">Cancelar</app-button>
+    <app-button type="submit" variant="primary" [loading]="submitting()">
+      {{ mode() === 'create' ? 'Crear activo' : 'Guardar cambios' }}
+    </app-button>
+  </div>
+</form>

@@ -1,0 +1,10 @@
+<span
+  class="badge"
+  [class.badge-neutral]="variant() === 'neutral'"
+  [class.badge-info]="variant() === 'info'"
+  [class.badge-success]="variant() === 'success'"
+  [class.badge-warning]="variant() === 'warning'"
+  [class.badge-danger]="variant() === 'danger'"
+>
+  <ng-content />
+</span>

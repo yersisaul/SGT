@@ -1,0 +1,115 @@
+<div class="admin-page">
+  <header class="admin-header">
+    <div class="admin-title-group">
+      <div>
+        <h1 class="admin-title">Especialidades</h1>
+        <p class="admin-subtitle">Áreas técnicas usadas para clasificar Activos, Requerimientos y Órdenes</p>
+      </div>
+      @if (!loading()) {
+        <span class="admin-count">{{ filtradas().length }}</span>
+      }
+    </div>
+
+    @if (canCreate) {
+      <app-button variant="primary" (click)="openCreate()">
+        <svg lucidePlus [size]="16" aria-hidden="true"></svg>
+        Nueva especialidad
+      </app-button>
+    }
+  </header>
+
+  <div class="admin-toolbar">
+    <div class="admin-search">
+      <svg lucideSearch [size]="16" aria-hidden="true"></svg>
+      <input
+        type="text"
+        placeholder="Buscar por nombre o descripción…"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        aria-label="Buscar especialidades"
+      />
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="admin-state">
+      <app-spinner label="Cargando especialidades" />
+      <span>Cargando especialidades…</span>
+    </div>
+  } @else if (loadError()) {
+    <div class="admin-state admin-state-error" role="alert">
+      <svg lucideCircleAlert [size]="20" aria-hidden="true"></svg>
+      <span>{{ loadError() }}</span>
+      <app-button variant="secondary" (click)="reload()">Reintentar</app-button>
+    </div>
+  } @else {
+    <div class="admin-tabla-wrapper">
+      @if (filtradas().length === 0) {
+        <p class="admin-tabla-empty">No hay especialidades que coincidan con la búsqueda.</p>
+      } @else {
+        <table class="admin-tabla">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Descripción</th>
+              <th class="admin-tabla-col-acciones">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of filtradas(); track item.id_especialidad) {
+              <tr class="admin-tabla-row" (click)="openEdit(item)">
+                <td>{{ item.nombre }}</td>
+                <td class="admin-tabla-secundario">{{ item.descripcion || '—' }}</td>
+                <td class="admin-tabla-col-acciones">
+                  @if (canUpdate) {
+                    <button type="button" class="admin-icon-btn" aria-label="Editar especialidad" (click)="$event.stopPropagation(); openEdit(item)">
+                      <svg lucidePencil [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                  @if (canDelete) {
+                    <button type="button" class="admin-icon-btn" aria-label="Eliminar especialidad" (click)="$event.stopPropagation(); requestDelete(item)">
+                      <svg lucideTrash [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+</div>
+
+<app-dialog
+  variant="modal"
+  [title]="dialogMode() === 'create' ? 'Crear especialidad' : 'Editar especialidad'"
+  [open]="dialogMode() !== null"
+  (closed)="closeDialog()"
+>
+  @if (dialogMode(); as mode) {
+    <app-especialidad-formulario
+      [mode]="mode"
+      [initial]="dialogTarget()"
+      [submitting]="formSubmitting()"
+      (submitForm)="handleFormSubmit($event)"
+      (cancel)="closeDialog()"
+    />
+  }
+</app-dialog>
+
+<app-dialog variant="modal" title="Eliminar especialidad" [open]="confirmTarget() !== null" (closed)="cancelDelete()">
+  @if (confirmTarget(); as target) {
+    <p class="confirm-text">
+      ¿Seguro que deseas eliminar la especialidad <strong>{{ target.nombre }}</strong>? Si tiene Activos,
+      Solicitudes, Requerimientos u Órdenes asociados, el sistema rechazará la eliminación.
+    </p>
+    @if (deleteError()) {
+      <div class="confirm-error" role="alert">{{ deleteError() }}</div>
+    }
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="deleteSubmitting()" (click)="cancelDelete()">Cancelar</app-button>
+      <app-button variant="danger" [loading]="deleteSubmitting()" (click)="confirmDeleteAction()">Eliminar</app-button>
+    </div>
+  }
+</app-dialog>

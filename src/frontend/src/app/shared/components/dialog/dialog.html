@@ -1,0 +1,19 @@
+@if (open()) {
+  <div class="dialog-backdrop" (click)="close()"></div>
+  <div
+    class="dialog-panel"
+    [class.dialog-panel-modal]="variant() === 'modal'"
+    [class.dialog-panel-drawer]="variant() === 'drawer'"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="title()"
+  >
+    <div class="dialog-header">
+      <h2 class="dialog-title">{{ title() }}</h2>
+      <button type="button" class="dialog-close" aria-label="Cerrar" (click)="close()">✕</button>
+    </div>
+    <div class="dialog-body">
+      <ng-content />
+    </div>
+  </div>
+}

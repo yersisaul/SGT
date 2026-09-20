@@ -1,0 +1,20 @@
+<button
+  [type]="type()"
+  class="btn"
+  [class.btn-block]="fullWidth()"
+  [class.btn-primary]="variant() === 'primary'"
+  [class.btn-secondary]="variant() === 'secondary'"
+  [class.btn-ghost]="variant() === 'ghost'"
+  [class.btn-danger]="variant() === 'danger'"
+  [disabled]="disabled() || loading()"
+  [attr.aria-busy]="loading()"
+>
+  @if (loading()) {
+    <app-spinner
+      size="sm"
+      label="Procesando"
+      [tone]="variant() === 'primary' || variant() === 'danger' ? 'inverted' : 'default'"
+    />
+  }
+  <ng-content />
+</button>

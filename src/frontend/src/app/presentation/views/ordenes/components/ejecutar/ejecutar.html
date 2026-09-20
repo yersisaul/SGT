@@ -1,0 +1,25 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="ejecutar-form" novalidate>
+  <app-select
+    label="Estado"
+    placeholder="Selecciona un estado"
+    [options]="estadoOptions"
+    formControlName="id_estado"
+    [errorMessage]="form.controls.id_estado.touched && form.controls.id_estado.invalid ? 'Selecciona un estado' : null"
+  />
+
+  <app-input
+    label="URL adjunto (opcional)"
+    type="text"
+    placeholder="https://…"
+    formControlName="url_adjunto"
+    [errorMessage]="
+      form.controls.url_adjunto.touched && form.controls.url_adjunto.invalid
+        ? 'Ingresa una URL válida (http:// o https://)'
+        : null
+    "
+  />
+
+  <div class="ejecutar-form-actions">
+    <app-button type="submit" variant="primary" [loading]="submitting()">Actualizar progreso</app-button>
+  </div>
+</form>

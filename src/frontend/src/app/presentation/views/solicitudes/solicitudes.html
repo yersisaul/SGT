@@ -1,0 +1,256 @@
+<div class="solicitudes-page">
+  <header class="solicitudes-header">
+    <div>
+      <h1 class="solicitudes-title">Solicitudes de atención</h1>
+      <p class="solicitudes-subtitle">Gestión de solicitudes de soporte técnico</p>
+    </div>
+
+    <div class="solicitudes-header-actions">
+      <div class="view-toggle" role="group" aria-label="Cambiar vista">
+        <button
+          type="button"
+          class="view-toggle-btn"
+          [class.view-toggle-active]="viewMode() === 'kanban'"
+          [disabled]="!estadosDisponibles()"
+          [title]="estadosDisponibles() ? '' : 'No tienes permiso para ver el catálogo de estados (estado.read)'"
+          (click)="viewMode.set('kanban')"
+        >
+          <svg lucideLayoutGrid [size]="16" aria-hidden="true"></svg>
+          Kanban
+        </button>
+        <button
+          type="button"
+          class="view-toggle-btn"
+          [class.view-toggle-active]="viewMode() === 'tabla'"
+          (click)="viewMode.set('tabla')"
+        >
+          <svg lucideTable [size]="16" aria-hidden="true"></svg>
+          Tabla
+        </button>
+      </div>
+
+      @if (canCreate) {
+        <app-button variant="primary" (click)="openCreate()">
+          <svg lucidePlus [size]="16" aria-hidden="true"></svg>
+          Nueva solicitud
+        </app-button>
+      }
+    </div>
+  </header>
+
+  @if (!estadosDisponibles() && !loading()) {
+    <div class="solicitudes-warning" role="status">
+      <svg lucideCircleAlert [size]="16" aria-hidden="true"></svg>
+      No se pudo cargar el catálogo de estados (requiere el permiso <strong>estado.read</strong>). Se muestra la vista de
+      tabla; los estados aparecerán como "Desconocido".
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="solicitudes-state">
+      <app-spinner label="Cargando solicitudes" />
+      <span>Cargando solicitudes…</span>
+    </div>
+  } @else if (loadError()) {
+    <div class="solicitudes-state solicitudes-state-error" role="alert">
+      <svg lucideCircleAlert [size]="20" aria-hidden="true"></svg>
+      <span>{{ loadError() }}</span>
+      <app-button variant="secondary" (click)="reload()">Reintentar</app-button>
+    </div>
+  } @else if (views().length === 0) {
+    <div class="solicitudes-state">
+      <svg lucideInbox [size]="28" aria-hidden="true"></svg>
+      <span>Aún no hay solicitudes registradas.</span>
+    </div>
+  } @else if (viewMode() === 'kanban' && estadosDisponibles()) {
+    <app-solicitud-kanban
+      [columns]="kanbanColumns()"
+      [canUpdate]="canUpdate"
+      [canDelete]="canDelete"
+      (cardOpen)="openEdit($event)"
+      (cardDelete)="requestDelete($event.raw)"
+      (moved)="handleMoved($event)"
+    />
+  } @else {
+    <app-solicitud-tabla
+      [items]="views()"
+      [canDelete]="canDelete"
+      (open)="openEdit($event)"
+      (delete)="requestDelete($event.raw)"
+    />
+  }
+</div>
+
+<app-dialog
+  variant="modal"
+  title="Crear solicitud"
+  [open]="dialogMode() === 'create'"
+  (closed)="closeDialog()"
+>
+  <app-solicitud-formulario
+    mode="create"
+    [activos]="activosCatalogo()"
+    [estados]="estadosCatalogo()"
+    [submitting]="formSubmitting()"
+    (submitForm)="handleFormSubmit($event)"
+    (cancel)="closeDialog()"
+  />
+</app-dialog>
+
+<app-dialog
+  variant="drawer"
+  [title]="dialogView() ? 'Solicitud ' + dialogView()!.raw.numeroSolicitud : 'Detalle de solicitud'"
+  [open]="dialogMode() === 'edit'"
+  (closed)="closeDialog()"
+>
+  @if (dialogView(); as view) {
+    <div class="ficha-info">
+      <div class="ficha-info-row">
+        <span class="ficha-info-label">Solicitante</span>
+        <span>{{ view.usuarioNombre }}</span>
+      </div>
+      <div class="ficha-info-row">
+        <span class="ficha-info-label">Fecha de registro</span>
+        <span>{{ view.raw.fecha_registro | date: 'd MMM yyyy, HH:mm' }}</span>
+      </div>
+    </div>
+
+    @if (canUpdate && !dialogEstaFinalizada()) {
+      <app-solicitud-formulario
+        mode="edit"
+        [initial]="view.raw"
+        [activos]="activosCatalogo()"
+        [estados]="estadosCatalogo()"
+        [submitting]="formSubmitting()"
+        (submitForm)="handleFormSubmit($event)"
+        (cancel)="closeDialog()"
+      />
+    } @else {
+      <div class="ficha-info">
+        @if (dialogEstaFinalizada()) {
+          <p class="ficha-nota">Esta solicitud ya fue finalizada; no admite más ediciones.</p>
+        }
+        <div class="ficha-info-row">
+          <span class="ficha-info-label">Activo</span>
+          <span>{{ view.activoNombre }}</span>
+        </div>
+        <div class="ficha-info-row">
+          <span class="ficha-info-label">Especialidad</span>
+          <span>{{ view.especialidadNombre }}</span>
+        </div>
+        <div class="ficha-info-row">
+          <span class="ficha-info-label">Prioridad</span>
+          <span>{{ view.raw.prioridad }}</span>
+        </div>
+        <div class="ficha-info-row">
+          <span class="ficha-info-label">Estado</span>
+          <span>{{ view.estadoNombre }}</span>
+        </div>
+        @if (view.raw.url_adjunto) {
+          <div class="ficha-info-row">
+            <span class="ficha-info-label">Adjunto</span>
+            <a [href]="view.raw.url_adjunto" target="_blank" rel="noopener">Ver adjunto</a>
+          </div>
+        }
+        <div class="ficha-info-row ficha-info-row-block">
+          <span class="ficha-info-label">Descripción</span>
+          <p>{{ view.raw.descripcion }}</p>
+        </div>
+      </div>
+    }
+
+    @if (canGenerarOrden || canCreateRequerimiento || canDelete) {
+      <div class="ficha-acciones">
+        @if (canGenerarOrden && !dialogEstaFinalizada()) {
+          <app-button variant="primary" (click)="requestGenerarOrden(view.raw)">
+            Generar Orden de Trabajo
+          </app-button>
+        }
+        @if (canCreateRequerimiento) {
+          <app-button
+            variant="secondary"
+            [disabled]="true"
+            title="Disponible próximamente"
+          >
+            Crear Requerimiento
+          </app-button>
+        }
+        @if (canDelete) {
+          <app-button variant="danger" (click)="requestDelete(view.raw)">Eliminar</app-button>
+        }
+      </div>
+    }
+
+    @if (canReadHistorial) {
+      <div class="ficha-historial">
+        <h3 class="ficha-historial-title">Historial</h3>
+        @if (historialLoading()) {
+          <div class="ficha-historial-loading">
+            <app-spinner size="sm" label="Cargando historial" />
+          </div>
+        } @else if (historial().length === 0) {
+          <p class="ficha-nota">Sin movimientos registrados todavía.</p>
+        } @else {
+          <ol class="ficha-historial-list">
+            @for (registro of historial(); track registro.id_historial_solicitud) {
+              <li class="ficha-historial-item">
+                <div class="ficha-historial-transicion">
+                  {{ estadoNombreHistorial(registro.id_estado_anterior) }}
+                  →
+                  {{ estadoNombreHistorial(registro.id_estado_nuevo) }}
+                </div>
+                <div class="ficha-historial-fecha">{{ registro.fecha | date: 'd MMM yyyy, HH:mm' }}</div>
+                @if (registro.comentario) {
+                  <p class="ficha-historial-comentario">{{ registro.comentario }}</p>
+                }
+              </li>
+            }
+          </ol>
+        }
+      </div>
+    }
+  }
+</app-dialog>
+
+<app-dialog
+  variant="modal"
+  title="Eliminar solicitud"
+  [open]="confirmTarget() !== null"
+  (closed)="cancelDelete()"
+>
+  @if (confirmTarget(); as target) {
+    <p class="confirm-text">
+      ¿Seguro que deseas eliminar la solicitud <strong>{{ target.numeroSolicitud }}</strong>? Esta acción no se puede
+      deshacer.
+    </p>
+    <div class="confirm-actions">
+      <app-button variant="secondary" (click)="cancelDelete()">Cancelar</app-button>
+      <app-button variant="danger" [loading]="deleteSubmitting()" (click)="confirmDeleteAction()">Eliminar</app-button>
+    </div>
+  }
+</app-dialog>
+
+<app-dialog
+  variant="modal"
+  title="Generar Orden de Trabajo"
+  [open]="generarOrdenTarget() !== null"
+  (closed)="cancelGenerarOrden()"
+>
+  @if (generarOrdenTarget(); as target) {
+    <p class="confirm-text">
+      Se generará una Orden de Trabajo a partir de la solicitud <strong>{{ target.numeroSolicitud }}</strong> y quedará
+      marcada como <strong>Finalizada</strong>. Esta acción no se puede deshacer.
+    </p>
+    @if (generarOrdenError()) {
+      <div class="confirm-error" role="alert">{{ generarOrdenError() }}</div>
+    }
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="generarOrdenSubmitting()" (click)="cancelGenerarOrden()">
+        Cancelar
+      </app-button>
+      <app-button variant="primary" [loading]="generarOrdenSubmitting()" (click)="confirmGenerarOrdenAction()">
+        Generar Orden
+      </app-button>
+    </div>
+  }
+</app-dialog>

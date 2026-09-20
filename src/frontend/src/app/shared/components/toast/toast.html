@@ -1,0 +1,16 @@
+<div class="toast-region" aria-live="polite" aria-atomic="true">
+  @for (item of items(); track item.id) {
+    <div
+      class="toast"
+      [class.toast-success]="item.variant === 'success'"
+      [class.toast-error]="item.variant === 'error'"
+      [class.toast-info]="item.variant === 'info'"
+      role="alert"
+    >
+      <span>{{ item.message }}</span>
+      <button type="button" class="toast-close" (click)="dismiss(item.id)" aria-label="Cerrar notificación">
+        &times;
+      </button>
+    </div>
+  }
+</div>

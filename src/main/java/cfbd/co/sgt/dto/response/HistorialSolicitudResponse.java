@@ -1,0 +1,19 @@
+package cfbd.co.sgt.dto.response;
+
+import java.time.Instant;
+import java.util.UUID;
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class HistorialSolicitudResponse {
+    private UUID id_historial_solicitud;
+    private UUID id_solicitud;
+    private UUID id_usuario;
+    private UUID id_estado_anterior;
+    private UUID id_estado_nuevo;
+    private Instant fecha;
+    private String comentario;
+}

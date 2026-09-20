@@ -1,0 +1,340 @@
+/**
+ * Estilos compartidos por las seis pantallas de Administración (catálogos de
+ * configuración: Usuarios, Roles, Permisos, Activos, Especialidades,
+ * Estados). Cada página los importa con @import y solo agrega lo que le es
+ * propio, para no repetir seis veces el mismo layout de página/tabla/estados
+ * (Fase 8: experiencia coherente, sin duplicar seis CRUDs idénticos).
+ */
+
+.admin-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.admin-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.admin-title-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.admin-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.admin-subtitle {
+  font-size: 13px;
+  color: var(--color-muted-foreground);
+  margin-top: 2px;
+}
+
+.admin-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-accent);
+  background: var(--status-info-bg);
+  border-radius: 999px;
+  padding: 2px var(--space-3);
+}
+
+.admin-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.admin-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-3);
+  height: 40px;
+  min-width: 260px;
+  color: var(--color-subtle-foreground);
+}
+
+.admin-search input {
+  border: none;
+  outline: none;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-foreground);
+  width: 100%;
+  background: transparent;
+}
+
+.admin-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  background: var(--status-warning-bg);
+  color: var(--status-warning-fg);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.admin-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-7) 0;
+  color: var(--color-muted-foreground);
+  font-size: 14px;
+}
+
+.admin-state-error {
+  color: var(--status-danger-fg);
+}
+
+.admin-tabla-wrapper {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.admin-tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-tabla thead th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted-foreground);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.admin-tabla tbody td {
+  padding: var(--space-3) var(--space-4);
+  font-size: 13px;
+  color: var(--color-foreground);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.admin-tabla tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-tabla-row {
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.admin-tabla-row:hover {
+  background: var(--color-bg);
+}
+
+.admin-tabla-col-acciones {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.admin-tabla-secundario {
+  color: var(--color-subtle-foreground);
+  font-size: 12px;
+}
+
+.admin-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--color-muted-foreground);
+  cursor: pointer;
+}
+
+.admin-icon-btn:hover {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
+}
+
+.admin-tabla-empty {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--color-subtle-foreground);
+  font-size: 13px;
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.admin-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+@media (max-width: 640px) {
+  .admin-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.admin-field-hint {
+  font-size: 12px;
+  color: var(--color-subtle-foreground);
+  margin-top: -6px;
+}
+
+.confirm-text {
+  font-size: 14px;
+  color: var(--color-foreground);
+  line-height: 1.5;
+  margin-bottom: var(--space-5);
+}
+
+.ficha-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ficha-info-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: 13px;
+}
+
+.ficha-info-label {
+  color: var(--color-muted-foreground);
+  font-weight: 500;
+}
+
+.ficha-nota {
+  font-size: 12px;
+  color: var(--color-subtle-foreground);
+  font-style: italic;
+}
+
+.ficha-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.ficha-historial-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted-foreground);
+  margin-bottom: var(--space-3);
+}
+
+.ficha-historial {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.confirm-error {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: 13px;
+  margin-bottom: var(--space-4);
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.admin-permisos-grupo {
+  margin-bottom: var(--space-4);
+}
+
+.admin-permisos-grupo-titulo {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted-foreground);
+  margin-bottom: var(--space-2);
+}
+
+.admin-permisos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.admin-permiso-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}
+
+.admin-permiso-item:hover {
+  background: var(--color-bg);
+}
+
+.admin-permiso-item input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.admin-permiso-item label {
+  cursor: pointer;
+  flex: 1;
+}
+
+.admin-permiso-codigo {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}

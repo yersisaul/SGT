@@ -1,0 +1,39 @@
+<article
+  class="requerimiento-card"
+  tabindex="0"
+  role="button"
+  [attr.aria-label]="'Requerimiento ' + item().raw.numeroRequerimiento"
+  (click)="open.emit()"
+  (keydown.enter)="open.emit()"
+>
+  <header class="requerimiento-card-header">
+    <span class="requerimiento-card-numero">{{ item().raw.numeroRequerimiento }}</span>
+    <app-badge [variant]="estadoBadgeVariant(item().estadoNombre)">{{ item().estadoNombre }}</app-badge>
+  </header>
+
+  <p class="requerimiento-card-descripcion">{{ item().raw.descripcion }}</p>
+
+  <div class="requerimiento-card-meta">
+    <span class="requerimiento-card-meta-item">{{ item().especialidadNombre }}</span>
+    <span class="requerimiento-card-meta-item">Creado por {{ item().creadoPorNombre }}</span>
+  </div>
+
+  <footer class="requerimiento-card-footer">
+    <span class="requerimiento-card-fecha">{{ item().raw.fecha_registro | date: 'd MMM, HH:mm' }}</span>
+    <div class="requerimiento-card-actions">
+      @if (item().raw.url_adjunto) {
+        <svg lucidePaperclip [size]="14" class="requerimiento-card-icon" aria-hidden="true"></svg>
+      }
+      @if (canDelete()) {
+        <button
+          type="button"
+          class="requerimiento-card-delete"
+          aria-label="Eliminar requerimiento"
+          (click)="onDelete($event)"
+        >
+          <svg lucideTrash [size]="14" aria-hidden="true"></svg>
+        </button>
+      }
+    </div>
+  </footer>
+</article>

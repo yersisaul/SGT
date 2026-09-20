@@ -1,0 +1,63 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="solicitud-form" novalidate>
+  <app-select
+    label="Activo"
+    placeholder="Selecciona un activo"
+    [options]="activoOptions"
+    formControlName="id_activo"
+    [errorMessage]="
+      form.controls.id_activo.touched && form.controls.id_activo.invalid ? 'Selecciona el activo afectado' : null
+    "
+  />
+
+  @if (mode() === 'edit') {
+    <app-select
+      label="Estado"
+      placeholder="Selecciona un estado"
+      [options]="estadoOptions"
+      formControlName="id_estado"
+      [errorMessage]="form.controls.id_estado.touched && form.controls.id_estado.invalid ? 'Selecciona un estado' : null"
+    />
+  }
+
+  <app-select
+    label="Prioridad"
+    placeholder="Selecciona una prioridad"
+    [options]="prioridadOptions"
+    formControlName="prioridad"
+    [errorMessage]="form.controls.prioridad.touched && form.controls.prioridad.invalid ? 'Selecciona una prioridad' : null"
+  />
+
+  <div class="field">
+    <label for="descripcion" class="field-label">Descripción</label>
+    <textarea
+      id="descripcion"
+      class="textarea"
+      rows="4"
+      formControlName="descripcion"
+      placeholder="Describe el problema o requerimiento…"
+      [class.textarea-error]="form.controls.descripcion.touched && form.controls.descripcion.invalid"
+    ></textarea>
+    @if (form.controls.descripcion.touched && form.controls.descripcion.invalid) {
+      <div class="helper helper-error" role="alert">La descripción es obligatoria (máx. 1000 caracteres).</div>
+    }
+  </div>
+
+  <app-input
+    label="URL adjunto (opcional)"
+    type="text"
+    placeholder="https://…"
+    formControlName="url_adjunto"
+    [errorMessage]="
+      form.controls.url_adjunto.touched && form.controls.url_adjunto.invalid
+        ? 'Ingresa una URL válida (http:// o https://)'
+        : null
+    "
+  />
+
+  <div class="solicitud-form-actions">
+    <app-button type="button" variant="secondary" (click)="cancel.emit()">Cancelar</app-button>
+    <app-button type="submit" variant="primary" [loading]="submitting()">
+      {{ mode() === 'create' ? 'Crear solicitud' : 'Guardar cambios' }}
+    </app-button>
+  </div>
+</form>

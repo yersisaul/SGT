@@ -1,0 +1,24 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="admin-form" novalidate>
+  <app-input
+    label="Nombre"
+    formControlName="nombre"
+    placeholder="Ej. Redes y comunicaciones"
+    [errorMessage]="form.controls.nombre.touched && form.controls.nombre.invalid ? 'El nombre es obligatorio' : null"
+  />
+
+  <app-input
+    label="Descripción"
+    formControlName="descripcion"
+    placeholder="Descripción breve (opcional)"
+    [errorMessage]="
+      form.controls.descripcion.touched && form.controls.descripcion.invalid ? 'Máximo 255 caracteres' : null
+    "
+  />
+
+  <div class="admin-form-actions">
+    <app-button type="button" variant="secondary" (click)="cancel.emit()">Cancelar</app-button>
+    <app-button type="submit" variant="primary" [loading]="submitting()">
+      {{ mode() === 'create' ? 'Crear especialidad' : 'Guardar cambios' }}
+    </app-button>
+  </div>
+</form>
