@@ -22,6 +22,15 @@ export const REQUERIMIENTO_ESTADOS_VALIDOS: readonly string[] = [
 
 export const REQUERIMIENTO_ESTADOS_EDITABLES_POR_PUT: readonly string[] = ['Pendiente', 'En revisión'];
 
+/**
+ * Subconjunto mostrado como columnas del Kanban (decisión de presentación,
+ * no de modelo): "Aprobado"/"Rechazado" NO tienen columna propia — son el
+ * resultado de una decisión puntual, no un paso operativo del flujo. Siguen
+ * existiendo como estado real y se muestran igual en la Tabla (que no usa
+ * este subconjunto, ver requerimientos/components/tabla/tabla.ts).
+ */
+export const REQUERIMIENTO_ESTADOS_KANBAN: readonly string[] = ['Pendiente', 'En revisión', 'En progreso', 'Finalizado'];
+
 function normalizar(nombre: string): string {
   return nombre.trim().toLowerCase();
 }
@@ -43,4 +52,9 @@ export function esEstadoAprobado(nombre: string): boolean {
 export function esEstadoDecidido(nombre: string): boolean {
   const objetivo = normalizar(nombre);
   return objetivo === 'aprobado' || objetivo === 'rechazado';
+}
+
+export function esEstadoKanbanDeRequerimiento(nombre: string): boolean {
+  const objetivo = normalizar(nombre);
+  return REQUERIMIENTO_ESTADOS_KANBAN.some((estado) => normalizar(estado) === objetivo);
 }

@@ -43,10 +43,16 @@ export const routes: Routes = [
         data: { permission: 'orden.read' },
       },
       {
+        // usuario.read ahora también lo tienen Cliente/Despachador (para
+        // resolver nombres de usuario en Solicitud/Requerimiento/Orden), así
+        // que ya no sirve para distinguir quién administra usuarios. La
+        // pantalla de administración se gatea con usuario.create, que solo
+        // tiene Administrador (CLAUDE.md 6: no usar un permiso de lectura
+        // amplio como excusa para exponer una capacidad administrativa).
         path: 'administracion/usuarios',
         component: Usuarios,
         canActivate: [permissionGuard],
-        data: { permission: 'usuario.read' },
+        data: { permission: 'usuario.create' },
       },
       {
         path: 'administracion/roles',

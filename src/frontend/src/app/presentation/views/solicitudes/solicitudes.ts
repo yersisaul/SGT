@@ -11,7 +11,9 @@ import {
   SolicitudRequest,
   SolicitudResponse,
 } from '../../../core/models/solicitud.model';
+import { RequerimientoRequest } from '../../../core/models/requerimiento.model';
 import { CatalogoService } from '../../../core/services/catalogo.service';
+import { RequerimientoService } from '../../../core/services/requerimiento.service';
 import { SolicitudService } from '../../../core/services/solicitud.service';
 import { Button } from '../../../shared/components/button/button';
 import { Dialog } from '../../../shared/components/dialog/dialog';
@@ -20,10 +22,16 @@ import { Spinner } from '../../../shared/components/spinner/spinner';
 import { NotificationService } from '../../../shared/services/notification.service';
 import { extractApiErrorMessage } from '../../../shared/utils/api-error.util';
 import { estadoOrderRank } from '../../../shared/utils/estado-order.util';
+import { Formulario as RequerimientoFormulario } from '../requerimientos/components/formulario/formulario';
 import { Formulario } from './components/formulario/formulario';
 import { Kanban, SolicitudMovida } from './components/kanban/kanban';
 import { Tabla } from './components/tabla/tabla';
-import { esEstadoEditablePorPut, esEstadoValidoDeSolicitud } from './solicitud-estados.config';
+import {
+  esEstadoEditablePorPut,
+  esEstadoFinalizado,
+  esEstadoPendiente,
+  esEstadoValidoDeSolicitud,
+} from './solicitud-estados.config';
 import { KanbanColumn, SolicitudView } from './solicitud-view.model';
 
 type ViewMode = 'kanban' | 'tabla';
@@ -41,6 +49,7 @@ type DialogMode = 'create' | 'edit' | null;
     Kanban,
     Tabla,
     Formulario,
+    RequerimientoFormulario,
     LucidePlus,
     LucideLayoutGrid,
     LucideTable,
@@ -53,6 +62,7 @@ type DialogMode = 'create' | 'edit' | null;
 export class Solicitudes {
   private readonly authService = inject(AuthService);
   private readonly solicitudService = inject(SolicitudService);
+  private readonly requerimientoService = inject(RequerimientoService);
   private readonly catalogoService = inject(CatalogoService);
   private readonly notifications = inject(NotificationService);
 
@@ -92,6 +102,14 @@ export class Solicitudes {
   protected readonly generarOrdenSubmitting = signal(false);
   protected readonly generarOrdenError = signal<string | null>(null);
 
+  // Crear Requerimiento desde la ficha de Solicitud: el modelo actual NO
+  // vincula Requerimiento a Solicitud (RequerimientoRequest no tiene
+  // id_solicitud), así que esto abre el mismo formulario de creación que la
+  // vista de Requerimientos, de forma independiente — no existe ninguna
+  // regla de negocio que lo condicione al estado de la Solicitud.
+  protected readonly crearRequerimientoAbierto = signal(false);
+  protected readonly crearRequerimientoSubmitting = signal(false);
+
   protected readonly ejecutorOptions = computed<SelectOption[]>(() =>
     this.usuariosOperaciones().map((u) => ({ value: u.id_usuario, label: `${u.nombres} ${u.apellidos}` })),
   );
@@ -101,6 +119,7 @@ export class Solicitudes {
 
   protected readonly activosCatalogo = this.activos.asReadonly();
   protected readonly estadosCatalogo = this.estados.asReadonly();
+  protected readonly especialidadesCatalogo = this.especialidades.asReadonly();
 
   protected readonly views = computed<SolicitudView[]>(() =>
     this.solicitudes().map((raw) => ({
@@ -141,12 +160,22 @@ export class Solicitudes {
     return this.views().find((view) => view.raw.id_solicitud === target.id_solicitud) ?? null;
   });
 
-  // "Finalizado" ya no es editable por PUT (ver solicitud-estados.config.ts):
-  // una vez ahí, el formulario de edición se oculta a favor de la ficha de
-  // solo lectura, y "Generar Orden" deja de ofrecerse (ya se generó).
+  // Comparación directa por nombre de estado — NO por "editable por PUT"
+  // (ese conjunto quedó vacío para Solicitud, ver solicitud-estados.config.ts,
+  // y usarlo como proxy de "finalizada" hacía que CUALQUIER estado, incluido
+  // Pendiente, entrara en la rama de "finalizada").
   protected readonly dialogEstaFinalizada = computed(() => {
     const view = this.dialogView();
-    return !!view && !esEstadoEditablePorPut(view.estadoNombre);
+    return !!view && esEstadoFinalizado(view.estadoNombre);
+  });
+
+  // "Generar Orden de Trabajo" solo tiene sentido para una Solicitud
+  // Pendiente: una vez generada la OT, la Solicitud pasa a "En progreso" y ya
+  // existe una Orden asociada (SolicitudServiceImpl.generarOrdenDesdeSolicitud
+  // bloquea una segunda OT con 409); "Finalizado" ya cerró su ciclo.
+  protected readonly dialogPuedeGenerarOrden = computed(() => {
+    const view = this.dialogView();
+    return !!view && esEstadoPendiente(view.estadoNombre);
   });
 
   constructor() {
@@ -293,6 +322,31 @@ export class Solicitudes {
         // vez de depender solo de un toast que puede pasar desapercibido.
         this.generarOrdenError.set(extractApiErrorMessage(error));
       },
+    });
+  }
+
+  protected requestCrearRequerimiento(): void {
+    this.crearRequerimientoAbierto.set(true);
+  }
+
+  protected cancelCrearRequerimiento(): void {
+    if (this.crearRequerimientoSubmitting()) return;
+    this.crearRequerimientoAbierto.set(false);
+  }
+
+  protected handleCrearRequerimientoSubmit(request: RequerimientoRequest): void {
+    const currentUser = this.authService.user();
+    if (!currentUser) return;
+
+    this.crearRequerimientoSubmitting.set(true);
+    const payload: RequerimientoRequest = { ...request, id_usuario: currentUser.id };
+    this.requerimientoService.crear(payload).subscribe({
+      next: (creado) => {
+        this.crearRequerimientoSubmitting.set(false);
+        this.crearRequerimientoAbierto.set(false);
+        this.notifications.success(`Requerimiento ${creado.numeroRequerimiento} creado correctamente.`);
+      },
+      error: () => this.crearRequerimientoSubmitting.set(false),
     });
   }
 

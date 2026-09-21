@@ -161,17 +161,13 @@
 
     @if (canGenerarOrden || canCreateRequerimiento || canDelete) {
       <div class="ficha-acciones">
-        @if (canGenerarOrden && !dialogEstaFinalizada()) {
+        @if (canGenerarOrden && dialogPuedeGenerarOrden()) {
           <app-button variant="primary" (click)="requestGenerarOrden(view.raw)">
             Generar Orden de Trabajo
           </app-button>
         }
         @if (canCreateRequerimiento) {
-          <app-button
-            variant="secondary"
-            [disabled]="true"
-            title="Disponible próximamente"
-          >
+          <app-button variant="secondary" (click)="requestCrearRequerimiento()">
             Crear Requerimiento
           </app-button>
         }
@@ -267,4 +263,23 @@
       </app-button>
     </div>
   }
+</app-dialog>
+
+<app-dialog
+  variant="modal"
+  title="Crear Requerimiento"
+  [open]="crearRequerimientoAbierto()"
+  (closed)="cancelCrearRequerimiento()"
+>
+  <p class="confirm-text">
+    El Requerimiento se crea de forma independiente: el modelo actual no vincula Requerimientos a Solicitudes.
+  </p>
+  <app-requerimiento-formulario
+    mode="create"
+    [especialidades]="especialidadesCatalogo()"
+    [estados]="estadosCatalogo()"
+    [submitting]="crearRequerimientoSubmitting()"
+    (submitForm)="handleCrearRequerimientoSubmit($event)"
+    (cancel)="cancelCrearRequerimiento()"
+  />
 </app-dialog>

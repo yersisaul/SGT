@@ -41,6 +41,7 @@ import {
   esEstadoAprobado,
   esEstadoDecidido,
   esEstadoEditablePorPut,
+  esEstadoKanbanDeRequerimiento,
   esEstadoValidoDeRequerimiento,
 } from './requerimiento-estados.config';
 import { RequerimientoKanbanColumn, RequerimientoView } from './requerimiento-view.model';
@@ -176,6 +177,10 @@ export class Requerimientos {
     })),
   );
 
+  // Solo las 4 columnas operativas (Observación 3 del pedido): "Aprobado"/
+  // "Rechazado" no tienen columna propia en el Kanban, aunque siguen siendo
+  // estados reales y se muestran igual en la Tabla (que no depende de este
+  // filtro, ver components/tabla/tabla.ts).
   protected readonly kanbanColumns = computed<RequerimientoKanbanColumn[]>(() => {
     const agrupado = new Map<string, RequerimientoView[]>();
     for (const view of this.views()) {
@@ -183,7 +188,8 @@ export class Requerimientos {
       lista.push(view);
       agrupado.set(view.raw.id_estado, lista);
     }
-    return [...this.estadosRequerimiento()]
+    return this.estadosRequerimiento()
+      .filter((estado) => esEstadoKanbanDeRequerimiento(estado.nombre))
       .sort((a, b) => estadoOrderRank(a.nombre) - estadoOrderRank(b.nombre))
       .map((estado) => ({
         estadoId: estado.id_estado,

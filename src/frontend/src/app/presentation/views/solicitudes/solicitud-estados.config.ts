@@ -31,3 +31,15 @@ export function esEstadoEditablePorPut(nombre: string): boolean {
   const objetivo = normalizar(nombre);
   return SOLICITUD_ESTADOS_EDITABLES_POR_PUT.some((editable) => normalizar(editable) === objetivo);
 }
+
+// NO usar "no editable por PUT" como proxy de "finalizada": desde que
+// SOLICITUD_ESTADOS_EDITABLES_POR_PUT quedó vacío (ninguna transición de
+// Solicitud es manual), esa comparación daba "finalizada" para CUALQUIER
+// estado, incluido Pendiente. Comparar directamente por nombre de estado.
+export function esEstadoPendiente(nombre: string): boolean {
+  return normalizar(nombre) === 'pendiente';
+}
+
+export function esEstadoFinalizado(nombre: string): boolean {
+  return normalizar(nombre) === 'finalizado';
+}

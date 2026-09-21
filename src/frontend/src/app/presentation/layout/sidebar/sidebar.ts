@@ -75,7 +75,10 @@ const NAV_ITEMS: NavItem[] = [
  * nombre de rol (CLAUDE.md 5.2/Fase 9).
  */
 const ADMIN_NAV_ITEMS: NavItem[] = [
-  { label: 'Usuarios', route: '/app/administracion/usuarios', icon: 'usuarios', permission: 'usuario.read' },
+  // usuario.read ya no es exclusivo de quien administra usuarios (Cliente y
+  // Despachador lo tienen para resolver nombres, ver app.routes.ts); el
+  // enlace del menú se gatea con usuario.create, que solo tiene Administrador.
+  { label: 'Usuarios', route: '/app/administracion/usuarios', icon: 'usuarios', permission: 'usuario.create' },
   { label: 'Roles', route: '/app/administracion/roles', icon: 'roles', permission: 'rol.read' },
   { label: 'Permisos', route: '/app/administracion/permisos', icon: 'permisos', permission: 'permiso.read' },
   { label: 'Activos', route: '/app/administracion/activos', icon: 'activos', permission: 'activo.read' },
