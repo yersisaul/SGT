@@ -26,15 +26,19 @@ import cfbd.co.sgt.exception.ResourceNotFoundException;
 import cfbd.co.sgt.model.Estado;
 import cfbd.co.sgt.model.HistorialOrden;
 import cfbd.co.sgt.model.HistorialRequerimiento;
+import cfbd.co.sgt.model.HistorialSolicitud;
 import cfbd.co.sgt.model.Orden;
 import cfbd.co.sgt.model.Requerimiento;
+import cfbd.co.sgt.model.Solicitud;
 import cfbd.co.sgt.model.Usuario;
 import cfbd.co.sgt.repository.EspecialidadRepository;
 import cfbd.co.sgt.repository.EstadoRepository;
 import cfbd.co.sgt.repository.HistorialOrdenRepository;
 import cfbd.co.sgt.repository.HistorialRequerimientoRepository;
+import cfbd.co.sgt.repository.HistorialSolicitudRepository;
 import cfbd.co.sgt.repository.OrdenRepository;
 import cfbd.co.sgt.repository.RequerimientoRepository;
+import cfbd.co.sgt.repository.SolicitudRepository;
 import cfbd.co.sgt.repository.UsuarioRepository;
 import cfbd.co.sgt.service.RequerimientoService;
 import cfbd.co.sgt.service.SlaCalculator;
@@ -78,6 +82,12 @@ public class RequerimientoServiceImpl implements RequerimientoService {
 
     @Autowired
     private HistorialOrdenRepository historialOrdenRepository;
+
+    @Autowired
+    private SolicitudRepository solicitudRepository;
+
+    @Autowired
+    private HistorialSolicitudRepository historialSolicitudRepository;
 
     @Autowired
     private SlaCalculator slaCalculator;
@@ -252,7 +262,46 @@ public class RequerimientoServiceImpl implements RequerimientoService {
                 : "Orden de trabajo " + ordenGuardada.getNumeroOrden() + " generada desde el Requerimiento aprobado; Requerimiento pasa a En progreso.");
         historialRequerimientoRepository.save(historial);
 
+        // Si este Requerimiento se originó de una Solicitud fuera de contrato
+        // (Requerimiento.solicitud, relación real — ver
+        // SolicitudServiceImpl.generarRequerimientoDesdeSolicitud), generar la
+        // OT ya significa que el trabajo pasó a ejecución: la Solicitud de
+        // origen debe sincronizarse de "En revisión" a "En progreso" en la
+        // misma transacción (la clase es @Transactional; si algo de lo
+        // anterior falla, esto tampoco se aplica).
+        if (requerimiento.getSolicitud() != null) {
+            sincronizarSolicitudOrigenConOrden(requerimiento.getSolicitud(), ordenGuardada, actor);
+        }
+
         return convertirOrdenAResponse(ordenGuardada);
+    }
+
+    private void sincronizarSolicitudOrigenConOrden(Solicitud solicitud, Orden ordenGuardada, Usuario actor) {
+        if (!"En revisión".equalsIgnoreCase(solicitud.getEstado().getNombre())) {
+            // Ya no está "En revisión" (p. ej. ya se sincronizó antes o el
+            // dato es legado): no reintentar la transición para no violar
+            // SolicitudServiceImpl.validarTransicion ni pisar un estado más
+            // avanzado (En progreso/Finalizado).
+            return;
+        }
+
+        Estado estadoAnteriorSolicitud = solicitud.getEstado();
+        Estado estadoEnProgresoSolicitud = estadoRepository.findByNombre("En progreso")
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Estado 'En progreso' no está configurado en el catálogo."));
+
+        solicitud.setEstado(estadoEnProgresoSolicitud);
+        solicitudRepository.save(solicitud);
+
+        HistorialSolicitud historialSolicitud = new HistorialSolicitud();
+        historialSolicitud.setSolicitud(solicitud);
+        historialSolicitud.setUsuario(actor);
+        historialSolicitud.setEstado_anterior(estadoAnteriorSolicitud);
+        historialSolicitud.setEstado_nuevo(estadoEnProgresoSolicitud);
+        historialSolicitud.setFecha(Instant.now());
+        historialSolicitud.setComentario("Orden de trabajo " + ordenGuardada.getNumeroOrden()
+                + " generada desde el Requerimiento asociado; Solicitud pasa a En progreso.");
+        historialSolicitudRepository.save(historialSolicitud);
     }
 
     /** Valida que el usuario elegido como ejecutor exista y tenga rol

@@ -587,13 +587,34 @@ class FlujoNegocioIntegrationTest {
         assertThat(requerimientoEnProgreso.get("id_estado").asText())
                 .isEqualTo(idEstadoPorNombre(estados, "En progreso").toString());
 
-        // La Solicitud sigue "En revisión" — generar la OT del Requerimiento
-        // NO la mueve a "En progreso" (solo el cierre de la OT la finaliza).
-        JsonNode solicitudTodaviaEnRevision = json(mockMvc.perform(
+        // Generar la OT desde el Requerimiento también sincroniza la Solicitud
+        // de origen: "En revisión" -> "En progreso" (el trabajo ya pasó a
+        // ejecución), en la misma operación que crea la OT y avanza el
+        // Requerimiento.
+        JsonNode solicitudEnProgreso = json(mockMvc.perform(
                         authed(get("/api/solicitudes/" + idSolicitudFueraDeContrato), tokenDespachador))
                 .andReturn());
-        assertThat(solicitudTodaviaEnRevision.get("id_estado").asText())
-                .isEqualTo(idEstadoPorNombre(estados, "En revisión").toString());
+        assertThat(solicitudEnProgreso.get("id_estado").asText())
+                .isEqualTo(idEstadoPorNombre(estados, "En progreso").toString());
+
+        // Esa transición queda registrada en HistorialSolicitud.
+        JsonNode historialSolicitud = json(mockMvc.perform(
+                        authed(get("/api/historial-solicitudes"), tokenDespachador))
+                .andReturn());
+        UUID idEnRevision = idEstadoPorNombre(estados, "En revisión");
+        UUID idEnProgresoParaHistorial = idEstadoPorNombre(estados, "En progreso");
+        boolean transicionRegistrada = false;
+        for (JsonNode registro : historialSolicitud) {
+            if (registro.get("id_solicitud").asText().equals(idSolicitudFueraDeContrato.toString())
+                    && registro.get("id_estado_anterior").asText().equals(idEnRevision.toString())
+                    && registro.get("id_estado_nuevo").asText().equals(idEnProgresoParaHistorial.toString())) {
+                transicionRegistrada = true;
+                break;
+            }
+        }
+        assertThat(transicionRegistrada)
+                .as("HistorialSolicitud debe registrar En revisión -> En progreso al generar la OT desde el Requerimiento.")
+                .isTrue();
 
         // Cierre de la OT: cascada Orden -> Requerimiento -> Solicitud.
         mockMvc.perform(authed(post("/api/ordenes/" + idOrdenDesdeRequerimientoDeSolicitud + "/cerrar"), tokenOperaciones)
