@@ -17,4 +17,6 @@ public class RequerimientoResponse {
     private Instant fecha_registro;
     private String descripcion;
     private String url_adjunto;
+    /** Derivado (no persistido): fecha_registro + SLA fijo de Requerimiento. Ver SlaCalculator. */
+    private Instant fecha_limite_despacho;
 }

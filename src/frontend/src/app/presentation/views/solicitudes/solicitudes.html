@@ -238,9 +238,18 @@
 >
   @if (generarOrdenTarget(); as target) {
     <p class="confirm-text">
-      Se generará una Orden de Trabajo a partir de la solicitud <strong>{{ target.numeroSolicitud }}</strong> y quedará
-      marcada como <strong>Finalizada</strong>. Esta acción no se puede deshacer.
+      Se generará una Orden de Trabajo a partir de la solicitud <strong>{{ target.numeroSolicitud }}</strong> y la
+      Solicitud pasará a <strong>En progreso</strong>. Esta acción no se puede deshacer.
     </p>
+
+    <app-select
+      label="Ejecutor responsable"
+      placeholder="Selecciona un usuario de Operaciones"
+      [options]="ejecutorOptions()"
+      [ngModel]="generarOrdenEjecutor()"
+      (ngModelChange)="generarOrdenEjecutor.set($event)"
+    />
+
     @if (generarOrdenError()) {
       <div class="confirm-error" role="alert">{{ generarOrdenError() }}</div>
     }
@@ -248,7 +257,12 @@
       <app-button variant="secondary" [disabled]="generarOrdenSubmitting()" (click)="cancelGenerarOrden()">
         Cancelar
       </app-button>
-      <app-button variant="primary" [loading]="generarOrdenSubmitting()" (click)="confirmGenerarOrdenAction()">
+      <app-button
+        variant="primary"
+        [disabled]="!generarOrdenEjecutor()"
+        [loading]="generarOrdenSubmitting()"
+        (click)="confirmGenerarOrdenAction()"
+      >
         Generar Orden
       </app-button>
     </div>

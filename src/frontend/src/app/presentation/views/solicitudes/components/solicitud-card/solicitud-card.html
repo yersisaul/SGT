@@ -8,7 +8,12 @@
 >
   <header class="solicitud-card-header">
     <span class="solicitud-card-numero">{{ item().raw.numeroSolicitud }}</span>
-    <app-badge [variant]="prioridadBadgeVariant(item().raw.prioridad)">{{ item().raw.prioridad }}</app-badge>
+    <div class="solicitud-card-header-badges">
+      @if (mostrarSla) {
+        <app-sla-indicator [fechaRegistro]="item().raw.fecha_registro" [fechaLimiteDespacho]="item().raw.fecha_limite_despacho" />
+      }
+      <app-badge [variant]="prioridadBadgeVariant(item().raw.prioridad)">{{ item().raw.prioridad }}</app-badge>
+    </div>
   </header>
 
   <p class="solicitud-card-descripcion">{{ item().raw.descripcion }}</p>

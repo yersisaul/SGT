@@ -3,7 +3,13 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { API_BASE_URL } from '../config/api-config';
-import { CerrarOrdenRequest, HistorialOrdenResponse, OrdenRequest, OrdenResponse } from '../models/orden.model';
+import {
+  CerrarOrdenRequest,
+  HistorialOrdenResponse,
+  OrdenRequest,
+  OrdenResponse,
+  ReasignarOrdenRequest,
+} from '../models/orden.model';
 
 /**
  * CRUD real de Orden (OrdenController) + cierre (cerrarOrden). No hay
@@ -36,6 +42,12 @@ export class OrdenService {
   /** POST /ordenes/{id}/cerrar — único camino a Finalizado. */
   cerrar(id: string, request: CerrarOrdenRequest): Observable<OrdenResponse> {
     return this.http.post<OrdenResponse>(`${this.apiBaseUrl}/ordenes/${id}/cerrar`, request);
+  }
+
+  /** POST /ordenes/{id}/reasignar — cambia el ejecutor asignado (orden.usuario).
+   * Autorizado en backend solo al ejecutor actual o a un Administrador. */
+  reasignar(id: string, request: ReasignarOrdenRequest): Observable<OrdenResponse> {
+    return this.http.post<OrdenResponse>(`${this.apiBaseUrl}/ordenes/${id}/reasignar`, request);
   }
 
   /** No existe endpoint filtrado por Orden; se trae todo

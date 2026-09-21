@@ -77,6 +77,25 @@
               <app-badge variant="warning">Pendiente</app-badge>
             </a>
           }
+          @if (pendientesProximosAVencer() > 0) {
+            <div class="atencion-item">
+              <svg lucideClock [size]="18" aria-hidden="true"></svg>
+              <span class="atencion-texto">
+                <strong>{{ pendientesProximosAVencer() }}</strong> solicitud(es)/requerimiento(s) próximos a vencer su
+                SLA de despacho
+              </span>
+              <app-badge variant="warning">Por vencer</app-badge>
+            </div>
+          }
+          @if (pendientesFueraDeSla() > 0) {
+            <div class="atencion-item">
+              <svg lucideClock [size]="18" aria-hidden="true"></svg>
+              <span class="atencion-texto">
+                <strong>{{ pendientesFueraDeSla() }}</strong> solicitud(es)/requerimiento(s) fuera del SLA de despacho
+              </span>
+              <app-badge variant="danger">Fuera de SLA</app-badge>
+            </div>
+          }
         </div>
       </section>
     }

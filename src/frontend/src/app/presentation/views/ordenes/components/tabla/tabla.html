@@ -36,6 +36,7 @@
               </button>
             </th>
             <th>Especialidad</th>
+            <th>Ejecutor</th>
             <th>Estado</th>
             <th>
               <button type="button" class="tabla-sort" (click)="toggleSort('fecha')">
@@ -51,6 +52,7 @@
             <tr class="tabla-row" (click)="open.emit(item)">
               <td class="tabla-numero">{{ item.raw.numeroOrden }}</td>
               <td>{{ item.especialidadNombre }}</td>
+              <td>{{ item.usuarioNombre }}</td>
               <td><app-badge [variant]="estadoBadgeVariant(item.estadoNombre)">{{ item.estadoNombre }}</app-badge></td>
               <td class="tabla-fecha">{{ item.raw.fecha_registro | date: 'd MMM yyyy, HH:mm' }}</td>
               <td class="tabla-fecha">

@@ -4,12 +4,17 @@
  * estado-badge.util: por substring, no igualdad exacta. Un Estado que no
  * calce con ningún patrón conocido (ej. "Cancelado") se ubica al final en
  * vez de perderse.
+ *
+ * "Aprobado"/"Rechazado" (exclusivos de Requerimiento) van entre "En
+ * revisión" y "En progreso": son el resultado de la decisión que sigue a la
+ * revisión y preceden a la ejecución.
  */
 export function estadoOrderRank(nombre: string): number {
   const normalizado = nombre.toLowerCase();
   if (normalizado.includes('pendiente')) return 0;
   if (normalizado.includes('revisi')) return 1;
-  if (normalizado.includes('progreso')) return 2;
-  if (normalizado.includes('final')) return 3;
+  if (normalizado.includes('aprob') || normalizado.includes('rechaz')) return 2;
+  if (normalizado.includes('progreso')) return 3;
+  if (normalizado.includes('final')) return 4;
   return 99;
 }

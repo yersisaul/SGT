@@ -9,15 +9,16 @@ import { SolicitudResponse } from '../../../core/models/solicitud.model';
  * origen: esos se cargan bajo demanda al abrir el detalle (ver
  * OrigenContexto), no en cada tarjeta de la bandeja.
  *
- * Sin "generadaPorNombre": OrdenResponse NO expone id_usuario (a diferencia
- * de SolicitudResponse/RequerimientoResponse), aunque el modelo Orden y
- * OrdenRequest sí lo tienen — es un campo que el backend no devuelve, así
- * que no se puede resolver "quién generó la Orden" sin inventar el dato.
+ * usuarioNombre es el EJECUTOR de Operaciones responsable (OrdenResponse.id_usuario
+ * ya no es el creador — ver Orden.usuario en el backend), resuelto contra el
+ * catálogo de usuarios de rol Operaciones (GET /usuarios/operaciones), no
+ * contra el catálogo genérico de usuarios (que Operaciones no puede leer).
  */
 export interface OrdenView {
   raw: OrdenResponse;
   estadoNombre: string;
   especialidadNombre: string;
+  usuarioNombre: string;
 }
 
 export interface OrdenKanbanColumn {

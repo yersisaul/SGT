@@ -28,6 +28,7 @@ import { Card } from '../../../shared/components/card/card';
 import { StatusSummary } from '../../../shared/components/status-summary/status-summary';
 import { estadoBadgeVariant } from '../../../shared/utils/estado-badge.util';
 import { prioridadBadgeVariant } from '../../../shared/utils/prioridad-badge.util';
+import { calcularSla } from '../../../shared/utils/sla.util';
 
 type AdminIcon = 'usuarios' | 'roles' | 'permisos' | 'activos' | 'especialidades' | 'estados';
 
@@ -176,11 +177,40 @@ export class Dashboard {
   protected readonly ordenesPorIniciar = computed(
     () => this.ordenes().filter((o) => this.nombreEstado(o.id_estado).toLowerCase() === 'pendiente').length,
   );
+
+  /** SLA de despacho (Solicitud/Requerimiento "Pendiente" únicamente — una
+   * vez despachados el backend deja de calcular un deadline útil para esta
+   * métrica). Mismo umbral que shared/utils/sla.util.ts, sin datos ficticios:
+   * cuenta sobre las listas reales ya cargadas. */
+  protected readonly pendientesFueraDeSla = computed(() => {
+    const esPendiente = (idEstado: string) => this.nombreEstado(idEstado).toLowerCase() === 'pendiente';
+    const solicitudesFuera = this.solicitudes().filter(
+      (s) => esPendiente(s.id_estado) && calcularSla(s.fecha_registro, s.fecha_limite_despacho)?.variante === 'rojo',
+    ).length;
+    const requerimientosFuera = this.requerimientos().filter(
+      (r) => esPendiente(r.id_estado) && calcularSla(r.fecha_registro, r.fecha_limite_despacho)?.variante === 'rojo',
+    ).length;
+    return solicitudesFuera + requerimientosFuera;
+  });
+
+  protected readonly pendientesProximosAVencer = computed(() => {
+    const esPendiente = (idEstado: string) => this.nombreEstado(idEstado).toLowerCase() === 'pendiente';
+    const solicitudesProximas = this.solicitudes().filter(
+      (s) => esPendiente(s.id_estado) && calcularSla(s.fecha_registro, s.fecha_limite_despacho)?.variante === 'amarillo',
+    ).length;
+    const requerimientosProximos = this.requerimientos().filter(
+      (r) => esPendiente(r.id_estado) && calcularSla(r.fecha_registro, r.fecha_limite_despacho)?.variante === 'amarillo',
+    ).length;
+    return solicitudesProximas + requerimientosProximos;
+  });
+
   protected readonly tieneAtencion = computed(
     () =>
       this.kpiRequerimientosPendientes() > 0 ||
       this.solicitudesPorClasificar() > 0 ||
-      this.ordenesPorIniciar() > 0,
+      this.ordenesPorIniciar() > 0 ||
+      this.pendientesFueraDeSla() > 0 ||
+      this.pendientesProximosAVencer() > 0,
   );
 
   // --- Distribución y actividad ---

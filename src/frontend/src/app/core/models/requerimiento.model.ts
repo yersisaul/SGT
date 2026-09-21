@@ -11,6 +11,10 @@ export interface RequerimientoResponse {
   fecha_registro: string;
   descripcion: string;
   url_adjunto: string | null;
+  /** Derivado en backend (fecha_registro + SLA fijo de Requerimiento), no
+   * persistido. El front lo muestra solo mientras el Requerimiento sigue
+   * "Pendiente" (ver shared/utils/sla.util.ts). */
+  fecha_limite_despacho: string | null;
 }
 
 export interface RequerimientoRequest {

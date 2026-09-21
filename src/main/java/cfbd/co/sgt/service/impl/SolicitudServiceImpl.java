@@ -24,6 +24,7 @@ import cfbd.co.sgt.dto.response.ResumenEstadosResponse;
 import cfbd.co.sgt.dto.response.SolicitudResponse;
 import cfbd.co.sgt.exception.ResourceNotFoundException;
 import cfbd.co.sgt.model.Estado;
+import cfbd.co.sgt.model.HistorialOrden;
 import cfbd.co.sgt.model.HistorialSolicitud;
 import cfbd.co.sgt.model.Orden;
 import cfbd.co.sgt.model.Solicitud;
@@ -31,10 +32,12 @@ import cfbd.co.sgt.model.Usuario;
 import cfbd.co.sgt.repository.ActivoRepository;
 import cfbd.co.sgt.repository.EspecialidadRepository;
 import cfbd.co.sgt.repository.EstadoRepository;
+import cfbd.co.sgt.repository.HistorialOrdenRepository;
 import cfbd.co.sgt.repository.HistorialSolicitudRepository;
 import cfbd.co.sgt.repository.OrdenRepository;
 import cfbd.co.sgt.repository.SolicitudRepository;
 import cfbd.co.sgt.repository.UsuarioRepository;
+import cfbd.co.sgt.service.SlaCalculator;
 import cfbd.co.sgt.service.SolicitudService;
 import jakarta.transaction.Transactional;
 
@@ -43,12 +46,13 @@ import jakarta.transaction.Transactional;
 public class SolicitudServiceImpl implements SolicitudService {
 
     // Transiciones válidas para Solicitud vía PUT genérico (nombre en
-    // minúsculas). "Finalizado" está deliberadamente excluido: solo se
-    // alcanza a través de generarOrdenDesdeSolicitud, para que el PUT
-    // genérico no permita saltarse el flujo (CLAUDE.md 5.3).
+    // minúsculas). Solicitud solo maneja Pendiente/En progreso/Finalizado; no
+    // hay ninguna transición manual: "Pendiente -> En progreso" solo se
+    // alcanza despachando (generarOrdenDesdeSolicitud) y "-> Finalizado" solo
+    // al cerrarse la Orden asociada (OrdenServiceImpl.cerrarOrden), nunca por
+    // PUT genérico (CLAUDE.md 5.3).
     private static final Map<String, Set<String>> TRANSICIONES_PERMITIDAS = Map.of(
-            "pendiente", Set.of("en revisión"),
-            "en revisión", Set.of("en progreso"),
+            "pendiente", Set.of(),
             "en progreso", Set.of(),
             "finalizado", Set.of());
 
@@ -72,6 +76,12 @@ public class SolicitudServiceImpl implements SolicitudService {
 
     @Autowired
     private HistorialSolicitudRepository historialSolicitudRepository;
+
+    @Autowired
+    private HistorialOrdenRepository historialOrdenRepository;
+
+    @Autowired
+    private SlaCalculator slaCalculator;
 
     @Override
     public SolicitudResponse crearSolicitud(SolicitudRequest solicitudDTO) {
@@ -194,18 +204,32 @@ public class SolicitudServiceImpl implements SolicitudService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                         "Estado 'Pendiente' no está configurado en el catálogo."));
         Usuario actor = usuarioAutenticado();
+        Usuario ejecutor = resolverEjecutorOperaciones(request.getId_usuario_ejecutor());
 
         Orden orden = new Orden();
-        orden.setUsuario(actor);
+        // Orden.usuario es el ejecutor de Operaciones responsable, no quien
+        // genera la OT (ver historial de creación más abajo para conservar
+        // esa trazabilidad).
+        orden.setUsuario(ejecutor);
         orden.setEstado(estadoInicialOrden);
         orden.setEspecialidad(solicitud.getEspecialidad());
         orden.setSolicitud(solicitud);
         orden.setRequerimiento(null);
-        orden.setUrl_adjunto(request != null ? request.getUrl_adjunto() : null);
+        orden.setUrl_adjunto(request.getUrl_adjunto());
         Long correlativo = ordenRepository.count() + 1;
         orden.setNumeroOrden("OT-" + correlativo);
         orden.setFecha_registro(Instant.now());
         Orden ordenGuardada = ordenRepository.save(orden);
+
+        HistorialOrden historialCreacion = new HistorialOrden();
+        historialCreacion.setOrden(ordenGuardada);
+        historialCreacion.setUsuario(actor);
+        historialCreacion.setEstado_anterior(estadoInicialOrden);
+        historialCreacion.setEstado_nuevo(estadoInicialOrden);
+        historialCreacion.setFecha(Instant.now());
+        historialCreacion.setComentario("Orden creada desde la Solicitud " + solicitud.getNumeroSolicitud()
+                + " y asignada a " + ejecutor.getNombres() + " " + ejecutor.getApellidos() + ".");
+        historialOrdenRepository.save(historialCreacion);
 
         solicitud.setEstado(estadoEnProgreso);
         solicitudRepository.save(solicitud);
@@ -216,12 +240,25 @@ public class SolicitudServiceImpl implements SolicitudService {
         historial.setEstado_anterior(estadoAnterior);
         historial.setEstado_nuevo(estadoEnProgreso);
         historial.setFecha(Instant.now());
-        historial.setComentario(request != null && request.getComentario() != null
+        historial.setComentario(request.getComentario() != null
                 ? request.getComentario()
                 : "Orden de trabajo " + ordenGuardada.getNumeroOrden() + " generada desde la Solicitud (bajo contrato); Solicitud pasa a En progreso.");
         historialSolicitudRepository.save(historial);
 
         return convertirOrdenAResponse(ordenGuardada);
+    }
+
+    /** Valida que el usuario elegido como ejecutor exista y tenga rol
+     * Operaciones (CLAUDE.md: no permitir asignar una OT a alguien que no sea
+     * Operaciones). */
+    private Usuario resolverEjecutorOperaciones(UUID idUsuarioEjecutor) {
+        Usuario ejecutor = usuarioRepository.findById(idUsuarioEjecutor)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario ejecutor no encontrado"));
+        if (!"Operaciones".equalsIgnoreCase(ejecutor.getRol().getNombre())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "El ejecutor asignado debe tener rol Operaciones.");
+        }
+        return ejecutor;
     }
 
     private boolean esCliente(Usuario usuario) {
@@ -262,12 +299,15 @@ public class SolicitudServiceImpl implements SolicitudService {
         response.setFecha_registro(solicitud.getFecha_registro());
         response.setDescripcion(solicitud.getDescripcion());
         response.setUrl_adjunto(solicitud.getUrl_adjunto());
+        response.setFecha_limite_despacho(
+                slaCalculator.deadlineSolicitud(solicitud.getFecha_registro(), solicitud.getPrioridad()));
         return response;
     }
 
     private OrdenResponse convertirOrdenAResponse(Orden orden) {
         OrdenResponse response = new OrdenResponse();
         response.setId_orden(orden.getId_orden());
+        response.setId_usuario(orden.getUsuario().getId_usuario());
         response.setId_especialidad(orden.getEspecialidad().getId_especialidad());
         response.setId_estado(orden.getEstado().getId_estado());
         response.setId_requerimiento(orden.getRequerimiento() != null ? orden.getRequerimiento().getId_requerimiento() : null);

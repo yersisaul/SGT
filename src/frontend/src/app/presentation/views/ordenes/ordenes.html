@@ -91,6 +91,10 @@
         <span>{{ view.especialidadNombre }}</span>
       </div>
       <div class="ficha-info-row">
+        <span class="ficha-info-label">Ejecutor</span>
+        <span>{{ view.usuarioNombre }}</span>
+      </div>
+      <div class="ficha-info-row">
         <span class="ficha-info-label">Fecha de registro</span>
         <span>{{ view.raw.fecha_registro | date: 'd MMM yyyy, HH:mm' }}</span>
       </div>
@@ -140,7 +144,7 @@
       }
     </div>
 
-    @if ((canUpdate && !dialogEstaCerrada()) || (canCerrar && !dialogEstaCerrada()) || canDelete) {
+    @if ((canUpdate && !dialogEstaCerrada()) || (canCerrar && !dialogEstaCerrada()) || (dialogPuedeReasignar() && !dialogEstaCerrada()) || canDelete) {
       <div class="ficha-acciones ficha-acciones-columna">
         @if (canUpdate && !dialogEstaCerrada()) {
           <app-orden-ejecutar
@@ -151,6 +155,9 @@
           />
         }
         <div class="ficha-acciones">
+          @if (dialogPuedeReasignar() && !dialogEstaCerrada()) {
+            <app-button variant="secondary" (click)="requestReasignar(view.raw)">Reasignar Orden</app-button>
+          }
           @if (canCerrar && !dialogEstaCerrada()) {
             <app-button variant="primary" (click)="requestCerrar(view.raw)">Cerrar Orden</app-button>
           }
@@ -228,6 +235,9 @@
       @if (target.id_solicitud) {
         La Solicitud de origen también pasará a <strong>Finalizado</strong>.
       }
+      @if (target.id_requerimiento) {
+        El Requerimiento de origen también pasará a <strong>Finalizado</strong>.
+      }
     </p>
 
     <div class="field">
@@ -250,6 +260,57 @@
       <app-button variant="secondary" [disabled]="cerrarSubmitting()" (click)="cancelCerrar()">Cancelar</app-button>
       <app-button variant="primary" [loading]="cerrarSubmitting()" (click)="confirmCerrarAction()">
         Cerrar Orden
+      </app-button>
+    </div>
+  }
+</app-dialog>
+
+<app-dialog
+  variant="modal"
+  title="Reasignar Orden"
+  [open]="reasignarTarget() !== null"
+  (closed)="cancelReasignar()"
+>
+  @if (reasignarTarget(); as target) {
+    <p class="confirm-text">
+      Vas a reasignar la orden <strong>{{ target.numeroOrden }}</strong> a otro ejecutor de Operaciones.
+    </p>
+
+    <app-select
+      label="Nuevo ejecutor"
+      placeholder="Selecciona un ejecutor de Operaciones"
+      [options]="ejecutorOptions()"
+      [ngModel]="reasignarSeleccionado()"
+      (ngModelChange)="reasignarSeleccionado.set($event)"
+    />
+
+    <div class="field">
+      <label for="reasignar-comentario" class="field-label">Comentario (opcional)</label>
+      <textarea
+        id="reasignar-comentario"
+        class="textarea"
+        rows="3"
+        [ngModel]="reasignarComentario()"
+        (ngModelChange)="reasignarComentario.set($event)"
+        placeholder="Motivo de la reasignación…"
+      ></textarea>
+    </div>
+
+    @if (reasignarError()) {
+      <div class="confirm-error" role="alert">{{ reasignarError() }}</div>
+    }
+
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="reasignarSubmitting()" (click)="cancelReasignar()">
+        Cancelar
+      </app-button>
+      <app-button
+        variant="primary"
+        [disabled]="!reasignarSeleccionado()"
+        [loading]="reasignarSubmitting()"
+        (click)="confirmReasignarAction()"
+      >
+        Reasignar
       </app-button>
     </div>
   }

@@ -3,14 +3,15 @@
  * Este archivo fija, por nombre (no por posición), el subconjunto de Orden
  * — mismo criterio que solicitud-estados.config.ts / requerimiento-estados.config.ts.
  *
- * "Finalizado" es válido para mostrar (columna del Kanban) pero NO editable
- * por PUT: solo se alcanza vía POST /api/ordenes/{id}/cerrar
+ * Orden maneja ÚNICAMENTE Pendiente/En progreso/Finalizado — sin "En
+ * revisión". "Finalizado" es válido para mostrar (columna del Kanban) pero
+ * NO editable por PUT: solo se alcanza vía POST /api/ordenes/{id}/cerrar
  * (OrdenServiceImpl.validarTransicion solo permite moverse entre
- * Pendiente/En revisión/En progreso).
+ * Pendiente/En progreso).
  */
-export const ORDEN_ESTADOS_VALIDOS: readonly string[] = ['Pendiente', 'En revisión', 'En progreso', 'Finalizado'];
+export const ORDEN_ESTADOS_VALIDOS: readonly string[] = ['Pendiente', 'En progreso', 'Finalizado'];
 
-export const ORDEN_ESTADOS_EDITABLES_POR_PUT: readonly string[] = ['Pendiente', 'En revisión', 'En progreso'];
+export const ORDEN_ESTADOS_EDITABLES_POR_PUT: readonly string[] = ['Pendiente', 'En progreso'];
 
 function normalizar(nombre: string): string {
   return nombre.trim().toLowerCase();

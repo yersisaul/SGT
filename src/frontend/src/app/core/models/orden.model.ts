@@ -1,6 +1,9 @@
-/** Contrato real de OrdenResponse (backend: dto.response.OrdenResponse). */
+/** Contrato real de OrdenResponse (backend: dto.response.OrdenResponse).
+ * id_usuario es el ejecutor de Operaciones responsable de la Orden (no quien
+ * la generó). */
 export interface OrdenResponse {
   id_orden: string;
+  id_usuario: string;
   id_estado: string;
   id_especialidad: string;
   id_solicitud: string | null;
@@ -27,8 +30,11 @@ export interface OrdenRequest {
 }
 
 /** Contrato real de GenerarOrdenRequest (backend: dto.request.GenerarOrdenRequest),
- * body de POST /solicitudes/{id}/generar-orden y /requerimientos/{id}/generar-orden. */
+ * body de POST /solicitudes/{id}/generar-orden y /requerimientos/{id}/generar-orden.
+ * id_usuario_ejecutor es obligatorio (@NotNull en backend): no se puede
+ * generar una OT sin ejecutor de Operaciones asignado. */
 export interface GenerarOrdenRequest {
+  id_usuario_ejecutor: string;
   comentario?: string;
   url_adjunto?: string | null;
 }
@@ -36,6 +42,13 @@ export interface GenerarOrdenRequest {
 /** Contrato real de CerrarOrdenRequest (backend: dto.request.CerrarOrdenRequest),
  * body de POST /ordenes/{id}/cerrar. */
 export interface CerrarOrdenRequest {
+  comentario?: string;
+}
+
+/** Contrato real de ReasignarOrdenRequest (backend: dto.request.ReasignarOrdenRequest),
+ * body de POST /ordenes/{id}/reasignar. */
+export interface ReasignarOrdenRequest {
+  id_usuario_nuevo: string;
   comentario?: string;
 }
 

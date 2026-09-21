@@ -19,4 +19,6 @@ public class SolicitudResponse {
     private Instant fecha_registro;
     private String descripcion;
     private String url_adjunto;
+    /** Derivado (no persistido): fecha_registro + SLA según prioridad. Ver SlaCalculator. */
+    private Instant fecha_limite_despacho;
 }

@@ -38,7 +38,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * en un paso se usa para generar su Orden en el siguiente, etc.) — no son
  * unidades independientes, sino una traza secuencial del flujo real.
  */
-@SpringBootTest
+// El flujo cubre ahora más pasos por método de test (visibilidad, reasignación)
+// y supera el rate limit por defecto (RATE_LIMIT_REQUESTS_PER_MINUTE=60) en la
+// misma ventana de un minuto; se eleva solo para este test, sin tocar el
+// límite real de la aplicación.
+@SpringBootTest(properties = {
+        "app.rate-limit.requests-per-minute=1000",
+        "app.rate-limit.auth-requests-per-minute=1000"
+})
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -60,9 +67,12 @@ class FlujoNegocioIntegrationTest {
     private String tokenDespachador;
     private String tokenAdministrador;
     private String tokenOperaciones;
+    private String tokenOperaciones2;
 
     private UUID idActivo;
     private UUID idEstadoPendiente;
+    private UUID idOperaciones1;
+    private UUID idOperaciones2;
 
     private UUID idSolicitudBajoContrato;
     private UUID idSolicitudDeCliente2;
@@ -79,10 +89,21 @@ class FlujoNegocioIntegrationTest {
     @Test
     @Order(1)
     void loginYCatalogosBase() throws Exception {
-        tokenCliente1 = login("cliente1@sgt.com");
-        tokenDespachador = login("despachador1@sgt.com");
-        tokenAdministrador = login("administrador1@sgt.com");
-        tokenOperaciones = login("operaciones1@sgt.com");
+        // Correos reales del DataSeeder vigente (CLAUDE.md: no se reemplazan
+        // por los valores de ejemplo anteriores).
+        tokenCliente1 = login("cliente1@cfbd.co");
+        tokenDespachador = login("despachador1@cfbd.co");
+        tokenAdministrador = login("administrador1@cfbd.co");
+        tokenOperaciones = login("operaciones1@cfbd.co");
+        tokenOperaciones2 = login("yortiz@cfbd.co");
+
+        JsonNode usuariosOperaciones = json(mockMvc.perform(authed(get("/api/usuarios/operaciones"), tokenDespachador))
+                .andExpect(status().isOk())
+                .andReturn());
+        idOperaciones1 = idUsuarioPorEmail(usuariosOperaciones, "operaciones1@cfbd.co");
+        idOperaciones2 = idUsuarioPorEmail(usuariosOperaciones, "yortiz@cfbd.co");
+        assertThat(idOperaciones1).as("operaciones1@cfbd.co debe estar en /usuarios/operaciones").isNotNull();
+        assertThat(idOperaciones2).as("yortiz@cfbd.co debe estar en /usuarios/operaciones").isNotNull();
 
         JsonNode activos = json(mockMvc.perform(authed(get("/api/activos"), tokenCliente1))
                 .andExpect(status().isOk())
@@ -170,9 +191,11 @@ class FlujoNegocioIntegrationTest {
     @Test
     @Order(4)
     void clienteNoPuedeOperarFueraDeSuAlcance() throws Exception {
+        // El body debe pasar la validación (id_usuario_ejecutor obligatorio)
+        // para que la petición llegue a la verificación de autorización.
         mockMvc.perform(authed(post("/api/solicitudes/" + idSolicitudBajoContrato + "/generar-orden"), tokenCliente1)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(toJson(Map.of("id_usuario_ejecutor", UUID.randomUUID().toString()))))
                 .andExpect(status().isForbidden());
 
         Map<String, Object> aprobacion = Map.of("id_requerimiento", UUID.randomUUID().toString(), "aprobado", true);
@@ -192,15 +215,28 @@ class FlujoNegocioIntegrationTest {
     @Test
     @Order(5)
     void despachadorGeneraOrdenDesdeSolicitudBajoContrato() throws Exception {
+        // Generar la OT exige seleccionar un ejecutor de Operaciones (no se
+        // puede generar sin asignar responsable).
+        Map<String, Object> sinEjecutor = new HashMap<>();
+        sinEjecutor.put("comentario", "Falta ejecutor");
+        mockMvc.perform(authed(post("/api/solicitudes/" + idSolicitudBajoContrato + "/generar-orden"), tokenDespachador)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(sinEjecutor)))
+                .andExpect(status().isBadRequest());
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("comentario", "Cubierto por contrato vigente");
+        payload.put("id_usuario_ejecutor", idOperaciones1.toString());
         MvcResult resultado = mockMvc.perform(authed(post("/api/solicitudes/" + idSolicitudBajoContrato + "/generar-orden"),
                         tokenDespachador)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(Map.of("comentario", "Cubierto por contrato vigente"))))
+                        .content(toJson(payload)))
                 .andExpect(status().isCreated())
                 .andReturn();
         JsonNode orden = json(resultado);
         idOrdenDesdeSolicitud = UUID.fromString(orden.get("id_orden").asText());
         assertThat(orden.get("id_solicitud").asText()).isEqualTo(idSolicitudBajoContrato.toString());
+        assertThat(orden.get("id_usuario").asText()).isEqualTo(idOperaciones1.toString());
         assertThat(orden.get("numeroOrden").asText()).startsWith("OT-");
         assertThat(orden.get("fecha_cierre").isNull()).isTrue();
 
@@ -217,7 +253,7 @@ class FlujoNegocioIntegrationTest {
         // No se puede generar una segunda Orden desde la misma Solicitud.
         mockMvc.perform(authed(post("/api/solicitudes/" + idSolicitudBajoContrato + "/generar-orden"), tokenDespachador)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(toJson(Map.of("id_usuario_ejecutor", idOperaciones1.toString()))))
                 .andExpect(status().isConflict());
     }
 
@@ -238,7 +274,7 @@ class FlujoNegocioIntegrationTest {
 
         mockMvc.perform(authed(post("/api/requerimientos/" + idRequerimientoParaAprobar + "/generar-orden"), tokenDespachador)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(toJson(Map.of("id_usuario_ejecutor", UUID.randomUUID().toString()))))
                 .andExpect(status().isForbidden());
     }
 
@@ -267,14 +303,14 @@ class FlujoNegocioIntegrationTest {
         mockMvc.perform(authed(post("/api/requerimientos/" + idRequerimientoParaRechazar + "/generar-orden"),
                         tokenAdministrador)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(toJson(Map.of("id_usuario_ejecutor", idOperaciones1.toString()))))
                 .andExpect(status().isConflict());
 
         // Un Requerimiento pendiente (nunca revisado) tampoco puede generar OT.
         mockMvc.perform(authed(post("/api/requerimientos/" + idRequerimientoPendiente + "/generar-orden"),
                         tokenAdministrador)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(toJson(Map.of("id_usuario_ejecutor", idOperaciones1.toString()))))
                 .andExpect(status().isConflict());
 
         // Aprobación real.
@@ -297,24 +333,34 @@ class FlujoNegocioIntegrationTest {
         mockMvc.perform(authed(post("/api/requerimientos/" + idRequerimientoParaAprobar + "/generar-orden"),
                         tokenDespachador)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(toJson(Map.of("id_usuario_ejecutor", idOperaciones1.toString()))))
                 .andExpect(status().isForbidden());
 
         MvcResult resultadoOrden = mockMvc.perform(authed(
                         post("/api/requerimientos/" + idRequerimientoParaAprobar + "/generar-orden"), tokenAdministrador)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(toJson(Map.of("id_usuario_ejecutor", idOperaciones1.toString(),
+                                "comentario", "Ejecutar visita técnica"))))
                 .andExpect(status().isCreated())
                 .andReturn();
         JsonNode orden = json(resultadoOrden);
         idOrdenDesdeRequerimiento = UUID.fromString(orden.get("id_orden").asText());
         assertThat(orden.get("id_requerimiento").asText()).isEqualTo(idRequerimientoParaAprobar.toString());
+        assertThat(orden.get("id_usuario").asText()).isEqualTo(idOperaciones1.toString());
+
+        // Generar la OT avanza el Requerimiento de "Aprobado" a "En progreso"
+        // (solo llega a "Finalizado" cuando se cierra la Orden asociada).
+        JsonNode requerimientoEnProgreso = json(mockMvc.perform(
+                        authed(get("/api/requerimientos/" + idRequerimientoParaAprobar), tokenAdministrador))
+                .andReturn());
+        assertThat(requerimientoEnProgreso.get("id_estado").asText())
+                .isEqualTo(idEstadoPorNombre(estados, "En progreso").toString());
 
         // No se puede generar una segunda Orden desde el mismo Requerimiento.
         mockMvc.perform(authed(post("/api/requerimientos/" + idRequerimientoParaAprobar + "/generar-orden"),
                         tokenAdministrador)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(toJson(Map.of("id_usuario_ejecutor", idOperaciones1.toString()))))
                 .andExpect(status().isConflict());
     }
 
@@ -363,6 +409,61 @@ class FlujoNegocioIntegrationTest {
                         .content(toJson(saltoIndebido)))
                 .andExpect(status().isConflict());
 
+        // ---- Visibilidad: Operaciones solo ve sus propias Órdenes ----
+        JsonNode ordenesDeOperaciones1 = json(mockMvc.perform(authed(get("/api/ordenes"), tokenOperaciones))
+                .andExpect(status().isOk())
+                .andReturn());
+        assertThat(contieneOrden(ordenesDeOperaciones1, idOrdenDesdeSolicitud)).isTrue();
+        assertThat(contieneOrden(ordenesDeOperaciones1, idOrdenDesdeRequerimiento)).isTrue();
+
+        JsonNode ordenesDeOperaciones2 = json(mockMvc.perform(authed(get("/api/ordenes"), tokenOperaciones2))
+                .andExpect(status().isOk())
+                .andReturn());
+        assertThat(contieneOrden(ordenesDeOperaciones2, idOrdenDesdeSolicitud)).isFalse();
+        assertThat(contieneOrden(ordenesDeOperaciones2, idOrdenDesdeRequerimiento)).isFalse();
+
+        // No puede consultar por id una Orden ajena (ownership -> 404).
+        mockMvc.perform(authed(get("/api/ordenes/" + idOrdenDesdeSolicitud), tokenOperaciones2))
+                .andExpect(status().isNotFound());
+
+        // No puede modificar una Orden ajena aunque exista y tenga orden.update.
+        mockMvc.perform(authed(put("/api/ordenes/" + idOrdenDesdeSolicitud), tokenOperaciones2)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(ejecucion)))
+                .andExpect(status().isForbidden());
+
+        // ---- Reasignación ----
+        // Operaciones2 no es ni el ejecutor actual ni Administrador: no puede reasignar.
+        mockMvc.perform(authed(post("/api/ordenes/" + idOrdenDesdeRequerimiento + "/reasignar"), tokenOperaciones2)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(Map.of("id_usuario_nuevo", idOperaciones2.toString()))))
+                .andExpect(status().isForbidden());
+
+        // El ejecutor actual (Operaciones1) sí puede reasignar a Operaciones2.
+        MvcResult reasignacion = mockMvc.perform(authed(post("/api/ordenes/" + idOrdenDesdeRequerimiento + "/reasignar"),
+                        tokenOperaciones)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(Map.of("id_usuario_nuevo", idOperaciones2.toString(),
+                                "comentario", "Operaciones2 tiene mejor disponibilidad"))))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertThat(json(reasignacion).get("id_usuario").asText()).isEqualTo(idOperaciones2.toString());
+
+        // Tras la reasignación, Operaciones1 ya no la ve y Operaciones2 sí.
+        mockMvc.perform(authed(get("/api/ordenes/" + idOrdenDesdeRequerimiento), tokenOperaciones))
+                .andExpect(status().isNotFound());
+        JsonNode ordenReasignada = json(mockMvc.perform(authed(get("/api/ordenes/" + idOrdenDesdeRequerimiento), tokenOperaciones2))
+                .andExpect(status().isOk())
+                .andReturn());
+        assertThat(ordenReasignada.get("id_usuario").asText()).isEqualTo(idOperaciones2.toString());
+
+        // El Administrador puede reasignarla de vuelta a Operaciones1 (para
+        // continuar la Fase 5 con el resto del flujo tal como estaba).
+        mockMvc.perform(authed(post("/api/ordenes/" + idOrdenDesdeRequerimiento + "/reasignar"), tokenAdministrador)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(Map.of("id_usuario_nuevo", idOperaciones1.toString()))))
+                .andExpect(status().isOk());
+
         // Despachador no puede cerrar la OT (no es su función).
         mockMvc.perform(authed(post("/api/ordenes/" + idOrdenDesdeSolicitud + "/cerrar"), tokenDespachador)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -394,11 +495,18 @@ class FlujoNegocioIntegrationTest {
                         .content("{}"))
                 .andExpect(status().isConflict());
 
-        // También cierra la Orden que vino del Requerimiento aprobado.
+        // También cierra la Orden que vino del Requerimiento aprobado, lo
+        // cual finaliza a su vez ese Requerimiento (En progreso -> Finalizado).
         mockMvc.perform(authed(post("/api/ordenes/" + idOrdenDesdeRequerimiento + "/cerrar"), tokenOperaciones)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isOk());
+
+        JsonNode requerimientoFinalizado = json(mockMvc.perform(
+                        authed(get("/api/requerimientos/" + idRequerimientoParaAprobar), tokenAdministrador))
+                .andExpect(status().isOk())
+                .andReturn());
+        assertThat(requerimientoFinalizado.get("id_estado").asText()).isEqualTo(idFinalizado.toString());
     }
 
     // ---------- Helpers ----------
@@ -479,6 +587,24 @@ class FlujoNegocioIntegrationTest {
         for (JsonNode rol : roles) {
             if (rol.get("nombre").asText().equalsIgnoreCase(nombre)) {
                 return UUID.fromString(rol.get("id_rol").asText());
+            }
+        }
+        return null;
+    }
+
+    private boolean contieneOrden(JsonNode ordenes, UUID idOrden) {
+        for (JsonNode orden : ordenes) {
+            if (orden.get("id_orden").asText().equals(idOrden.toString())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private UUID idUsuarioPorEmail(JsonNode usuarios, String email) {
+        for (JsonNode usuario : usuarios) {
+            if (usuario.get("email").asText().equalsIgnoreCase(email)) {
+                return UUID.fromString(usuario.get("id_usuario").asText());
             }
         }
         return null;

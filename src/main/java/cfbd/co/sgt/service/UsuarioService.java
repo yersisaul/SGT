@@ -9,6 +9,7 @@ public interface UsuarioService {
     UsuarioResponse crearUsuario(UsuarioRequest usuario);
     UsuarioResponse editarUsuario(UsuarioRequest usuario, UUID id);
     List<UsuarioResponse> listarUsuarios();
+    List<UsuarioResponse> listarUsuariosPorRol(String nombreRol);
     UsuarioResponse buscarUsuarioPorId(UUID id);
     UsuarioResponse buscarUsuarioPorEmail(String email);
     void eliminarUsuario(UUID id);

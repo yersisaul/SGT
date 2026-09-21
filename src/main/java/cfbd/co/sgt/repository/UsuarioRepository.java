@@ -25,4 +25,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
 
     @Query("select case when count(u) > 0 then true else false end from Usuario u where u.apellidos = :apellidos")
     boolean existsByApellidos(@Param("apellidos") String apellidos);
+
+    // Usuarios de un rol dado (p. ej. "Operaciones" para el selector de
+    // ejecutor). JPQL explícito por el mismo motivo que existsBy... arriba.
+    @Query("select u from Usuario u where u.rol.nombre = :nombreRol")
+    List<Usuario> findByRolNombre(@Param("nombreRol") String nombreRol);
 }

@@ -79,6 +79,14 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<UsuarioResponse> listarUsuariosPorRol(String nombreRol) {
+        return usuarioRepository.findByRolNombre(nombreRol).stream()
+                .map(usuarioMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public UsuarioResponse buscarUsuarioPorId(UUID id) {
         return usuarioRepository.findById(id).map(usuarioMapper::toResponse).orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }

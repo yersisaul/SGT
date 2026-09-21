@@ -9,6 +9,8 @@ import java.time.Instant;
 @Setter 
 public class OrdenResponse {
     public UUID id_orden;
+    /** Ejecutor de Operaciones responsable de la Orden (Orden.usuario). */
+    private UUID id_usuario;
     private UUID id_estado;
     private UUID id_especialidad;
     private UUID id_solicitud;

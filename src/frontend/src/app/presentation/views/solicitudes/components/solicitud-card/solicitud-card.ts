@@ -3,13 +3,14 @@ import { Component, input, output } from '@angular/core';
 import { LucidePaperclip, LucideTrash } from '@lucide/angular';
 
 import { Badge } from '../../../../../shared/components/badge/badge';
+import { SlaIndicator } from '../../../../../shared/components/sla-indicator/sla-indicator';
 import { estadoBadgeVariant } from '../../../../../shared/utils/estado-badge.util';
 import { prioridadBadgeVariant } from '../../../../../shared/utils/prioridad-badge.util';
 import { SolicitudView } from '../../solicitud-view.model';
 
 @Component({
   selector: 'app-solicitud-card',
-  imports: [Badge, DatePipe, LucidePaperclip, LucideTrash],
+  imports: [Badge, SlaIndicator, DatePipe, LucidePaperclip, LucideTrash],
   templateUrl: './solicitud-card.html',
   styleUrl: './solicitud-card.css',
 })
@@ -22,6 +23,13 @@ export class SolicitudCard {
 
   protected readonly estadoBadgeVariant = estadoBadgeVariant;
   protected readonly prioridadBadgeVariant = prioridadBadgeVariant;
+
+  /** El SLA de despacho solo aplica mientras la Solicitud sigue "Pendiente"
+   * (una vez despachada, el backend deja de medirlo — CLAUDE.md SLA sección
+   * 15). Se decide por el nombre de estado real, no por un flag propio. */
+  protected get mostrarSla(): boolean {
+    return this.item().estadoNombre.toLowerCase() === 'pendiente';
+  }
 
   protected onDelete(event: Event): void {
     event.stopPropagation();

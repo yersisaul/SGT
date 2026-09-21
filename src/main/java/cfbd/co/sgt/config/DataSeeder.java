@@ -71,7 +71,8 @@ public class DataSeeder implements ApplicationRunner {
             "solicitud.generar_orden",
             "requerimiento.generar_orden",
             "requerimiento.aprobar",
-            "orden.cerrar");
+            "orden.cerrar",
+            "orden.reasignar");
 
     private final RolService rolService;
     private final PermisoService permisoService;
@@ -164,7 +165,7 @@ public class DataSeeder implements ApplicationRunner {
         Map<String, List<String>> matriz = Map.of(
                 "Cliente", List.of(
                         "solicitud.read", "solicitud.create",
-                        "activo.read", "estado.read"),
+                        "activo.read", "estado.read", "especialidad.read"),
                 "Despachador", List.of(
                         "solicitud.read", "solicitud.update", "solicitud.generar_orden",
                         "requerimiento.read", "requerimiento.create", "requerimiento.update",
@@ -183,15 +184,16 @@ public class DataSeeder implements ApplicationRunner {
                         "solicitud.generar_orden",
                         "requerimiento.read", "requerimiento.create", "requerimiento.update", "requerimiento.delete",
                         "requerimiento.aprobar", "requerimiento.generar_orden",
-                        "orden.read", "orden.update", "orden.delete",
+                        "orden.read", "orden.update", "orden.delete", "orden.reasignar",
                         "derivacion.read",
                         "aprobacion.read",
                         "historial_orden.read", "historial_requerimiento.read", "historial_solicitud.read"),
                 "Operaciones", List.of(
                         "solicitud.read",
                         "requerimiento.read",
-                        "orden.read", "orden.update", "orden.cerrar",
+                        "orden.read", "orden.update", "orden.cerrar", "orden.reasignar",
                         "activo.read", "estado.read",
+                        "especialidad.read",
                         "historial_orden.read", "historial_requerimiento.read", "historial_solicitud.read")
         );
 
@@ -260,10 +262,14 @@ public class DataSeeder implements ApplicationRunner {
         record UsuarioSeed(String email, String nombres, String apellidos, String rol) {
         }
         List<UsuarioSeed> usuarios = List.of(
-                new UsuarioSeed("cliente1@sgt.com", "Cliente", "Uno", "Cliente"),
-                new UsuarioSeed("despachador1@sgt.com", "Despachador", "Uno", "Despachador"),
-                new UsuarioSeed("administrador1@sgt.com", "Administrador", "Uno", "Administrador"),
-                new UsuarioSeed("operaciones1@sgt.com", "Operaciones", "Uno", "Operaciones"));
+                new UsuarioSeed("cliente1@cfbd.co", "Cliente", "Uno", "Cliente"),
+                new UsuarioSeed("despachador1@cfbd.co", "Despachador", "Uno", "Despachador"),
+                new UsuarioSeed("administrador1@cfbd.co", "Administrador", "Uno", "Administrador"),
+                new UsuarioSeed("operaciones1@cfbd.co", "Operaciones", "Uno", "Operaciones"),
+                new UsuarioSeed("yortiz@cfbd.co", "Yersy Saul", "Ortiz Mallqui", "Operaciones"),
+                new UsuarioSeed("ddiaz@cfbd.co", "Danny", "Diaz Cordova", "Operaciones"),
+                new UsuarioSeed("carlos@cfbd.co", "Carlos", "Barrientos Diliberto", "Administrador"));
+                
         for (UsuarioSeed seed : usuarios) {
             if (usuarioRepository.existsByEmail(seed.email())) {
                 continue;

@@ -9,7 +9,7 @@
     "
   />
 
-  @if (mode() === 'edit') {
+  @if (mode() === 'edit' && estadoOptions.length > 0) {
     <app-select
       label="Estado"
       placeholder="Selecciona un estado"

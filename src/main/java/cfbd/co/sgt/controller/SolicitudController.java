@@ -80,7 +80,7 @@ public class SolicitudController {
     @PostMapping("/{id}/generar-orden")
     public ResponseEntity<OrdenResponse> generarOrdenDesdeSolicitud(
             @PathVariable UUID id,
-            @RequestBody(required = false) GenerarOrdenRequest request) {
+            @Valid @RequestBody GenerarOrdenRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(solicitudService.generarOrdenDesdeSolicitud(id, request));
     }

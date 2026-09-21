@@ -6,7 +6,12 @@ import { forkJoin } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { EspecialidadCatalogo, EstadoCatalogo, UsuarioCatalogo } from '../../../core/models/catalogo.model';
-import { HistorialOrdenResponse, OrdenRequest, OrdenResponse } from '../../../core/models/orden.model';
+import {
+  HistorialOrdenResponse,
+  OrdenRequest,
+  OrdenResponse,
+  ReasignarOrdenRequest,
+} from '../../../core/models/orden.model';
 import { CatalogoService } from '../../../core/services/catalogo.service';
 import { OrdenService } from '../../../core/services/orden.service';
 import { RequerimientoService } from '../../../core/services/requerimiento.service';
@@ -14,6 +19,7 @@ import { SolicitudService } from '../../../core/services/solicitud.service';
 import { Badge } from '../../../shared/components/badge/badge';
 import { Button } from '../../../shared/components/button/button';
 import { Dialog } from '../../../shared/components/dialog/dialog';
+import { Select, SelectOption } from '../../../shared/components/select/select';
 import { Spinner } from '../../../shared/components/spinner/spinner';
 import { NotificationService } from '../../../shared/services/notification.service';
 import { extractApiErrorMessage } from '../../../shared/utils/api-error.util';
@@ -35,6 +41,7 @@ type ViewMode = 'kanban' | 'tabla';
     Badge,
     Button,
     Dialog,
+    Select,
     Spinner,
     Kanban,
     Tabla,
@@ -59,6 +66,7 @@ export class Ordenes {
   protected readonly canUpdate = this.authService.hasPermission('orden.update');
   protected readonly canCerrar = this.authService.hasPermission('orden.cerrar');
   protected readonly canDelete = this.authService.hasPermission('orden.delete');
+  protected readonly canReasignar = this.authService.hasPermission('orden.reasignar');
   protected readonly canReadHistorial = this.authService.hasPermission('historial_orden.read');
   protected readonly canReadSolicitud = this.authService.hasPermission('solicitud.read');
   protected readonly canReadRequerimiento = this.authService.hasPermission('requerimiento.read');
@@ -70,6 +78,7 @@ export class Ordenes {
   private readonly estados = signal<EstadoCatalogo[]>([]);
   private readonly especialidades = signal<EspecialidadCatalogo[]>([]);
   private readonly usuarios = signal<UsuarioCatalogo[]>([]);
+  private readonly usuariosOperaciones = signal<UsuarioCatalogo[]>([]);
 
   protected readonly viewMode = signal<ViewMode>('kanban');
 
@@ -88,6 +97,12 @@ export class Ordenes {
   protected readonly cerrarComentario = signal('');
   protected readonly cerrarSubmitting = signal(false);
   protected readonly cerrarError = signal<string | null>(null);
+
+  protected readonly reasignarTarget = signal<OrdenResponse | null>(null);
+  protected readonly reasignarSeleccionado = signal('');
+  protected readonly reasignarComentario = signal('');
+  protected readonly reasignarSubmitting = signal(false);
+  protected readonly reasignarError = signal<string | null>(null);
 
   protected readonly historial = signal<HistorialOrdenResponse[]>([]);
   protected readonly historialLoading = signal(false);
@@ -109,6 +124,7 @@ export class Ordenes {
         (e) => e.nombre,
         '—',
       ),
+      usuarioNombre: this.nombreEjecutor(raw.id_usuario),
     })),
   );
 
@@ -136,6 +152,25 @@ export class Ordenes {
   });
 
   protected readonly dialogEstaCerrada = computed(() => !!this.dialogTarget()?.fecha_cierre);
+
+  // Reasignar es una capacidad de recurso, no solo de permiso (CLAUDE.md
+  // 5.5): orden.reasignar habilita el intento, pero solo puede ejecutarlo el
+  // ejecutor actualmente asignado o un Administrador — el backend vuelve a
+  // validar esto igual, esto es solo la curación de UI.
+  protected readonly dialogPuedeReasignar = computed(() => {
+    if (!this.canReasignar) return false;
+    const target = this.dialogTarget();
+    const user = this.authService.user();
+    if (!target || !user) return false;
+    return target.id_usuario === user.id || user.rol === 'Administrador';
+  });
+
+  protected readonly ejecutorOptions = computed<SelectOption[]>(() => {
+    const actual = this.reasignarTarget()?.id_usuario;
+    return this.usuariosOperaciones()
+      .filter((u) => u.id_usuario !== actual)
+      .map((u) => ({ value: u.id_usuario, label: `${u.nombres} ${u.apellidos}` }));
+  });
 
   constructor() {
     this.loadAll();
@@ -257,6 +292,49 @@ export class Ordenes {
     });
   }
 
+  protected requestReasignar(orden: OrdenResponse): void {
+    this.reasignarTarget.set(orden);
+    this.reasignarSeleccionado.set('');
+    this.reasignarComentario.set('');
+    this.reasignarError.set(null);
+  }
+
+  protected cancelReasignar(): void {
+    if (this.reasignarSubmitting()) return;
+    this.reasignarTarget.set(null);
+    this.reasignarError.set(null);
+  }
+
+  protected confirmReasignarAction(): void {
+    const target = this.reasignarTarget();
+    const nuevoEjecutor = this.reasignarSeleccionado();
+    if (!target || !nuevoEjecutor) return;
+
+    const request: ReasignarOrdenRequest = {
+      id_usuario_nuevo: nuevoEjecutor,
+      comentario: this.reasignarComentario().trim() || undefined,
+    };
+
+    this.reasignarSubmitting.set(true);
+    this.reasignarError.set(null);
+    this.ordenService.reasignar(target.id_orden, request).subscribe({
+      next: (actualizada) => {
+        this.ordenes.update((lista) => lista.map((o) => (o.id_orden === actualizada.id_orden ? actualizada : o)));
+        if (this.dialogTarget()?.id_orden === actualizada.id_orden) {
+          this.dialogTarget.set(actualizada);
+          this.loadHistorial(actualizada.id_orden);
+        }
+        this.reasignarSubmitting.set(false);
+        this.reasignarTarget.set(null);
+        this.notifications.success(`Orden ${actualizada.numeroOrden} reasignada correctamente.`);
+      },
+      error: (error: unknown) => {
+        this.reasignarSubmitting.set(false);
+        this.reasignarError.set(extractApiErrorMessage(error));
+      },
+    });
+  }
+
   protected handleMoved({ item, estadoDestinoId }: OrdenMovida): void {
     const estadoAnteriorId = item.raw.id_estado;
     if (estadoAnteriorId === estadoDestinoId) return;
@@ -288,10 +366,18 @@ export class Ordenes {
     return this.buscarNombre(this.estados(), idEstado, (e) => e.id_estado, (e) => e.nombre, 'Desconocido');
   }
 
-  /** HistorialOrdenResponse sí trae id_usuario (a diferencia de OrdenResponse):
-   * quién realizó cada transición registrada. */
+  /** HistorialOrdenResponse trae id_usuario: quién realizó cada transición
+   * registrada (puede ser cualquier rol, no solo Operaciones). */
   protected nombreUsuarioPorId(idUsuario: string): string {
     const usuario = this.usuarios().find((item) => item.id_usuario === idUsuario);
+    return usuario ? `${usuario.nombres} ${usuario.apellidos}` : '—';
+  }
+
+  /** El ejecutor (Orden.usuario) siempre es de rol Operaciones; se resuelve
+   * contra /usuarios/operaciones porque el catálogo general de usuarios
+   * requiere usuario.read, que Operaciones no tiene. */
+  private nombreEjecutor(idUsuario: string): string {
+    const usuario = this.usuariosOperaciones().find((item) => item.id_usuario === idUsuario);
     return usuario ? `${usuario.nombres} ${usuario.apellidos}` : '—';
   }
 
@@ -356,12 +442,14 @@ export class Ordenes {
       estados: this.catalogoService.getEstados(),
       especialidades: this.catalogoService.getEspecialidades(),
       usuarios: this.catalogoService.getUsuarios(),
+      usuariosOperaciones: this.catalogoService.getUsuariosOperaciones(),
     }).subscribe({
-      next: ({ ordenes, estados, especialidades, usuarios }) => {
+      next: ({ ordenes, estados, especialidades, usuarios, usuariosOperaciones }) => {
         this.ordenes.set(ordenes);
         this.estados.set(estados);
         this.especialidades.set(especialidades);
         this.usuarios.set(usuarios);
+        this.usuariosOperaciones.set(usuariosOperaciones);
         this.loading.set(false);
       },
       error: () => {

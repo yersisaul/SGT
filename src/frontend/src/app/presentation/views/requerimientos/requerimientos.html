@@ -374,6 +374,15 @@
       Se generará una Orden de Trabajo a partir del requerimiento <strong>{{ target.numeroRequerimiento }}</strong>.
       Esta acción no se puede deshacer.
     </p>
+
+    <app-select
+      label="Ejecutor responsable"
+      placeholder="Selecciona un usuario de Operaciones"
+      [options]="ejecutorOptions()"
+      [ngModel]="generarOrdenEjecutor()"
+      (ngModelChange)="generarOrdenEjecutor.set($event)"
+    />
+
     @if (generarOrdenError()) {
       <div class="confirm-error" role="alert">{{ generarOrdenError() }}</div>
     }
@@ -381,7 +390,12 @@
       <app-button variant="secondary" [disabled]="generarOrdenSubmitting()" (click)="cancelGenerarOrden()">
         Cancelar
       </app-button>
-      <app-button variant="primary" [loading]="generarOrdenSubmitting()" (click)="confirmGenerarOrdenAction()">
+      <app-button
+        variant="primary"
+        [disabled]="!generarOrdenEjecutor()"
+        [loading]="generarOrdenSubmitting()"
+        (click)="confirmGenerarOrdenAction()"
+      >
         Generar Orden
       </app-button>
     </div>
@@ -399,6 +413,15 @@
       El requerimiento <strong>{{ target.numeroRequerimiento }}</strong> quedó <strong>Aprobado</strong>.
       ¿Deseas generar la Orden de Trabajo ahora?
     </p>
+
+    <app-select
+      label="Ejecutor responsable"
+      placeholder="Selecciona un usuario de Operaciones"
+      [options]="ejecutorOptions()"
+      [ngModel]="generarOrdenEjecutor()"
+      (ngModelChange)="generarOrdenEjecutor.set($event)"
+    />
+
     @if (postAprobacionError()) {
       <div class="confirm-error" role="alert">{{ postAprobacionError() }}</div>
     }
@@ -406,7 +429,12 @@
       <app-button variant="secondary" [disabled]="postAprobacionSubmitting()" (click)="generarOrdenDespues()">
         Generar después
       </app-button>
-      <app-button variant="primary" [loading]="postAprobacionSubmitting()" (click)="confirmGenerarOrdenAhora()">
+      <app-button
+        variant="primary"
+        [disabled]="!generarOrdenEjecutor()"
+        [loading]="postAprobacionSubmitting()"
+        (click)="confirmGenerarOrdenAhora()"
+      >
         Generar Orden ahora
       </app-button>
     </div>

@@ -4,20 +4,19 @@
  * nombre (no por posición), qué subconjunto es válido para Solicitud y
  * cuáles de esos son alcanzables por el PUT genérico.
  *
- * "Finalizado" es válido para mostrar (columna del Kanban, aparece una vez
- * que ya se generó la Orden) pero NO es editable por PUT: solo se alcanza
- * vía POST /solicitudes/{id}/generar-orden (SolicitudServiceImpl,
- * validarTransicion). "Aprobado"/"Rechazado" son exclusivos de Requerimiento
- * y nunca deben aparecer acá.
- *
- * Cuando construyamos Requerimientos/Órdenes, cada uno tendrá su propio
- * archivo de configuración análogo a este (sus subconjuntos son distintos:
- * Requerimiento no incluye "En progreso"/"Finalizado", Orden no incluye
- * "Aprobado"/"Rechazado").
+ * Solicitud maneja ÚNICAMENTE Pendiente/En progreso/Finalizado — "En
+ * revisión" no es un estado propio de Solicitud (se eliminó del flujo:
+ * "despachar" una Solicitud significa generar la OT directamente, sin un
+ * paso manual intermedio). Ninguno de los tres es editable por PUT genérico:
+ * "Pendiente -> En progreso" solo se alcanza vía POST
+ * /solicitudes/{id}/generar-orden, y "-> Finalizado" solo cuando se cierra la
+ * Orden asociada (SolicitudServiceImpl.validarTransicion no permite ninguna
+ * transición manual). "Aprobado"/"Rechazado"/"En revisión" son de
+ * Requerimiento y nunca deben aparecer acá.
  */
-export const SOLICITUD_ESTADOS_VALIDOS: readonly string[] = ['Pendiente', 'En revisión', 'En progreso', 'Finalizado'];
+export const SOLICITUD_ESTADOS_VALIDOS: readonly string[] = ['Pendiente', 'En progreso', 'Finalizado'];
 
-export const SOLICITUD_ESTADOS_EDITABLES_POR_PUT: readonly string[] = ['Pendiente', 'En revisión', 'En progreso'];
+export const SOLICITUD_ESTADOS_EDITABLES_POR_PUT: readonly string[] = [];
 
 function normalizar(nombre: string): string {
   return nombre.trim().toLowerCase();

@@ -23,4 +23,9 @@ public interface OrdenRepository extends JpaRepository<Orden, UUID> {
 
     @Query("select case when count(o) > 0 then true else false end from Orden o where o.requerimiento.id_requerimiento = :idRequerimiento")
     boolean existsByRequerimiento(@Param("idRequerimiento") UUID idRequerimiento);
+
+    // Órdenes asignadas a un ejecutor (Orden.usuario). JPQL explícito por el
+    // mismo motivo que existsBySolicitud/existsByRequerimiento.
+    @Query("select o from Orden o where o.usuario.id_usuario = :idUsuario")
+    List<Orden> findByUsuario(@Param("idUsuario") UUID idUsuario);
 }

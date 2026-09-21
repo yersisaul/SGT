@@ -8,7 +8,15 @@
 >
   <header class="requerimiento-card-header">
     <span class="requerimiento-card-numero">{{ item().raw.numeroRequerimiento }}</span>
-    <app-badge [variant]="estadoBadgeVariant(item().estadoNombre)">{{ item().estadoNombre }}</app-badge>
+    <div class="requerimiento-card-header-badges">
+      @if (mostrarSla) {
+        <app-sla-indicator
+          [fechaRegistro]="item().raw.fecha_registro"
+          [fechaLimiteDespacho]="item().raw.fecha_limite_despacho"
+        />
+      }
+      <app-badge [variant]="estadoBadgeVariant(item().estadoNombre)">{{ item().estadoNombre }}</app-badge>
+    </div>
   </header>
 
   <p class="requerimiento-card-descripcion">{{ item().raw.descripcion }}</p>

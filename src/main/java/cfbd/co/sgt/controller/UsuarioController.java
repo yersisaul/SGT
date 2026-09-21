@@ -32,6 +32,16 @@ public class UsuarioController {
         return usuarios;
     }
 
+    // Listado acotado a rol Operaciones, para el selector de ejecutor al
+    // generar/reasignar una OT. Reutiliza permisos de negocio ya existentes
+    // en lugar de abrir usuario.read a roles (Despachador) que no lo tienen
+    // (CLAUDE.md 5.3: no dar permisos más amplios de lo necesario).
+    @PreAuthorize("hasAnyAuthority('solicitud.generar_orden','requerimiento.generar_orden','orden.reasignar')")
+    @GetMapping("/operaciones")
+    public List<UsuarioResponse> getUsuariosOperaciones() {
+        return usuarioService.listarUsuariosPorRol("Operaciones");
+    }
+
     @PreAuthorize("hasAuthority('usuario.read')")
     @GetMapping("/{id}")
     public ResponseEntity<UsuarioResponse> getUserById(@PathVariable UUID id) {

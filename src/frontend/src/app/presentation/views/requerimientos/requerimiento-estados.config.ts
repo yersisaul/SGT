@@ -4,12 +4,21 @@
  * dominio de Requerimiento — mismo criterio que
  * solicitudes/solicitud-estados.config.ts.
  *
- * "Aprobado"/"Rechazado" son válidos para mostrar (columna del Kanban,
- * resultado de la decisión) pero NO son editables por el PUT genérico: solo
- * se alcanzan vía POST /api/aprobaciones (RequerimientoServiceImpl.validarTransicion
- * solo permite Pendiente<->En revisión).
+ * Requerimiento maneja 6 estados: Pendiente, En revisión (se alcanza
+ * "despachando", vía PUT), Aprobado/Rechazado (vía POST /api/aprobaciones),
+ * En progreso (al generar la OT desde un Requerimiento Aprobado) y
+ * Finalizado (al cerrarse la Orden asociada). Solo Pendiente/En revisión son
+ * editables por el PUT genérico (RequerimientoServiceImpl.validarTransicion);
+ * el resto son estados de negocio alcanzados por operaciones dedicadas.
  */
-export const REQUERIMIENTO_ESTADOS_VALIDOS: readonly string[] = ['Pendiente', 'En revisión', 'Aprobado', 'Rechazado'];
+export const REQUERIMIENTO_ESTADOS_VALIDOS: readonly string[] = [
+  'Pendiente',
+  'En revisión',
+  'Aprobado',
+  'Rechazado',
+  'En progreso',
+  'Finalizado',
+];
 
 export const REQUERIMIENTO_ESTADOS_EDITABLES_POR_PUT: readonly string[] = ['Pendiente', 'En revisión'];
 

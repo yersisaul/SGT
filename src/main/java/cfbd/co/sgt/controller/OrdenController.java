@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import cfbd.co.sgt.dto.request.CerrarOrdenRequest;
 import cfbd.co.sgt.dto.request.OrdenRequest;
+import cfbd.co.sgt.dto.request.ReasignarOrdenRequest;
 import cfbd.co.sgt.dto.response.OrdenResponse;
 import cfbd.co.sgt.exception.ResourceNotFoundException;
 import cfbd.co.sgt.service.OrdenService;
@@ -70,5 +71,14 @@ public class OrdenController {
     public ResponseEntity<OrdenResponse> cerrarOrden(@PathVariable UUID id,
                                                       @RequestBody(required = false) CerrarOrdenRequest request) {
         return ResponseEntity.status(HttpStatus.OK).body(ordenService.cerrarOrden(id, request));
+    }
+
+    // Reasignar el ejecutor de una Orden: la puede pedir el ejecutor actual o
+    // un Administrador (validado en el Service, no solo aquí).
+    @PreAuthorize("hasAuthority('orden.reasignar')")
+    @PostMapping("/{id}/reasignar")
+    public ResponseEntity<OrdenResponse> reasignarOrden(@PathVariable UUID id,
+                                                         @Valid @RequestBody ReasignarOrdenRequest request) {
+        return ResponseEntity.status(HttpStatus.OK).body(ordenService.reasignarOrden(id, request));
     }
 }

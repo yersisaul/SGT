@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { LucideCircleAlert, LucideInbox, LucideLayoutGrid, LucidePlus, LucideTable } from '@lucide/angular';
 import { forkJoin } from 'rxjs';
 
@@ -14,6 +15,7 @@ import { CatalogoService } from '../../../core/services/catalogo.service';
 import { SolicitudService } from '../../../core/services/solicitud.service';
 import { Button } from '../../../shared/components/button/button';
 import { Dialog } from '../../../shared/components/dialog/dialog';
+import { Select, SelectOption } from '../../../shared/components/select/select';
 import { Spinner } from '../../../shared/components/spinner/spinner';
 import { NotificationService } from '../../../shared/services/notification.service';
 import { extractApiErrorMessage } from '../../../shared/utils/api-error.util';
@@ -31,8 +33,10 @@ type DialogMode = 'create' | 'edit' | null;
   selector: 'app-solicitudes',
   imports: [
     DatePipe,
+    FormsModule,
     Button,
     Dialog,
+    Select,
     Spinner,
     Kanban,
     Tabla,
@@ -67,6 +71,7 @@ export class Solicitudes {
   private readonly activos = signal<ActivoCatalogo[]>([]);
   private readonly especialidades = signal<EspecialidadCatalogo[]>([]);
   private readonly usuarios = signal<UsuarioCatalogo[]>([]);
+  private readonly usuariosOperaciones = signal<UsuarioCatalogo[]>([]);
 
   protected readonly viewMode = signal<ViewMode>('kanban');
 
@@ -83,8 +88,13 @@ export class Solicitudes {
   protected readonly deleteSubmitting = signal(false);
 
   protected readonly generarOrdenTarget = signal<SolicitudResponse | null>(null);
+  protected readonly generarOrdenEjecutor = signal('');
   protected readonly generarOrdenSubmitting = signal(false);
   protected readonly generarOrdenError = signal<string | null>(null);
+
+  protected readonly ejecutorOptions = computed<SelectOption[]>(() =>
+    this.usuariosOperaciones().map((u) => ({ value: u.id_usuario, label: `${u.nombres} ${u.apellidos}` })),
+  );
 
   protected readonly historial = signal<HistorialSolicitudResponse[]>([]);
   protected readonly historialLoading = signal(false);
@@ -239,6 +249,7 @@ export class Solicitudes {
    * (excluida en Formulario). */
   protected requestGenerarOrden(solicitud: SolicitudResponse): void {
     this.generarOrdenTarget.set(solicitud);
+    this.generarOrdenEjecutor.set('');
     this.generarOrdenError.set(null);
   }
 
@@ -250,7 +261,8 @@ export class Solicitudes {
 
   protected confirmGenerarOrdenAction(): void {
     const target = this.generarOrdenTarget();
-    if (!target) return;
+    const ejecutor = this.generarOrdenEjecutor();
+    if (!target || !ejecutor) return;
 
     // Generar la OT ya no finaliza la Solicitud: el backend la mueve a "En
     // progreso" (SolicitudServiceImpl.generarOrdenDesdeSolicitud) y solo
@@ -259,7 +271,7 @@ export class Solicitudes {
 
     this.generarOrdenSubmitting.set(true);
     this.generarOrdenError.set(null);
-    this.solicitudService.generarOrden(target.id_solicitud, {}).subscribe({
+    this.solicitudService.generarOrden(target.id_solicitud, { id_usuario_ejecutor: ejecutor }).subscribe({
       next: (orden) => {
         if (estadoEnProgreso) {
           const actualizada: SolicitudResponse = { ...target, id_estado: estadoEnProgreso.id_estado };
@@ -349,13 +361,15 @@ export class Solicitudes {
       activos: this.catalogoService.getActivos(),
       especialidades: this.catalogoService.getEspecialidades(),
       usuarios: this.catalogoService.getUsuarios(),
+      usuariosOperaciones: this.catalogoService.getUsuariosOperaciones(),
     }).subscribe({
-      next: ({ solicitudes, estados, activos, especialidades, usuarios }) => {
+      next: ({ solicitudes, estados, activos, especialidades, usuarios, usuariosOperaciones }) => {
         this.solicitudes.set(solicitudes);
         this.estados.set(estados);
         this.activos.set(activos);
         this.especialidades.set(especialidades);
         this.usuarios.set(usuarios);
+        this.usuariosOperaciones.set(usuariosOperaciones);
         this.loading.set(false);
       },
       error: () => {
