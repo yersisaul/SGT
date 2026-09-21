@@ -17,6 +17,14 @@ export interface SolicitudResponse {
   fecha_limite_despacho: string | null;
 }
 
+/** Contrato real de GenerarRequerimientoRequest (backend: dto.request),
+ * body de POST /solicitudes/{id}/generar-requerimiento. Si "descripcion" se
+ * omite/vacía, el backend la autogenera (descripción original de la
+ * Solicitud + nota de origen) — nunca queda en blanco. */
+export interface GenerarRequerimientoRequest {
+  descripcion?: string;
+}
+
 export interface SolicitudRequest {
   id_usuario: string;
   id_activo: string;

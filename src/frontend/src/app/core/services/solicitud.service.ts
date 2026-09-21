@@ -4,7 +4,14 @@ import { Observable, map } from 'rxjs';
 
 import { API_BASE_URL } from '../config/api-config';
 import { GenerarOrdenRequest, OrdenResponse } from '../models/orden.model';
-import { HistorialSolicitudRequest, HistorialSolicitudResponse, SolicitudRequest, SolicitudResponse } from '../models/solicitud.model';
+import { RequerimientoResponse } from '../models/requerimiento.model';
+import {
+  GenerarRequerimientoRequest,
+  HistorialSolicitudRequest,
+  HistorialSolicitudResponse,
+  SolicitudRequest,
+  SolicitudResponse,
+} from '../models/solicitud.model';
 
 /**
  * CRUD real de Solicitud (SolicitudController) + operaciones de negocio
@@ -37,9 +44,16 @@ export class SolicitudService {
     return this.http.delete<void>(`${this.apiBaseUrl}/solicitudes/${id}`);
   }
 
-  /** POST /solicitudes/{id}/generar-orden — único camino para llegar a Finalizado. */
+  /** POST /solicitudes/{id}/generar-orden — camino "bajo contrato" (Pendiente -> En progreso). */
   generarOrden(id: string, request: GenerarOrdenRequest): Observable<OrdenResponse> {
     return this.http.post<OrdenResponse>(`${this.apiBaseUrl}/solicitudes/${id}/generar-orden`, request);
+  }
+
+  /** POST /solicitudes/{id}/generar-requerimiento — camino "fuera de contrato"
+   * (Pendiente -> En revisión). Ambos son las dos ramas de la misma decisión
+   * de clasificación del Despachador; solo una puede ejecutarse. */
+  generarRequerimiento(id: string, request: GenerarRequerimientoRequest): Observable<RequerimientoResponse> {
+    return this.http.post<RequerimientoResponse>(`${this.apiBaseUrl}/solicitudes/${id}/generar-requerimiento`, request);
   }
 
   /** Bitácora de auditoría (HistorialSolicitudController). Se usa best-effort

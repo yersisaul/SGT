@@ -23,10 +23,12 @@ import {
   RequerimientoRequest,
   RequerimientoResponse,
 } from '../../../core/models/requerimiento.model';
+import { SolicitudResponse } from '../../../core/models/solicitud.model';
 import { AprobacionService } from '../../../core/services/aprobacion.service';
 import { CatalogoService } from '../../../core/services/catalogo.service';
 import { OrdenService } from '../../../core/services/orden.service';
 import { RequerimientoService } from '../../../core/services/requerimiento.service';
+import { SolicitudService } from '../../../core/services/solicitud.service';
 import { Button } from '../../../shared/components/button/button';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Select, SelectOption } from '../../../shared/components/select/select';
@@ -78,6 +80,7 @@ type DialogMode = 'create' | 'edit' | null;
 export class Requerimientos {
   private readonly authService = inject(AuthService);
   private readonly requerimientoService = inject(RequerimientoService);
+  private readonly solicitudService = inject(SolicitudService);
   private readonly aprobacionService = inject(AprobacionService);
   private readonly catalogoService = inject(CatalogoService);
   private readonly ordenService = inject(OrdenService);
@@ -92,6 +95,13 @@ export class Requerimientos {
   protected readonly canReadAprobaciones = this.authService.hasPermission('aprobacion.read');
   protected readonly canReadOrden = this.authService.hasPermission('orden.read');
   protected readonly canReadHistorialOrden = this.authService.hasPermission('historial_orden.read');
+  protected readonly canReadSolicitud = this.authService.hasPermission('solicitud.read');
+
+  // Trazabilidad Requerimiento -> Solicitud de origen (Requerimiento.solicitud,
+  // relación real): se resuelve puntualmente al abrir el detalle, no con un
+  // listado completo — igual criterio que ordenAsociada más abajo.
+  protected readonly origenSolicitud = signal<SolicitudResponse | null>(null);
+  protected readonly origenSolicitudLoading = signal(false);
 
   // Trazabilidad Requerimiento -> OT (Observación 7): Orden.id_requerimiento
   // es la única relación real; no hay endpoint filtrado, así que se trae la
@@ -251,6 +261,7 @@ export class Requerimientos {
       this.ordenAsociada.set(null);
       this.ordenAsociadaSinAcceso.set(false);
     }
+    this.loadOrigenSolicitud(view.raw.id_solicitud);
   }
 
   protected closeDialog(): void {
@@ -261,6 +272,20 @@ export class Requerimientos {
     this.ordenAsociada.set(null);
     this.ordenAsociadaSinAcceso.set(false);
     this.ordenHistorial.set([]);
+    this.origenSolicitud.set(null);
+  }
+
+  private loadOrigenSolicitud(idSolicitud: string | null): void {
+    this.origenSolicitud.set(null);
+    if (!idSolicitud || !this.canReadSolicitud) return;
+    this.origenSolicitudLoading.set(true);
+    this.solicitudService.obtener(idSolicitud).subscribe({
+      next: (solicitud) => {
+        this.origenSolicitud.set(solicitud);
+        this.origenSolicitudLoading.set(false);
+      },
+      error: () => this.origenSolicitudLoading.set(false),
+    });
   }
 
   private loadOrdenAsociada(idRequerimiento: string): void {

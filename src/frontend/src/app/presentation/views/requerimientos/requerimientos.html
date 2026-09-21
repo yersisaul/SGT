@@ -125,6 +125,18 @@
         <span class="ficha-info-label">Estado</span>
         <span>{{ view.estadoNombre }}</span>
       </div>
+      @if (view.raw.id_solicitud) {
+        <div class="ficha-info-row">
+          <span class="ficha-info-label">Origen</span>
+          @if (origenSolicitudLoading()) {
+            <span>Cargando…</span>
+          } @else if (origenSolicitud(); as solicitud) {
+            <span>Solicitud {{ solicitud.numeroSolicitud }} (fuera de contrato)</span>
+          } @else {
+            <span>Solicitud fuera de contrato</span>
+          }
+        </div>
+      }
     </div>
 
     @if (canUpdate && !dialogEstaDecidido()) {

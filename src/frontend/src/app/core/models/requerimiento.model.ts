@@ -1,12 +1,16 @@
 /** Contrato real de RequerimientoResponse / RequerimientoRequest
- * (backend: dto.response / dto.request). Sin id_activo ni id_solicitud: el
- * modelo actual de Requerimiento no tiene esos campos — no inventarlos. */
+ * (backend: dto.response / dto.request). Sin id_activo: el modelo actual de
+ * Requerimiento no tiene ese campo — no inventarlo. */
 
 export interface RequerimientoResponse {
   id_requerimiento: string;
   id_usuario: string;
   id_estado: string;
   id_especialidad: string;
+  /** Solicitud de origen (Requerimiento.solicitud), si se generó desde una
+   * Solicitud fuera de contrato vía POST /solicitudes/{id}/generar-requerimiento;
+   * null si es independiente. */
+  id_solicitud: string | null;
   numeroRequerimiento: string;
   fecha_registro: string;
   descripcion: string;

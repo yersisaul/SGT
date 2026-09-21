@@ -130,6 +130,12 @@
         @if (dialogEstaFinalizada()) {
           <p class="ficha-nota">Esta solicitud ya fue finalizada; no admite más ediciones.</p>
         }
+        @if (dialogEstaEnRevision()) {
+          <p class="ficha-nota">
+            Esta Solicitud está fuera de contrato: fue derivada a un Requerimiento y sigue el flujo de aprobación
+            correspondiente. Se finalizará automáticamente cuando se cierre la Orden de Trabajo asociada.
+          </p>
+        }
         <div class="ficha-info-row">
           <span class="ficha-info-label">Activo</span>
           <span>{{ view.activoNombre }}</span>
@@ -159,16 +165,16 @@
       </div>
     }
 
-    @if (canGenerarOrden || canCreateRequerimiento || canDelete) {
+    @if (canGenerarOrden || canGenerarRequerimiento || canDelete) {
       <div class="ficha-acciones">
         @if (canGenerarOrden && dialogPuedeGenerarOrden()) {
           <app-button variant="primary" (click)="requestGenerarOrden(view.raw)">
             Generar Orden de Trabajo
           </app-button>
         }
-        @if (canCreateRequerimiento) {
-          <app-button variant="secondary" (click)="requestCrearRequerimiento()">
-            Crear Requerimiento
+        @if (canGenerarRequerimiento && dialogPuedeGenerarRequerimiento()) {
+          <app-button variant="secondary" (click)="requestGenerarRequerimiento(view.raw)">
+            Generar Requerimiento (fuera de contrato)
           </app-button>
         }
         @if (canDelete) {
@@ -267,19 +273,44 @@
 
 <app-dialog
   variant="modal"
-  title="Crear Requerimiento"
-  [open]="crearRequerimientoAbierto()"
-  (closed)="cancelCrearRequerimiento()"
+  title="Generar Requerimiento"
+  [open]="generarRequerimientoTarget() !== null"
+  (closed)="cancelGenerarRequerimiento()"
 >
-  <p class="confirm-text">
-    El Requerimiento se crea de forma independiente: el modelo actual no vincula Requerimientos a Solicitudes.
-  </p>
-  <app-requerimiento-formulario
-    mode="create"
-    [especialidades]="especialidadesCatalogo()"
-    [estados]="estadosCatalogo()"
-    [submitting]="crearRequerimientoSubmitting()"
-    (submitForm)="handleCrearRequerimientoSubmit($event)"
-    (cancel)="cancelCrearRequerimiento()"
-  />
+  @if (generarRequerimientoTarget(); as target) {
+    <p class="confirm-text">
+      Se generará un Requerimiento a partir de la solicitud <strong>{{ target.numeroSolicitud }}</strong> (fuera de
+      contrato) y la Solicitud pasará a <strong>En revisión</strong>, siguiendo el flujo de aprobación. Esta acción no
+      se puede deshacer.
+    </p>
+
+    <div class="field">
+      <label for="req-desc-origen" class="field-label">Descripción del Requerimiento</label>
+      <textarea
+        id="req-desc-origen"
+        class="textarea"
+        rows="5"
+        [ngModel]="generarRequerimientoDescripcion()"
+        (ngModelChange)="generarRequerimientoDescripcion.set($event)"
+      ></textarea>
+      <div class="helper">Precargada con la descripción original de la Solicitud; puedes revisarla o ajustarla antes de confirmar.</div>
+    </div>
+
+    @if (generarRequerimientoError()) {
+      <div class="confirm-error" role="alert">{{ generarRequerimientoError() }}</div>
+    }
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="generarRequerimientoSubmitting()" (click)="cancelGenerarRequerimiento()">
+        Cancelar
+      </app-button>
+      <app-button
+        variant="primary"
+        [disabled]="!generarRequerimientoDescripcion().trim()"
+        [loading]="generarRequerimientoSubmitting()"
+        (click)="confirmGenerarRequerimientoAction()"
+      >
+        Generar Requerimiento
+      </app-button>
+    </div>
+  }
 </app-dialog>

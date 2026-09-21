@@ -252,7 +252,44 @@ public class OrdenServiceImpl implements OrdenService {
     }
 
     private void finalizarSolicitudAsociada(Orden ordenCerrada, Usuario actor) {
-        Solicitud solicitud = ordenCerrada.getSolicitud();
+        finalizarSolicitud(ordenCerrada.getSolicitud(), actor,
+                "Orden de trabajo " + ordenCerrada.getNumeroOrden() + " cerrada; Solicitud finalizada.");
+    }
+
+    private void finalizarRequerimientoAsociado(Orden ordenCerrada, Usuario actor) {
+        Requerimiento requerimiento = ordenCerrada.getRequerimiento();
+        if (!"Finalizado".equalsIgnoreCase(requerimiento.getEstado().getNombre())) {
+            Estado estadoAnteriorRequerimiento = requerimiento.getEstado();
+            Estado estadoFinalizado = estadoRepository.findByNombre("Finalizado")
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                            "Estado 'Finalizado' no está configurado en el catálogo."));
+
+            requerimiento.setEstado(estadoFinalizado);
+            requerimientoRepository.save(requerimiento);
+
+            HistorialRequerimiento historialRequerimiento = new HistorialRequerimiento();
+            historialRequerimiento.setRequerimiento(requerimiento);
+            historialRequerimiento.setUsuario(actor);
+            historialRequerimiento.setEstado_anterior(estadoAnteriorRequerimiento);
+            historialRequerimiento.setEstado_nuevo(estadoFinalizado);
+            historialRequerimiento.setFecha(Instant.now());
+            historialRequerimiento.setComentario(
+                    "Orden de trabajo " + ordenCerrada.getNumeroOrden() + " cerrada; Requerimiento finalizado.");
+            historialRequerimientoRepository.save(historialRequerimiento);
+        }
+
+        // Cascada Solicitud -> Requerimiento -> OT: si este Requerimiento se
+        // generó desde una Solicitud fuera de contrato (Requerimiento.solicitud),
+        // cerrar la OT también finaliza esa Solicitud — mismo criterio que el
+        // camino directo Solicitud -> OT (finalizarSolicitudAsociada).
+        if (requerimiento.getSolicitud() != null) {
+            finalizarSolicitud(requerimiento.getSolicitud(), actor,
+                    "Orden de trabajo " + ordenCerrada.getNumeroOrden() + " (vía Requerimiento "
+                            + requerimiento.getNumeroRequerimiento() + ") cerrada; Solicitud finalizada.");
+        }
+    }
+
+    private void finalizarSolicitud(Solicitud solicitud, Usuario actor, String comentario) {
         if ("Finalizado".equalsIgnoreCase(solicitud.getEstado().getNombre())) {
             return;
         }
@@ -271,34 +308,8 @@ public class OrdenServiceImpl implements OrdenService {
         historialSolicitud.setEstado_anterior(estadoAnteriorSolicitud);
         historialSolicitud.setEstado_nuevo(estadoFinalizado);
         historialSolicitud.setFecha(Instant.now());
-        historialSolicitud.setComentario(
-                "Orden de trabajo " + ordenCerrada.getNumeroOrden() + " cerrada; Solicitud finalizada.");
+        historialSolicitud.setComentario(comentario);
         historialSolicitudRepository.save(historialSolicitud);
-    }
-
-    private void finalizarRequerimientoAsociado(Orden ordenCerrada, Usuario actor) {
-        Requerimiento requerimiento = ordenCerrada.getRequerimiento();
-        if ("Finalizado".equalsIgnoreCase(requerimiento.getEstado().getNombre())) {
-            return;
-        }
-
-        Estado estadoAnteriorRequerimiento = requerimiento.getEstado();
-        Estado estadoFinalizado = estadoRepository.findByNombre("Finalizado")
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Estado 'Finalizado' no está configurado en el catálogo."));
-
-        requerimiento.setEstado(estadoFinalizado);
-        requerimientoRepository.save(requerimiento);
-
-        HistorialRequerimiento historialRequerimiento = new HistorialRequerimiento();
-        historialRequerimiento.setRequerimiento(requerimiento);
-        historialRequerimiento.setUsuario(actor);
-        historialRequerimiento.setEstado_anterior(estadoAnteriorRequerimiento);
-        historialRequerimiento.setEstado_nuevo(estadoFinalizado);
-        historialRequerimiento.setFecha(Instant.now());
-        historialRequerimiento.setComentario(
-                "Orden de trabajo " + ordenCerrada.getNumeroOrden() + " cerrada; Requerimiento finalizado.");
-        historialRequerimientoRepository.save(historialRequerimiento);
     }
 
     private boolean esOperaciones(Usuario usuario) {

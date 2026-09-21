@@ -69,6 +69,7 @@ public class DataSeeder implements ApplicationRunner {
     // genérico (evita saltarse el flujo).
     private static final List<String> PERMISOS_DE_NEGOCIO = List.of(
             "solicitud.generar_orden",
+            "solicitud.generar_requerimiento",
             "requerimiento.generar_orden",
             "requerimiento.aprobar",
             "orden.cerrar",
@@ -167,7 +168,7 @@ public class DataSeeder implements ApplicationRunner {
                         "solicitud.read", "solicitud.create",
                         "activo.read", "estado.read", "especialidad.read", "usuario.read"),
                 "Despachador", List.of(
-                        "solicitud.read", "solicitud.update", "solicitud.generar_orden",
+                        "solicitud.read", "solicitud.update", "solicitud.generar_orden", "solicitud.generar_requerimiento",
                         "requerimiento.read", "requerimiento.create", "requerimiento.update",
                         "activo.read", "estado.read", "especialidad.read", "usuario.read",
                         "derivacion.read", "derivacion.create",
@@ -181,7 +182,7 @@ public class DataSeeder implements ApplicationRunner {
                         "especialidad.read", "especialidad.create", "especialidad.update", "especialidad.delete",
                         "estado.read", "estado.create", "estado.update", "estado.delete",
                         "solicitud.read", "solicitud.create", "solicitud.update", "solicitud.delete",
-                        "solicitud.generar_orden",
+                        "solicitud.generar_orden", "solicitud.generar_requerimiento",
                         "requerimiento.read", "requerimiento.create", "requerimiento.update", "requerimiento.delete",
                         "requerimiento.aprobar", "requerimiento.generar_orden",
                         "orden.read", "orden.update", "orden.delete", "orden.reasignar",

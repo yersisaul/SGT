@@ -7,13 +7,12 @@ import { forkJoin } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ActivoCatalogo, EspecialidadCatalogo, EstadoCatalogo, UsuarioCatalogo } from '../../../core/models/catalogo.model';
 import {
+  GenerarRequerimientoRequest,
   HistorialSolicitudResponse,
   SolicitudRequest,
   SolicitudResponse,
 } from '../../../core/models/solicitud.model';
-import { RequerimientoRequest } from '../../../core/models/requerimiento.model';
 import { CatalogoService } from '../../../core/services/catalogo.service';
-import { RequerimientoService } from '../../../core/services/requerimiento.service';
 import { SolicitudService } from '../../../core/services/solicitud.service';
 import { Button } from '../../../shared/components/button/button';
 import { Dialog } from '../../../shared/components/dialog/dialog';
@@ -22,13 +21,14 @@ import { Spinner } from '../../../shared/components/spinner/spinner';
 import { NotificationService } from '../../../shared/services/notification.service';
 import { extractApiErrorMessage } from '../../../shared/utils/api-error.util';
 import { estadoOrderRank } from '../../../shared/utils/estado-order.util';
-import { Formulario as RequerimientoFormulario } from '../requerimientos/components/formulario/formulario';
 import { Formulario } from './components/formulario/formulario';
 import { Kanban, SolicitudMovida } from './components/kanban/kanban';
 import { Tabla } from './components/tabla/tabla';
 import {
   esEstadoEditablePorPut,
+  esEstadoEnRevision,
   esEstadoFinalizado,
+  esEstadoKanbanDeSolicitud,
   esEstadoPendiente,
   esEstadoValidoDeSolicitud,
 } from './solicitud-estados.config';
@@ -49,7 +49,6 @@ type DialogMode = 'create' | 'edit' | null;
     Kanban,
     Tabla,
     Formulario,
-    RequerimientoFormulario,
     LucidePlus,
     LucideLayoutGrid,
     LucideTable,
@@ -62,7 +61,6 @@ type DialogMode = 'create' | 'edit' | null;
 export class Solicitudes {
   private readonly authService = inject(AuthService);
   private readonly solicitudService = inject(SolicitudService);
-  private readonly requerimientoService = inject(RequerimientoService);
   private readonly catalogoService = inject(CatalogoService);
   private readonly notifications = inject(NotificationService);
 
@@ -70,7 +68,7 @@ export class Solicitudes {
   protected readonly canUpdate = this.authService.hasPermission('solicitud.update');
   protected readonly canDelete = this.authService.hasPermission('solicitud.delete');
   protected readonly canGenerarOrden = this.authService.hasPermission('solicitud.generar_orden');
-  protected readonly canCreateRequerimiento = this.authService.hasPermission('requerimiento.create');
+  protected readonly canGenerarRequerimiento = this.authService.hasPermission('solicitud.generar_requerimiento');
   protected readonly canReadHistorial = this.authService.hasPermission('historial_solicitud.read');
 
   protected readonly loading = signal(true);
@@ -102,13 +100,15 @@ export class Solicitudes {
   protected readonly generarOrdenSubmitting = signal(false);
   protected readonly generarOrdenError = signal<string | null>(null);
 
-  // Crear Requerimiento desde la ficha de Solicitud: el modelo actual NO
-  // vincula Requerimiento a Solicitud (RequerimientoRequest no tiene
-  // id_solicitud), así que esto abre el mismo formulario de creación que la
-  // vista de Requerimientos, de forma independiente — no existe ninguna
-  // regla de negocio que lo condicione al estado de la Solicitud.
-  protected readonly crearRequerimientoAbierto = signal(false);
-  protected readonly crearRequerimientoSubmitting = signal(false);
+  // Generar Requerimiento desde una Solicitud "fuera de contrato"
+  // (Requerimiento.solicitud es una relación real — ver
+  // SolicitudServiceImpl.generarRequerimientoDesdeSolicitud). La descripción
+  // se precarga con la de la Solicitud + nota de origen (nunca en blanco) y
+  // queda editable para que el usuario la revise antes de confirmar.
+  protected readonly generarRequerimientoTarget = signal<SolicitudResponse | null>(null);
+  protected readonly generarRequerimientoDescripcion = signal('');
+  protected readonly generarRequerimientoSubmitting = signal(false);
+  protected readonly generarRequerimientoError = signal<string | null>(null);
 
   protected readonly ejecutorOptions = computed<SelectOption[]>(() =>
     this.usuariosOperaciones().map((u) => ({ value: u.id_usuario, label: `${u.nombres} ${u.apellidos}` })),
@@ -119,7 +119,6 @@ export class Solicitudes {
 
   protected readonly activosCatalogo = this.activos.asReadonly();
   protected readonly estadosCatalogo = this.estados.asReadonly();
-  protected readonly especialidadesCatalogo = this.especialidades.asReadonly();
 
   protected readonly views = computed<SolicitudView[]>(() =>
     this.solicitudes().map((raw) => ({
@@ -137,6 +136,10 @@ export class Solicitudes {
     })),
   );
 
+  // Solo las 3 columnas operativas: "En revisión" no tiene columna propia
+  // (la Solicitud está siendo tratada por el flujo de aprobación del
+  // Requerimiento que generó, no por el flujo operativo directo) — sigue
+  // siendo un estado real y se ve igual en la Tabla (que no usa este filtro).
   protected readonly kanbanColumns = computed<KanbanColumn[]>(() => {
     const agrupado = new Map<string, SolicitudView[]>();
     for (const view of this.views()) {
@@ -144,7 +147,8 @@ export class Solicitudes {
       lista.push(view);
       agrupado.set(view.raw.id_estado, lista);
     }
-    return [...this.estadosSolicitud()]
+    return this.estadosSolicitud()
+      .filter((estado) => esEstadoKanbanDeSolicitud(estado.nombre))
       .sort((a, b) => estadoOrderRank(a.nombre) - estadoOrderRank(b.nombre))
       .map((estado) => ({
         estadoId: estado.id_estado,
@@ -169,13 +173,23 @@ export class Solicitudes {
     return !!view && esEstadoFinalizado(view.estadoNombre);
   });
 
-  // "Generar Orden de Trabajo" solo tiene sentido para una Solicitud
-  // Pendiente: una vez generada la OT, la Solicitud pasa a "En progreso" y ya
-  // existe una Orden asociada (SolicitudServiceImpl.generarOrdenDesdeSolicitud
-  // bloquea una segunda OT con 409); "Finalizado" ya cerró su ciclo.
+  // El Despachador clasifica una Solicitud Pendiente en una de dos ramas
+  // (bajo contrato -> OT, fuera de contrato -> Requerimiento); ambas acciones
+  // solo tienen sentido mientras sigue Pendiente — una vez clasificada
+  // (En revisión/En progreso) o cerrado el ciclo (Finalizado), ninguna aplica.
   protected readonly dialogPuedeGenerarOrden = computed(() => {
     const view = this.dialogView();
     return !!view && esEstadoPendiente(view.estadoNombre);
+  });
+
+  protected readonly dialogPuedeGenerarRequerimiento = computed(() => {
+    const view = this.dialogView();
+    return !!view && esEstadoPendiente(view.estadoNombre);
+  });
+
+  protected readonly dialogEstaEnRevision = computed(() => {
+    const view = this.dialogView();
+    return !!view && esEstadoEnRevision(view.estadoNombre);
   });
 
   constructor() {
@@ -325,28 +339,53 @@ export class Solicitudes {
     });
   }
 
-  protected requestCrearRequerimiento(): void {
-    this.crearRequerimientoAbierto.set(true);
+  protected requestGenerarRequerimiento(solicitud: SolicitudResponse): void {
+    this.generarRequerimientoTarget.set(solicitud);
+    // Precarga editable: mismo texto que generaría el backend por defecto
+    // (descripción original + nota de origen), para que el usuario nunca
+    // tenga que volver a escribirla, pero pueda revisarla/ajustarla antes de
+    // confirmar (sección 6 del pedido). Si la edita, se envía tal cual; si no
+    // la toca, es idéntica a lo que el backend habría generado solo.
+    this.generarRequerimientoDescripcion.set(
+      `${solicitud.descripcion}\n\nRequerimiento generado a partir de la Solicitud ${solicitud.numeroSolicitud}.`,
+    );
+    this.generarRequerimientoError.set(null);
   }
 
-  protected cancelCrearRequerimiento(): void {
-    if (this.crearRequerimientoSubmitting()) return;
-    this.crearRequerimientoAbierto.set(false);
+  protected cancelGenerarRequerimiento(): void {
+    if (this.generarRequerimientoSubmitting()) return;
+    this.generarRequerimientoTarget.set(null);
+    this.generarRequerimientoError.set(null);
   }
 
-  protected handleCrearRequerimientoSubmit(request: RequerimientoRequest): void {
-    const currentUser = this.authService.user();
-    if (!currentUser) return;
+  protected confirmGenerarRequerimientoAction(): void {
+    const target = this.generarRequerimientoTarget();
+    if (!target) return;
 
-    this.crearRequerimientoSubmitting.set(true);
-    const payload: RequerimientoRequest = { ...request, id_usuario: currentUser.id };
-    this.requerimientoService.crear(payload).subscribe({
-      next: (creado) => {
-        this.crearRequerimientoSubmitting.set(false);
-        this.crearRequerimientoAbierto.set(false);
-        this.notifications.success(`Requerimiento ${creado.numeroRequerimiento} creado correctamente.`);
+    const request: GenerarRequerimientoRequest = { descripcion: this.generarRequerimientoDescripcion().trim() };
+
+    this.generarRequerimientoSubmitting.set(true);
+    this.generarRequerimientoError.set(null);
+    this.solicitudService.generarRequerimiento(target.id_solicitud, request).subscribe({
+      next: (requerimiento) => {
+        const estadoEnRevision = this.estados().find((e) => e.nombre.toLowerCase() === 'en revisión');
+        if (estadoEnRevision) {
+          const actualizada: SolicitudResponse = { ...target, id_estado: estadoEnRevision.id_estado };
+          this.solicitudes.update((lista) =>
+            lista.map((s) => (s.id_solicitud === target.id_solicitud ? actualizada : s)),
+          );
+          if (this.dialogTarget()?.id_solicitud === target.id_solicitud) {
+            this.dialogTarget.set(actualizada);
+          }
+        }
+        this.generarRequerimientoSubmitting.set(false);
+        this.generarRequerimientoTarget.set(null);
+        this.notifications.success(`Requerimiento ${requerimiento.numeroRequerimiento} generado correctamente.`);
       },
-      error: () => this.crearRequerimientoSubmitting.set(false),
+      error: (error: unknown) => {
+        this.generarRequerimientoSubmitting.set(false);
+        this.generarRequerimientoError.set(extractApiErrorMessage(error));
+      },
     });
   }
 

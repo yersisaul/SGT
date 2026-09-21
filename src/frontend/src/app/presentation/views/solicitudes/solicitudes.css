@@ -189,6 +189,38 @@
   margin-bottom: var(--space-5);
 }
 
+.field {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-bottom: var(--space-4);
+}
+
+.field-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-primary);
+  margin-bottom: var(--space-2);
+}
+
+.textarea {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-foreground);
+  resize: vertical;
+  min-height: 96px;
+}
+
+.helper {
+  font-size: 12px;
+  color: var(--color-muted-foreground);
+  margin-top: var(--space-2);
+}
+
 .confirm-error {
   background: var(--status-danger-bg);
   color: var(--status-danger-fg);

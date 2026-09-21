@@ -13,6 +13,10 @@ public class RequerimientoResponse {
     private UUID id_usuario;
     private UUID id_estado;
     private UUID id_especialidad;
+    /** Solicitud de origen, si el Requerimiento se generó desde una (ver
+     * SolicitudServiceImpl.generarRequerimientoDesdeSolicitud); null si es
+     * independiente. */
+    private UUID id_solicitud;
     private String numeroRequerimiento;
     private Instant fecha_registro;
     private String descripcion;

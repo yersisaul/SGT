@@ -4,12 +4,15 @@
  * dominio de Requerimiento — mismo criterio que
  * solicitudes/solicitud-estados.config.ts.
  *
- * Requerimiento maneja 6 estados: Pendiente, En revisión (se alcanza
- * "despachando", vía PUT), Aprobado/Rechazado (vía POST /api/aprobaciones),
- * En progreso (al generar la OT desde un Requerimiento Aprobado) y
- * Finalizado (al cerrarse la Orden asociada). Solo Pendiente/En revisión son
- * editables por el PUT genérico (RequerimientoServiceImpl.validarTransicion);
- * el resto son estados de negocio alcanzados por operaciones dedicadas.
+ * Requerimiento maneja 6 estados en el dominio: Pendiente (legado — un
+ * Requerimiento nuevo ya NO nace ahí, ver RequerimientoServiceImpl.
+ * crearRequerimiento / SolicitudServiceImpl.generarRequerimientoDesdeSolicitud,
+ * que fuerzan "En revisión" directamente), En revisión, Aprobado/Rechazado
+ * (vía POST /api/aprobaciones), En progreso (al generar la OT desde un
+ * Requerimiento Aprobado) y Finalizado (al cerrarse la Orden asociada). Solo
+ * Pendiente/En revisión son editables por el PUT genérico
+ * (RequerimientoServiceImpl.validarTransicion); el resto son estados de
+ * negocio alcanzados por operaciones dedicadas.
  */
 export const REQUERIMIENTO_ESTADOS_VALIDOS: readonly string[] = [
   'Pendiente',
@@ -24,12 +27,15 @@ export const REQUERIMIENTO_ESTADOS_EDITABLES_POR_PUT: readonly string[] = ['Pend
 
 /**
  * Subconjunto mostrado como columnas del Kanban (decisión de presentación,
- * no de modelo): "Aprobado"/"Rechazado" NO tienen columna propia — son el
- * resultado de una decisión puntual, no un paso operativo del flujo. Siguen
- * existiendo como estado real y se muestran igual en la Tabla (que no usa
- * este subconjunto, ver requerimientos/components/tabla/tabla.ts).
+ * no de modelo): "Pendiente" ya no aporta valor operativo (ningún
+ * Requerimiento nuevo nace ahí) y "Aprobado"/"Rechazado" NO tienen columna
+ * propia — son el resultado de una decisión puntual, no un paso operativo
+ * del flujo. Los tres siguen existiendo como estado real (registros legados
+ * en "Pendiente", o el resultado de una aprobación/rechazo) y se muestran
+ * igual en la Tabla (que no usa este subconjunto, ver
+ * requerimientos/components/tabla/tabla.ts).
  */
-export const REQUERIMIENTO_ESTADOS_KANBAN: readonly string[] = ['Pendiente', 'En revisión', 'En progreso', 'Finalizado'];
+export const REQUERIMIENTO_ESTADOS_KANBAN: readonly string[] = ['En revisión', 'En progreso', 'Finalizado'];
 
 function normalizar(nombre: string): string {
   return nombre.trim().toLowerCase();

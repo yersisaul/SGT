@@ -84,6 +84,12 @@ class FlujoNegocioIntegrationTest {
     private UUID idOrdenDesdeSolicitud;
     private UUID idOrdenDesdeRequerimiento;
 
+    private UUID idSolicitudFueraDeContrato;
+    private UUID idRequerimientoDesdeSolicitud;
+    private UUID idOrdenDesdeRequerimientoDeSolicitud;
+    private String descripcionSolicitudFueraDeContrato;
+    private String numeroSolicitudFueraDeContrato;
+
     // ---------- FASE 0: identidad y catálogos ----------
 
     @Test
@@ -507,6 +513,106 @@ class FlujoNegocioIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn());
         assertThat(requerimientoFinalizado.get("id_estado").asText()).isEqualTo(idFinalizado.toString());
+    }
+
+    // ---------- FASE 6: Solicitud fuera de contrato -> Requerimiento -> OT -> cascada de cierre ----------
+
+    @Test
+    @Order(9)
+    void solicitudFueraDeContratoGeneraRequerimientoYCierreCascadaHastaLaSolicitud() throws Exception {
+        descripcionSolicitudFueraDeContrato = "El cliente solicita mantenimiento de cámaras fuera del alcance contratado";
+        idSolicitudFueraDeContrato = crearSolicitud(tokenCliente1, "Media", descripcionSolicitudFueraDeContrato);
+
+        JsonNode solicitudCreada = json(mockMvc.perform(
+                        authed(get("/api/solicitudes/" + idSolicitudFueraDeContrato), tokenDespachador))
+                .andReturn());
+        numeroSolicitudFueraDeContrato = solicitudCreada.get("numeroSolicitud").asText();
+
+        // Generar Requerimiento sin body: la descripción se autogenera a
+        // partir de la de la Solicitud + nota de origen (no queda en blanco).
+        MvcResult resultadoRequerimiento = mockMvc.perform(authed(
+                        post("/api/solicitudes/" + idSolicitudFueraDeContrato + "/generar-requerimiento"), tokenDespachador))
+                .andExpect(status().isCreated())
+                .andReturn();
+        JsonNode requerimientoCreado = json(resultadoRequerimiento);
+        idRequerimientoDesdeSolicitud = UUID.fromString(requerimientoCreado.get("id_requerimiento").asText());
+        assertThat(requerimientoCreado.get("id_solicitud").asText()).isEqualTo(idSolicitudFueraDeContrato.toString());
+        assertThat(requerimientoCreado.get("descripcion").asText())
+                .contains(descripcionSolicitudFueraDeContrato)
+                .contains(numeroSolicitudFueraDeContrato);
+
+        JsonNode estados = json(mockMvc.perform(authed(get("/api/estados"), tokenDespachador)).andReturn());
+        assertThat(requerimientoCreado.get("id_estado").asText())
+                .as("Un Requerimiento nuevo nace directamente 'En revisión', nunca 'Pendiente'.")
+                .isEqualTo(idEstadoPorNombre(estados, "En revisión").toString());
+
+        // La Solicitud pasa a "En revisión" (no "En progreso" ni "Finalizado").
+        JsonNode solicitudEnRevision = json(mockMvc.perform(
+                        authed(get("/api/solicitudes/" + idSolicitudFueraDeContrato), tokenDespachador))
+                .andReturn());
+        assertThat(solicitudEnRevision.get("id_estado").asText())
+                .isEqualTo(idEstadoPorNombre(estados, "En revisión").toString());
+
+        // Ya clasificada: no puede generar una OT directa ni otro Requerimiento.
+        mockMvc.perform(authed(post("/api/solicitudes/" + idSolicitudFueraDeContrato + "/generar-orden"), tokenDespachador)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(Map.of("id_usuario_ejecutor", idOperaciones1.toString()))))
+                .andExpect(status().isConflict());
+        mockMvc.perform(authed(
+                        post("/api/solicitudes/" + idSolicitudFueraDeContrato + "/generar-requerimiento"), tokenDespachador))
+                .andExpect(status().isConflict());
+
+        // Aprobación + generación inmediata de OT (Caso B, sección 10 del pedido).
+        Map<String, Object> aprobacion = Map.of(
+                "id_requerimiento", idRequerimientoDesdeSolicitud.toString(),
+                "aprobado", true,
+                "comentario", "Aprobado tras revisión de jefatura");
+        mockMvc.perform(authed(post("/api/aprobaciones"), tokenAdministrador)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(aprobacion)))
+                .andExpect(status().isCreated());
+
+        MvcResult resultadoOrden = mockMvc.perform(authed(
+                        post("/api/requerimientos/" + idRequerimientoDesdeSolicitud + "/generar-orden"), tokenAdministrador)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(Map.of("id_usuario_ejecutor", idOperaciones1.toString()))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        idOrdenDesdeRequerimientoDeSolicitud = UUID.fromString(json(resultadoOrden).get("id_orden").asText());
+
+        // No queda visualmente en "Aprobado": pasa a "En progreso" al generar la OT.
+        JsonNode requerimientoEnProgreso = json(mockMvc.perform(
+                        authed(get("/api/requerimientos/" + idRequerimientoDesdeSolicitud), tokenAdministrador))
+                .andReturn());
+        assertThat(requerimientoEnProgreso.get("id_estado").asText())
+                .isEqualTo(idEstadoPorNombre(estados, "En progreso").toString());
+
+        // La Solicitud sigue "En revisión" — generar la OT del Requerimiento
+        // NO la mueve a "En progreso" (solo el cierre de la OT la finaliza).
+        JsonNode solicitudTodaviaEnRevision = json(mockMvc.perform(
+                        authed(get("/api/solicitudes/" + idSolicitudFueraDeContrato), tokenDespachador))
+                .andReturn());
+        assertThat(solicitudTodaviaEnRevision.get("id_estado").asText())
+                .isEqualTo(idEstadoPorNombre(estados, "En revisión").toString());
+
+        // Cierre de la OT: cascada Orden -> Requerimiento -> Solicitud.
+        mockMvc.perform(authed(post("/api/ordenes/" + idOrdenDesdeRequerimientoDeSolicitud + "/cerrar"), tokenOperaciones)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(Map.of("comentario", "Mantenimiento fuera de contrato completado"))))
+                .andExpect(status().isOk());
+
+        UUID idFinalizado = idEstadoPorNombre(estados, "Finalizado");
+        JsonNode requerimientoFinal = json(mockMvc.perform(
+                        authed(get("/api/requerimientos/" + idRequerimientoDesdeSolicitud), tokenAdministrador))
+                .andReturn());
+        assertThat(requerimientoFinal.get("id_estado").asText()).isEqualTo(idFinalizado.toString());
+
+        JsonNode solicitudFinal = json(mockMvc.perform(
+                        authed(get("/api/solicitudes/" + idSolicitudFueraDeContrato), tokenDespachador))
+                .andReturn());
+        assertThat(solicitudFinal.get("id_estado").asText())
+                .as("Cerrar la OT del Requerimiento también finaliza la Solicitud que lo originó.")
+                .isEqualTo(idFinalizado.toString());
     }
 
     // ---------- Helpers ----------

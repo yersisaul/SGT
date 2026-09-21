@@ -1,8 +1,10 @@
 package cfbd.co.sgt.service;
 
 import cfbd.co.sgt.dto.request.GenerarOrdenRequest;
+import cfbd.co.sgt.dto.request.GenerarRequerimientoRequest;
 import cfbd.co.sgt.dto.request.SolicitudRequest;
 import cfbd.co.sgt.dto.response.OrdenResponse;
+import cfbd.co.sgt.dto.response.RequerimientoResponse;
 import cfbd.co.sgt.dto.response.ResumenEstadosResponse;
 import cfbd.co.sgt.dto.response.SolicitudResponse;
 import java.util.List;
@@ -18,4 +20,5 @@ public interface SolicitudService {
     void eliminarSolicitud(UUID id);
     ResumenEstadosResponse obtenerResumenPorEstado();
     OrdenResponse generarOrdenDesdeSolicitud(UUID idSolicitud, GenerarOrdenRequest request);
+    RequerimientoResponse generarRequerimientoDesdeSolicitud(UUID idSolicitud, GenerarRequerimientoRequest request);
 }

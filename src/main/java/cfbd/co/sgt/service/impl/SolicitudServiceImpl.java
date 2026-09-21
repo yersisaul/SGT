@@ -17,24 +17,30 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.HashMap;
 
 import cfbd.co.sgt.dto.request.GenerarOrdenRequest;
+import cfbd.co.sgt.dto.request.GenerarRequerimientoRequest;
 import cfbd.co.sgt.dto.request.SolicitudRequest;
 import cfbd.co.sgt.dto.response.EstadoCantidadResponse;
 import cfbd.co.sgt.dto.response.OrdenResponse;
+import cfbd.co.sgt.dto.response.RequerimientoResponse;
 import cfbd.co.sgt.dto.response.ResumenEstadosResponse;
 import cfbd.co.sgt.dto.response.SolicitudResponse;
 import cfbd.co.sgt.exception.ResourceNotFoundException;
 import cfbd.co.sgt.model.Estado;
 import cfbd.co.sgt.model.HistorialOrden;
+import cfbd.co.sgt.model.HistorialRequerimiento;
 import cfbd.co.sgt.model.HistorialSolicitud;
 import cfbd.co.sgt.model.Orden;
+import cfbd.co.sgt.model.Requerimiento;
 import cfbd.co.sgt.model.Solicitud;
 import cfbd.co.sgt.model.Usuario;
 import cfbd.co.sgt.repository.ActivoRepository;
 import cfbd.co.sgt.repository.EspecialidadRepository;
 import cfbd.co.sgt.repository.EstadoRepository;
 import cfbd.co.sgt.repository.HistorialOrdenRepository;
+import cfbd.co.sgt.repository.HistorialRequerimientoRepository;
 import cfbd.co.sgt.repository.HistorialSolicitudRepository;
 import cfbd.co.sgt.repository.OrdenRepository;
+import cfbd.co.sgt.repository.RequerimientoRepository;
 import cfbd.co.sgt.repository.SolicitudRepository;
 import cfbd.co.sgt.repository.UsuarioRepository;
 import cfbd.co.sgt.service.SlaCalculator;
@@ -46,13 +52,17 @@ import jakarta.transaction.Transactional;
 public class SolicitudServiceImpl implements SolicitudService {
 
     // Transiciones válidas para Solicitud vía PUT genérico (nombre en
-    // minúsculas). Solicitud solo maneja Pendiente/En progreso/Finalizado; no
-    // hay ninguna transición manual: "Pendiente -> En progreso" solo se
-    // alcanza despachando (generarOrdenDesdeSolicitud) y "-> Finalizado" solo
-    // al cerrarse la Orden asociada (OrdenServiceImpl.cerrarOrden), nunca por
-    // PUT genérico (CLAUDE.md 5.3).
+    // minúsculas). Solicitud maneja Pendiente/En revisión/En progreso/
+    // Finalizado; ninguna transición es manual: desde "Pendiente" el
+    // Despachador clasifica y despacha con una de dos acciones de negocio —
+    // "En progreso" vía generarOrdenDesdeSolicitud (bajo contrato) o "En
+    // revisión" vía generarRequerimientoDesdeSolicitud (fuera de contrato) —
+    // y "Finalizado" solo se alcanza cuando se cierra la Orden asociada
+    // (directamente, o vía el Requerimiento que se aprobó y generó OT), nunca
+    // por PUT genérico (CLAUDE.md 5.3).
     private static final Map<String, Set<String>> TRANSICIONES_PERMITIDAS = Map.of(
             "pendiente", Set.of(),
+            "en revisión", Set.of(),
             "en progreso", Set.of(),
             "finalizado", Set.of());
 
@@ -79,6 +89,12 @@ public class SolicitudServiceImpl implements SolicitudService {
 
     @Autowired
     private HistorialOrdenRepository historialOrdenRepository;
+
+    @Autowired
+    private RequerimientoRepository requerimientoRepository;
+
+    @Autowired
+    private HistorialRequerimientoRepository historialRequerimientoRepository;
 
     @Autowired
     private SlaCalculator slaCalculator;
@@ -184,9 +200,14 @@ public class SolicitudServiceImpl implements SolicitudService {
         Solicitud solicitud = solicitudRepository.findById(idSolicitud)
                 .orElseThrow(() -> new ResourceNotFoundException("Solicitud not found"));
 
-        if ("Finalizado".equalsIgnoreCase(solicitud.getEstado().getNombre())) {
+        // Solo se puede despachar bajo contrato desde "Pendiente": una vez
+        // clasificada (bajo contrato -> En progreso, o fuera de contrato ->
+        // En revisión vía generarRequerimientoDesdeSolicitud) o cerrado el
+        // ciclo (Finalizado), no puede volver a generar otra OT.
+        if (!"Pendiente".equalsIgnoreCase(solicitud.getEstado().getNombre())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "La Solicitud ya fue finalizada; no se puede generar otra Orden desde ella.");
+                    "Solo se puede generar una Orden desde una Solicitud en estado 'Pendiente' (actual: "
+                            + solicitud.getEstado().getNombre() + ").");
         }
         if (ordenRepository.existsBySolicitud(idSolicitud)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -248,6 +269,75 @@ public class SolicitudServiceImpl implements SolicitudService {
         return convertirOrdenAResponse(ordenGuardada);
     }
 
+    @Override
+    public RequerimientoResponse generarRequerimientoDesdeSolicitud(UUID idSolicitud, GenerarRequerimientoRequest request) {
+        Solicitud solicitud = solicitudRepository.findById(idSolicitud)
+                .orElseThrow(() -> new ResourceNotFoundException("Solicitud not found"));
+
+        // Mismo punto de entrada que generarOrdenDesdeSolicitud: el
+        // Despachador clasifica una Solicitud Pendiente en uno de dos
+        // caminos (bajo contrato -> OT, fuera de contrato -> Requerimiento),
+        // nunca ambos ni repetido.
+        if (!"Pendiente".equalsIgnoreCase(solicitud.getEstado().getNombre())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Solo se puede generar un Requerimiento desde una Solicitud en estado 'Pendiente' (actual: "
+                            + solicitud.getEstado().getNombre() + ").");
+        }
+
+        Estado estadoAnterior = solicitud.getEstado();
+        Estado estadoEnRevision = estadoRepository.findByNombre("En revisión")
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Estado 'En revisión' no está configurado en el catálogo."));
+        Usuario actor = usuarioAutenticado();
+
+        String descripcion = request != null && request.getDescripcion() != null && !request.getDescripcion().isBlank()
+                ? request.getDescripcion()
+                : descripcionRequerimientoDesdeSolicitud(solicitud);
+
+        Requerimiento requerimiento = new Requerimiento();
+        requerimiento.setUsuario(actor);
+        // Un Requerimiento nuevo nunca inicia en "Pendiente": nace
+        // directamente "En revisión" (no aporta un paso operativo propio).
+        requerimiento.setEstado(estadoEnRevision);
+        requerimiento.setEspecialidad(solicitud.getEspecialidad());
+        requerimiento.setSolicitud(solicitud);
+        requerimiento.setDescripcion(descripcion);
+        Long correlativo = requerimientoRepository.count() + 1;
+        requerimiento.setNumeroRequerimiento("RQ-" + correlativo);
+        requerimiento.setFecha_registro(Instant.now());
+        Requerimiento requerimientoGuardado = requerimientoRepository.save(requerimiento);
+
+        HistorialRequerimiento historialCreacion = new HistorialRequerimiento();
+        historialCreacion.setRequerimiento(requerimientoGuardado);
+        historialCreacion.setUsuario(actor);
+        historialCreacion.setEstado_anterior(estadoEnRevision);
+        historialCreacion.setEstado_nuevo(estadoEnRevision);
+        historialCreacion.setFecha(Instant.now());
+        historialCreacion.setComentario("Requerimiento creado desde la Solicitud " + solicitud.getNumeroSolicitud()
+                + " (fuera de contrato).");
+        historialRequerimientoRepository.save(historialCreacion);
+
+        solicitud.setEstado(estadoEnRevision);
+        solicitudRepository.save(solicitud);
+
+        HistorialSolicitud historial = new HistorialSolicitud();
+        historial.setSolicitud(solicitud);
+        historial.setUsuario(actor);
+        historial.setEstado_anterior(estadoAnterior);
+        historial.setEstado_nuevo(estadoEnRevision);
+        historial.setFecha(Instant.now());
+        historial.setComentario("Requerimiento " + requerimientoGuardado.getNumeroRequerimiento()
+                + " generado desde la Solicitud (fuera de contrato); Solicitud pasa a En revisión.");
+        historialSolicitudRepository.save(historial);
+
+        return convertirRequerimientoAResponse(requerimientoGuardado);
+    }
+
+    private String descripcionRequerimientoDesdeSolicitud(Solicitud solicitud) {
+        return solicitud.getDescripcion()
+                + "\n\nRequerimiento generado a partir de la Solicitud " + solicitud.getNumeroSolicitud() + ".";
+    }
+
     /** Valida que el usuario elegido como ejecutor exista y tenga rol
      * Operaciones (CLAUDE.md: no permitir asignar una OT a alguien que no sea
      * Operaciones). */
@@ -301,6 +391,21 @@ public class SolicitudServiceImpl implements SolicitudService {
         response.setUrl_adjunto(solicitud.getUrl_adjunto());
         response.setFecha_limite_despacho(
                 slaCalculator.deadlineSolicitud(solicitud.getFecha_registro(), solicitud.getPrioridad()));
+        return response;
+    }
+
+    private RequerimientoResponse convertirRequerimientoAResponse(Requerimiento requerimiento) {
+        RequerimientoResponse response = new RequerimientoResponse();
+        response.setId_requerimiento(requerimiento.getId_requerimiento());
+        response.setId_usuario(requerimiento.getUsuario().getId_usuario());
+        response.setId_estado(requerimiento.getEstado().getId_estado());
+        response.setId_especialidad(requerimiento.getEspecialidad().getId_especialidad());
+        response.setId_solicitud(requerimiento.getSolicitud() != null ? requerimiento.getSolicitud().getId_solicitud() : null);
+        response.setNumeroRequerimiento(requerimiento.getNumeroRequerimiento());
+        response.setFecha_registro(requerimiento.getFecha_registro());
+        response.setDescripcion(requerimiento.getDescripcion());
+        response.setUrl_adjunto(requerimiento.getUrl_adjunto());
+        response.setFecha_limite_despacho(slaCalculator.deadlineRequerimiento(requerimiento.getFecha_registro()));
         return response;
     }
 

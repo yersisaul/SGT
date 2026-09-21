@@ -55,10 +55,14 @@ export class Formulario implements OnInit {
     // solo en ngOnInit (correría con estados() aún vacío): debe reaccionar
     // cuando el catálogo llegue.
     effect(() => {
+      // El backend ignora el id_estado enviado al crear (siempre fuerza "En
+      // revisión" — ver RequerimientoServiceImpl.crearRequerimiento); este
+      // valor por defecto es solo para que el campo (oculto en modo create,
+      // ver formulario.html) no quede vacío.
       const estadosDisponibles = this.estados();
       if (this.mode() === 'create' && estadosDisponibles.length > 0 && !this.form.controls.id_estado.value) {
-        const pendiente = estadosDisponibles.find((estado) => estado.nombre.toLowerCase().includes('pendiente'));
-        this.form.controls.id_estado.setValue(pendiente?.id_estado ?? estadosDisponibles[0].id_estado);
+        const enRevision = estadosDisponibles.find((estado) => estado.nombre.toLowerCase().includes('revisi'));
+        this.form.controls.id_estado.setValue(enRevision?.id_estado ?? estadosDisponibles[0].id_estado);
       }
     });
   }

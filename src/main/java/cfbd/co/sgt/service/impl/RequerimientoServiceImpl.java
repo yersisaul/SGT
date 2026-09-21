@@ -87,8 +87,13 @@ public class RequerimientoServiceImpl implements RequerimientoService {
         Requerimiento requerimiento = new Requerimiento();
         // El usuario se obtiene del contexto de seguridad, nunca del body.
         requerimiento.setUsuario(usuarioAutenticado());
-        requerimiento.setEstado(estadoRepository.findById(requerimientoDTO.getId_estado())
-                .orElseThrow(() -> new ResourceNotFoundException("Estado not found")));
+        // Un Requerimiento nuevo nunca inicia en "Pendiente": el id_estado
+        // del body se ignora deliberadamente (igual que generarOrdenDesde*
+        // ignora el estado inicial de la Orden) y siempre nace "En revisión".
+        Estado estadoInicial = estadoRepository.findByNombre("En revisión")
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Estado 'En revisión' no está configurado en el catálogo."));
+        requerimiento.setEstado(estadoInicial);
         requerimiento.setEspecialidad(especialidadRepository.findById(requerimientoDTO.getId_especialidad())
                 .orElseThrow(() -> new ResourceNotFoundException("Especialidad not found")));
         requerimiento.setDescripcion(requerimientoDTO.getDescripcion());
@@ -96,7 +101,18 @@ public class RequerimientoServiceImpl implements RequerimientoService {
         Long correlativo = requerimientoRepository.count() + 1;
         requerimiento.setNumeroRequerimiento("RQ-" + correlativo);
         requerimiento.setFecha_registro(Instant.now());
-        return convertToResponse(requerimientoRepository.save(requerimiento));
+        Requerimiento requerimientoGuardado = requerimientoRepository.save(requerimiento);
+
+        HistorialRequerimiento historialCreacion = new HistorialRequerimiento();
+        historialCreacion.setRequerimiento(requerimientoGuardado);
+        historialCreacion.setUsuario(requerimientoGuardado.getUsuario());
+        historialCreacion.setEstado_anterior(estadoInicial);
+        historialCreacion.setEstado_nuevo(estadoInicial);
+        historialCreacion.setFecha(Instant.now());
+        historialCreacion.setComentario("Requerimiento creado.");
+        historialRequerimientoRepository.save(historialCreacion);
+
+        return convertToResponse(requerimientoGuardado);
     }
 
     @Override
@@ -276,6 +292,7 @@ public class RequerimientoServiceImpl implements RequerimientoService {
         response.setId_usuario(requerimiento.getUsuario().getId_usuario());
         response.setId_estado(requerimiento.getEstado().getId_estado());
         response.setId_especialidad(requerimiento.getEspecialidad().getId_especialidad());
+        response.setId_solicitud(requerimiento.getSolicitud() != null ? requerimiento.getSolicitud().getId_solicitud() : null);
         response.setNumeroRequerimiento(requerimiento.getNumeroRequerimiento());
         response.setFecha_registro(requerimiento.getFecha_registro());
         response.setDescripcion(requerimiento.getDescripcion());

@@ -41,6 +41,14 @@ public class Requerimiento {
     @JoinColumn(name = "id_especialidad", nullable = false)
     private Especialidad especialidad;
 
+    // Relación con la entidad Solicitud (opcional): un Requerimiento puede
+    // originarse de una Solicitud que resultó estar fuera de contrato (ver
+    // SolicitudServiceImpl.generarRequerimientoDesdeSolicitud), o crearse de
+    // forma independiente (nullable) como ya lo permitía el flujo existente.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_solicitud", nullable = true)
+    private Solicitud solicitud;
+
     @Column (name = "numero_requerimiento")
     private String numeroRequerimiento;
 

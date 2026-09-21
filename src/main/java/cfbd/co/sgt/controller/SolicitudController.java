@@ -16,8 +16,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import cfbd.co.sgt.dto.request.GenerarOrdenRequest;
+import cfbd.co.sgt.dto.request.GenerarRequerimientoRequest;
 import cfbd.co.sgt.dto.request.SolicitudRequest;
 import cfbd.co.sgt.dto.response.OrdenResponse;
+import cfbd.co.sgt.dto.response.RequerimientoResponse;
 import cfbd.co.sgt.dto.response.ResumenEstadosResponse;
 import cfbd.co.sgt.dto.response.SolicitudResponse;
 import cfbd.co.sgt.exception.ResourceNotFoundException;
@@ -83,5 +85,18 @@ public class SolicitudController {
             @Valid @RequestBody GenerarOrdenRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(solicitudService.generarOrdenDesdeSolicitud(id, request));
+    }
+
+    // Generar un Requerimiento desde una Solicitud "fuera de contrato".
+    // Permiso de negocio propio (mismo criterio que solicitud.generar_orden):
+    // ambos son las dos ramas de la misma decisión de clasificación del
+    // Despachador (CLAUDE.md 5.3).
+    @PreAuthorize("hasAuthority('solicitud.generar_requerimiento')")
+    @PostMapping("/{id}/generar-requerimiento")
+    public ResponseEntity<RequerimientoResponse> generarRequerimientoDesdeSolicitud(
+            @PathVariable UUID id,
+            @RequestBody(required = false) GenerarRequerimientoRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(solicitudService.generarRequerimientoDesdeSolicitud(id, request));
     }
 }
