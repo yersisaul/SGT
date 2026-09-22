@@ -165,7 +165,7 @@
       </div>
     }
 
-    @if (canGenerarOrden || canGenerarRequerimiento || canDelete) {
+    @if (canGenerarOrden || canGenerarRequerimiento) {
       <div class="ficha-acciones">
         @if (canGenerarOrden && dialogPuedeGenerarOrden()) {
           <app-button variant="primary" (click)="requestGenerarOrden(view.raw)">
@@ -176,9 +176,6 @@
           <app-button variant="secondary" (click)="requestGenerarRequerimiento(view.raw)">
             Generar Requerimiento (fuera de contrato)
           </app-button>
-        }
-        @if (canDelete) {
-          <app-button variant="danger" (click)="requestDelete(view.raw)">Eliminar</app-button>
         }
       </div>
     }
