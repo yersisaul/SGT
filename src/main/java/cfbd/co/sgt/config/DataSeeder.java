@@ -166,11 +166,13 @@ public class DataSeeder implements ApplicationRunner {
         Map<String, List<String>> matriz = Map.of(
                 "Cliente", List.of(
                         "solicitud.read", "solicitud.create",
-                        "activo.read", "estado.read", "especialidad.read", "usuario.read"),
+                        "activo.read", "estado.read", "especialidad.read", "usuario.read",
+                        "orden.read", "historial_orden.read"),
                 "Despachador", List.of(
                         "solicitud.read", "solicitud.update", "solicitud.generar_orden", "solicitud.generar_requerimiento",
                         "requerimiento.read", "requerimiento.create", "requerimiento.update",
                         "activo.read", "estado.read", "especialidad.read", "usuario.read",
+                        "orden.read", "historial_orden.read",
                         "derivacion.read", "derivacion.create",
                         "historial_solicitud.read"),
                 "Administrador", List.of(
