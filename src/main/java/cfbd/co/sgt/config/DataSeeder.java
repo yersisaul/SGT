@@ -31,15 +31,12 @@ import cfbd.co.sgt.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Carga los datos iniciales del sistema (permisos, roles, usuarios de
- * prueba, especialidades, activos y estados). Idempotente: se apoya en
- * campos naturales (codigo/nombre/email) para no duplicar registros en
- * reinicios sucesivos de la aplicación.
+ * Carga los datos iniciales del sistema (permisos, roles, usuarios de prueba, especialidades, activos y estados). Idempotente: se apoya en
+ * campos naturales (codigo/nombre/email) para no duplicar registros en reinicios sucesivos de la aplicación.
  */
 @Component
 @RequiredArgsConstructor
 public class DataSeeder implements ApplicationRunner {
-
     private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
 
     private static final List<String> RECURSOS_CON_CRUD = List.of(
@@ -47,8 +44,7 @@ public class DataSeeder implements ApplicationRunner {
             "activo", "especialidad", "estado", "permiso");
     private static final List<String> ACCIONES_CRUD = List.of("read", "create", "update", "delete");
 
-    // Recursos que solo exponen un subconjunto de acciones (ver decisión de
-    // alcance del CRUD: auditoría/eventos de negocio no se editan ni se borran,
+    // Recursos que solo exponen un subconjunto de acciones (ver decisión de alcance del CRUD: auditoría/eventos de negocio no se editan ni se borran,
     // y rolpermiso no tiene "update" porque una asignación se revoca y se
     // vuelve a crear, no se edita). "aprobacion" perdió "create": esa
     // operación ahora está gobernada por el permiso de negocio

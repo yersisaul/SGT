@@ -169,12 +169,12 @@
       <div class="ficha-acciones">
         @if (canGenerarOrden && dialogPuedeGenerarOrden()) {
           <app-button variant="primary" (click)="requestGenerarOrden(view.raw)">
-            Generar Orden de Trabajo
+            Generar Orden
           </app-button>
         }
         @if (canGenerarRequerimiento && dialogPuedeGenerarRequerimiento()) {
           <app-button variant="secondary" (click)="requestGenerarRequerimiento(view.raw)">
-            Generar Requerimiento (fuera de contrato)
+            Generar requerimiento
           </app-button>
         }
         @if (canDelete) {
