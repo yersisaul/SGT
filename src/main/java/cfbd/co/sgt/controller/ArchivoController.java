@@ -54,11 +54,9 @@ public class ArchivoController {
     private final FileStorageService fileStorageService;
 
     // ---- Activos (imagen) ----
-
     @PreAuthorize("hasAuthority('activo.update')")
     @PostMapping("/activos/{id}")
-    public ResponseEntity<ActivoResponse> subirImagenActivo(@PathVariable UUID id,
-                                                              @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<ActivoResponse> subirImagenActivo(@PathVariable UUID id, @RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(activoService.subirImagen(id, file));
     }
 
@@ -75,11 +73,9 @@ public class ArchivoController {
     }
 
     // ---- Usuarios (foto) ----
-
     @PreAuthorize("hasAuthority('usuario.update')")
     @PostMapping("/usuarios/{id}")
-    public ResponseEntity<UsuarioResponse> subirFotoUsuario(@PathVariable UUID id,
-                                                              @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<UsuarioResponse> subirFotoUsuario(@PathVariable UUID id, @RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(usuarioService.subirImagen(id, file));
     }
 
@@ -96,11 +92,9 @@ public class ArchivoController {
     }
 
     // ---- Solicitudes (adjunto) ----
-
     @PreAuthorize("hasAuthority('solicitud.update')")
     @PostMapping("/solicitudes/{id}")
-    public ResponseEntity<SolicitudResponse> subirAdjuntoSolicitud(@PathVariable UUID id,
-                                                                     @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<SolicitudResponse> subirAdjuntoSolicitud(@PathVariable UUID id, @RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(solicitudService.subirAdjunto(id, file));
     }
 
@@ -117,11 +111,9 @@ public class ArchivoController {
     }
 
     // ---- Requerimientos (adjunto) ----
-
     @PreAuthorize("hasAuthority('requerimiento.update')")
     @PostMapping("/requerimientos/{id}")
-    public ResponseEntity<RequerimientoResponse> subirAdjuntoRequerimiento(@PathVariable UUID id,
-                                                                            @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<RequerimientoResponse> subirAdjuntoRequerimiento(@PathVariable UUID id, @RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(requerimientoService.subirAdjunto(id, file));
     }
 
@@ -144,8 +136,7 @@ public class ArchivoController {
 
     @PreAuthorize("hasAuthority('requerimiento.aprobar')")
     @PostMapping("/aprobaciones/{id}")
-    public ResponseEntity<AprobacionResponse> subirAdjuntoAprobacion(@PathVariable UUID id,
-                                                                       @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<AprobacionResponse> subirAdjuntoAprobacion(@PathVariable UUID id, @RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(aprobacionService.subirAdjunto(id, file));
     }
 

@@ -165,7 +165,7 @@ public class DataSeeder implements ApplicationRunner {
     private void seedRolPermisos(Map<String, Rol> roles, Map<String, Permiso> permisos) {
         Map<String, List<String>> matriz = Map.of(
                 "Cliente", List.of(
-                        "solicitud.read", "solicitud.create",
+                        "solicitud.read", "solicitud.create", "solicitud.update",
                         "activo.read", "estado.read", "especialidad.read", "usuario.read",
                         "orden.read", "historial_orden.read"),
                 "Despachador", List.of(
@@ -192,8 +192,8 @@ public class DataSeeder implements ApplicationRunner {
                         "aprobacion.read",
                         "historial_orden.read", "historial_requerimiento.read", "historial_solicitud.read"),
                 "Operaciones", List.of(
-                        "solicitud.read",
-                        "requerimiento.read",
+                        "solicitud.read", "solicitud.create", "solicitud.update",
+                        "requerimiento.read", "requerimiento.create", "requerimiento.update",
                         "orden.read", "orden.update", "orden.cerrar", "orden.reasignar",
                         "activo.read", "estado.read",
                         "especialidad.read",
@@ -271,7 +271,12 @@ public class DataSeeder implements ApplicationRunner {
                 new UsuarioSeed("operaciones1@cfbd.co", "Operaciones", "Uno", "Operaciones"),
                 new UsuarioSeed("yortiz@cfbd.co", "Yersy Saul", "Ortiz Mallqui", "Operaciones"),
                 new UsuarioSeed("ddiaz@cfbd.co", "Danny", "Diaz Cordova", "Operaciones"),
-                new UsuarioSeed("carlos@cfbd.co", "Carlos", "Barrientos Diliberto", "Administrador"));
+                new UsuarioSeed("carlos@cfbd.co", "Carlos", "Barrientos Diliberto", "Administrador"),
+                new UsuarioSeed("pgaspar@cfbd.co", "Pedro", "Gaspar Ortiz", "Operaciones"),
+                new UsuarioSeed("mjimenez@cfbd.co", "Miguel", "Jimenez", "Operaciones"),
+                new UsuarioSeed("aperalta@cfbd.co ", "Alicia", "Peralta", "Operaciones"),
+                new UsuarioSeed("lulloa@cfbd.co", "Lorenzo", "Ulloa Alva", "Operaciones"),
+                new UsuarioSeed("rjuarez@cfbd.co", "Ricardo", "Juares Blaz", "Operaciones"));
                 
         for (UsuarioSeed seed : usuarios) {
             if (usuarioRepository.existsByEmail(seed.email())) {
