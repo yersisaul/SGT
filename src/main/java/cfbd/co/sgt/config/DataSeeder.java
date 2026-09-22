@@ -93,9 +93,9 @@ public class DataSeeder implements ApplicationRunner {
         Map<String, Rol> roles = seedRoles();
         Map<String, Permiso> permisos = seedPermisos();
         seedRolPermisos(roles, permisos);
-        Especialidad especialidad = seedEspecialidad();
+        Map<String, Especialidad> especialidades = seedEspecialidades();
         seedEstados();
-        seedActivos(especialidad);
+        seedActivos(especialidades.get("Videovigilancia"));
         seedUsuarios(roles);
         log.info("DataSeeder: carga de datos iniciales verificada (permisos={}, roles={}).",
                 permisos.size(), roles.size());
@@ -216,15 +216,31 @@ public class DataSeeder implements ApplicationRunner {
         });
     }
 
-    private Especialidad seedEspecialidad() {
-        String nombre = "Videovigilancia";
-        return especialidadRepository.findByNombre(nombre).orElseGet(() -> {
-            Especialidad nueva = new Especialidad();
-            nueva.setNombre(nombre);
-            nueva.setDescripcion("Sistemas y software de videovigilancia y monitoreo");
-            log.info("DataSeeder: creando especialidad '{}'.", nombre);
-            return especialidadRepository.save(nueva);
-        });
+    /** "Videovigilancia" se conserva (los Activos sembrados por seedActivos
+     * la referencian); las 4 siguientes son las especialidades pedidas para
+     * clasificar trabajo interno de desarrollo. */
+    private Map<String, Especialidad> seedEspecialidades() {
+        record EspecialidadSeed(String nombre, String descripcion) {
+        }
+        List<EspecialidadSeed> especialidades = List.of(
+                new EspecialidadSeed("Videovigilancia", "Sistemas y software de videovigilancia y monitoreo"),
+                new EspecialidadSeed("Desarrollo", "Desarrollo de software"),
+                new EspecialidadSeed("Implementación", "Implementación de soluciones"),
+                new EspecialidadSeed("DevOPS", "Infraestructura, CI/CD y operaciones"),
+                new EspecialidadSeed("Soporte", "Soporte técnico y mantenimiento"));
+
+        Map<String, Especialidad> resultado = new LinkedHashMap<>();
+        for (EspecialidadSeed seed : especialidades) {
+            Especialidad especialidad = especialidadRepository.findByNombre(seed.nombre()).orElseGet(() -> {
+                Especialidad nueva = new Especialidad();
+                nueva.setNombre(seed.nombre());
+                nueva.setDescripcion(seed.descripcion());
+                log.info("DataSeeder: creando especialidad '{}'.", seed.nombre());
+                return especialidadRepository.save(nueva);
+            });
+            resultado.put(seed.nombre(), especialidad);
+        }
+        return resultado;
     }
 
     private void seedEstados() {
