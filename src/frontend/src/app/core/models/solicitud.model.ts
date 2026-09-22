@@ -32,7 +32,6 @@ export interface SolicitudRequest {
   id_especialidad: string;
   prioridad: string;
   descripcion: string;
-  url_adjunto: string | null;
 }
 
 /** Contrato real de POST /api/historial-solicitudes (HistorialSolicitudRequest). */

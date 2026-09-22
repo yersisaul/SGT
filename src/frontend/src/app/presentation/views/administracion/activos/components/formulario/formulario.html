@@ -37,15 +37,13 @@
     "
   />
 
-  <app-input
-    label="URL de imagen (opcional)"
-    formControlName="url_img"
-    placeholder="https://…"
-    [errorMessage]="
-      form.controls.url_img.touched && form.controls.url_img.invalid
-        ? 'Ingresa una URL válida (http:// o https://)'
-        : null
-    "
+  <app-file-upload
+    label="Imagen del activo"
+    tipo="imagen"
+    [maxSizeMb]="5"
+    [currentUrl]="urlImagenActual"
+    [formControl]="imagenControl"
+    (eliminarActual)="onEliminarImagenActual()"
   />
 
   <div class="admin-form-actions">

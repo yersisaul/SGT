@@ -155,7 +155,7 @@
         @if (view.raw.url_adjunto) {
           <div class="ficha-info-row">
             <span class="ficha-info-label">Adjunto</span>
-            <a [href]="view.raw.url_adjunto" target="_blank" rel="noopener">Ver adjunto</a>
+            <button type="button" class="ficha-link" (click)="verAdjunto(view.raw.url_adjunto)">Ver adjunto</button>
           </div>
         }
         <div class="ficha-info-row ficha-info-row-block">

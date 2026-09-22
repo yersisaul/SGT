@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
@@ -40,8 +41,10 @@ import cfbd.co.sgt.repository.OrdenRepository;
 import cfbd.co.sgt.repository.RequerimientoRepository;
 import cfbd.co.sgt.repository.SolicitudRepository;
 import cfbd.co.sgt.repository.UsuarioRepository;
+import cfbd.co.sgt.service.FileStorageService;
 import cfbd.co.sgt.service.RequerimientoService;
 import cfbd.co.sgt.service.SlaCalculator;
+import cfbd.co.sgt.service.TipoRecursoArchivo;
 import jakarta.transaction.Transactional;
 
 @Service
@@ -92,6 +95,9 @@ public class RequerimientoServiceImpl implements RequerimientoService {
     @Autowired
     private SlaCalculator slaCalculator;
 
+    @Autowired
+    private FileStorageService fileStorageService;
+
     @Override
     public RequerimientoResponse crearRequerimiento(RequerimientoRequest requerimientoDTO) {
         Requerimiento requerimiento = new Requerimiento();
@@ -107,7 +113,8 @@ public class RequerimientoServiceImpl implements RequerimientoService {
         requerimiento.setEspecialidad(especialidadRepository.findById(requerimientoDTO.getId_especialidad())
                 .orElseThrow(() -> new ResourceNotFoundException("Especialidad not found")));
         requerimiento.setDescripcion(requerimientoDTO.getDescripcion());
-        requerimiento.setUrl_adjunto(requerimientoDTO.getUrl_adjunto());
+        // El adjunto se gestiona exclusivamente vía subirAdjunto/eliminarAdjunto
+        // (fileserver propio, CLAUDE.md sección 26/30): no se acepta desde este DTO.
         Long correlativo = requerimientoRepository.count() + 1;
         requerimiento.setNumeroRequerimiento("RQ-" + correlativo);
         requerimiento.setFecha_registro(Instant.now());
@@ -146,7 +153,6 @@ public class RequerimientoServiceImpl implements RequerimientoService {
         requerimiento.setEspecialidad(especialidadRepository.findById(requerimientoDTO.getId_especialidad())
                 .orElseThrow(() -> new ResourceNotFoundException("Especialidad not found")));
         requerimiento.setDescripcion(requerimientoDTO.getDescripcion());
-        requerimiento.setUrl_adjunto(requerimientoDTO.getUrl_adjunto());
         return convertToResponse(requerimientoRepository.save(requerimiento));
     }
 
@@ -276,6 +282,42 @@ public class RequerimientoServiceImpl implements RequerimientoService {
         return convertirOrdenAResponse(ordenGuardada);
     }
 
+    @Override
+    public RequerimientoResponse subirAdjunto(UUID id, MultipartFile file) {
+        Requerimiento requerimiento = requerimientoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Requerimiento not found"));
+        String referenciaAnterior = requerimiento.getUrl_adjunto();
+        String nuevaReferencia = fileStorageService.store(file, TipoRecursoArchivo.REQUERIMIENTOS, id);
+        requerimiento.setUrl_adjunto(nuevaReferencia);
+        Requerimiento guardado = requerimientoRepository.save(requerimiento);
+        if (referenciaAnterior != null) {
+            fileStorageService.delete(referenciaAnterior);
+        }
+        return convertToResponse(guardado);
+    }
+
+    @Override
+    public String obtenerReferenciaAdjunto(UUID id) {
+        Requerimiento requerimiento = requerimientoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Requerimiento not found"));
+        if (requerimiento.getUrl_adjunto() == null) {
+            throw new ResourceNotFoundException("El Requerimiento no tiene adjunto.");
+        }
+        return requerimiento.getUrl_adjunto();
+    }
+
+    @Override
+    public RequerimientoResponse eliminarAdjunto(UUID id) {
+        Requerimiento requerimiento = requerimientoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Requerimiento not found"));
+        if (requerimiento.getUrl_adjunto() != null) {
+            fileStorageService.delete(requerimiento.getUrl_adjunto());
+            requerimiento.setUrl_adjunto(null);
+            requerimientoRepository.save(requerimiento);
+        }
+        return convertToResponse(requerimiento);
+    }
+
     private void sincronizarSolicitudOrigenConOrden(Solicitud solicitud, Orden ordenGuardada, Usuario actor) {
         if (!"En revisión".equalsIgnoreCase(solicitud.getEstado().getNombre())) {
             // Ya no está "En revisión" (p. ej. ya se sincronizó antes o el
@@ -345,7 +387,8 @@ public class RequerimientoServiceImpl implements RequerimientoService {
         response.setNumeroRequerimiento(requerimiento.getNumeroRequerimiento());
         response.setFecha_registro(requerimiento.getFecha_registro());
         response.setDescripcion(requerimiento.getDescripcion());
-        response.setUrl_adjunto(requerimiento.getUrl_adjunto());
+        response.setUrl_adjunto(requerimiento.getUrl_adjunto() != null
+                ? "/api/archivos/requerimientos/" + requerimiento.getId_requerimiento() : null);
         response.setFecha_limite_despacho(slaCalculator.deadlineRequerimiento(requerimiento.getFecha_registro()));
         return response;
     }
@@ -361,7 +404,8 @@ public class RequerimientoServiceImpl implements RequerimientoService {
         response.setNumeroOrden(orden.getNumeroOrden());
         response.setFecha_registro(orden.getFecha_registro());
         response.setFecha_cierre(orden.getFecha_cierre());
-        response.setUrl_adjunto(orden.getUrl_adjunto());
+        response.setUrl_adjunto(orden.getUrl_adjunto() != null
+                ? "/api/archivos/ordenes/" + orden.getId_orden() : null);
         return response;
     }
 }

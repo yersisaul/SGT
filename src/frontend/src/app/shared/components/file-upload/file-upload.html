@@ -1,0 +1,90 @@
+<div class="field">
+  <label class="field-label" [attr.for]="inputId">{{ label() }}</label>
+
+  <input
+    #fileInput
+    type="file"
+    [id]="inputId"
+    [accept]="accept()"
+    class="visually-hidden"
+    [disabled]="disabled()"
+    (change)="onFileInputChange($event)"
+  />
+
+  @if (selectedFile(); as file) {
+    <div class="file-card">
+      @if (previewUrl(); as preview) {
+        <img [src]="preview" alt="" class="file-thumb" />
+      } @else {
+        <svg lucidePaperclip [size]="20" aria-hidden="true" class="file-icon"></svg>
+      }
+      <div class="file-info">
+        <span class="file-name">{{ file.name }}</span>
+        <span class="file-meta">{{ formatearTamano(file.size) }}</span>
+      </div>
+      <button
+        type="button"
+        class="file-remove"
+        (click)="quitarSeleccion()"
+        [disabled]="disabled()"
+        aria-label="Quitar archivo seleccionado"
+      >
+        <svg lucideX [size]="16" aria-hidden="true"></svg>
+      </button>
+    </div>
+  } @else if (currentUrl() && !actualEliminado()) {
+    <div class="file-card">
+      @if (cargandoPreview()) {
+        <app-spinner size="sm" label="Cargando preview" />
+      } @else if (currentPreviewUrl(); as preview) {
+        <img [src]="preview" alt="" class="file-thumb" />
+      } @else {
+        <svg lucidePaperclip [size]="20" aria-hidden="true" class="file-icon"></svg>
+      }
+      <div class="file-info">
+        <span class="file-name">Archivo actual</span>
+        <button type="button" class="file-link" (click)="verArchivoActual()">Ver archivo</button>
+      </div>
+      <div class="file-actions">
+        <button type="button" class="file-secondary" (click)="fileInput.click()" [disabled]="disabled()">
+          Reemplazar
+        </button>
+        <button
+          type="button"
+          class="file-remove"
+          (click)="quitarActual()"
+          [disabled]="disabled()"
+          aria-label="Eliminar archivo actual"
+        >
+          <svg lucideX [size]="16" aria-hidden="true"></svg>
+        </button>
+      </div>
+    </div>
+  } @else {
+    <div
+      class="dropzone"
+      role="button"
+      tabindex="0"
+      [class.dropzone-over]="dragOver()"
+      [class.dropzone-disabled]="disabled()"
+      (click)="fileInput.click()"
+      (keydown.enter)="fileInput.click()"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave()"
+      (drop)="onDrop($event)"
+    >
+      <svg lucideUpload [size]="22" aria-hidden="true"></svg>
+      <p class="dropzone-text">Arrastra un archivo aquí</p>
+      <button type="button" class="dropzone-btn" (click)="$event.stopPropagation(); fileInput.click()" [disabled]="disabled()">
+        Seleccionar archivo
+      </button>
+    </div>
+  }
+
+  @if (localError() || errorMessage()) {
+    <span class="helper helper-error">
+      <svg lucideCircleAlert [size]="14" aria-hidden="true"></svg>
+      {{ localError() || errorMessage() }}
+    </span>
+  }
+</div>

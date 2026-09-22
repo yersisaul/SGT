@@ -10,6 +10,7 @@ import cfbd.co.sgt.dto.response.SolicitudResponse;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface SolicitudService {
     SolicitudResponse crearSolicitud(SolicitudRequest solicitud);
@@ -21,4 +22,8 @@ public interface SolicitudService {
     ResumenEstadosResponse obtenerResumenPorEstado();
     OrdenResponse generarOrdenDesdeSolicitud(UUID idSolicitud, GenerarOrdenRequest request);
     RequerimientoResponse generarRequerimientoDesdeSolicitud(UUID idSolicitud, GenerarRequerimientoRequest request);
+
+    SolicitudResponse subirAdjunto(UUID id, MultipartFile file);
+    String obtenerReferenciaAdjunto(UUID id);
+    SolicitudResponse eliminarAdjunto(UUID id);
 }

@@ -5,7 +5,8 @@ import { forkJoin } from 'rxjs';
 
 import { AuthService } from '../../../../core/auth/auth.service';
 import { RolCatalogo } from '../../../../core/models/catalogo.model';
-import { UsuarioRequest, UsuarioResponse } from '../../../../core/models/usuario.model';
+import { UsuarioResponse } from '../../../../core/models/usuario.model';
+import { ArchivoService } from '../../../../core/services/archivo.service';
 import { CatalogoService } from '../../../../core/services/catalogo.service';
 import { UsuarioService } from '../../../../core/services/usuario.service';
 import { Badge } from '../../../../shared/components/badge/badge';
@@ -14,7 +15,7 @@ import { Dialog } from '../../../../shared/components/dialog/dialog';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { NotificationService } from '../../../../shared/services/notification.service';
 import { extractApiErrorMessage } from '../../../../shared/utils/api-error.util';
-import { Formulario } from './components/formulario/formulario';
+import { Formulario, UsuarioFormSubmit } from './components/formulario/formulario';
 
 type DialogMode = 'create' | 'edit' | null;
 
@@ -27,6 +28,7 @@ type DialogMode = 'create' | 'edit' | null;
 export class Usuarios {
   private readonly authService = inject(AuthService);
   private readonly usuarioService = inject(UsuarioService);
+  private readonly archivoService = inject(ArchivoService);
   private readonly catalogoService = inject(CatalogoService);
   private readonly notifications = inject(NotificationService);
 
@@ -85,36 +87,58 @@ export class Usuarios {
     this.dialogTarget.set(null);
   }
 
-  protected handleFormSubmit(request: UsuarioRequest): void {
+  protected handleFormSubmit(submission: UsuarioFormSubmit): void {
     this.formSubmitting.set(true);
+    const { request, archivo, eliminarArchivo } = submission;
+    const esCreacion = this.dialogMode() === 'create';
 
-    if (this.dialogMode() === 'create') {
-      this.usuarioService.crear(request).subscribe({
-        next: (creado) => {
-          this.usuarios.update((lista) => [...lista, creado]);
-          this.formSubmitting.set(false);
-          this.closeDialog();
-          this.notifications.success('Usuario creado correctamente.');
+    const guardar$ = esCreacion
+      ? this.usuarioService.crear(request)
+      : this.usuarioService.editar(this.dialogTarget()!.id_usuario, request);
+
+    guardar$.subscribe({
+      next: (entidad) => this.gestionarArchivoYFinalizar(entidad, archivo, eliminarArchivo, esCreacion),
+      error: () => this.formSubmitting.set(false),
+    });
+  }
+
+  private gestionarArchivoYFinalizar(
+    entidad: UsuarioResponse,
+    archivo: File | null,
+    eliminarArchivo: boolean,
+    esCreacion: boolean,
+  ): void {
+    const finalizar = (actualizado: UsuarioResponse) => {
+      this.usuarios.update((lista) =>
+        esCreacion
+          ? [...lista, actualizado]
+          : lista.map((u) => (u.id_usuario === actualizado.id_usuario ? actualizado : u)),
+      );
+      this.formSubmitting.set(false);
+      this.closeDialog();
+      this.notifications.success(esCreacion ? 'Usuario creado correctamente.' : 'Usuario actualizado correctamente.');
+    };
+
+    if (archivo) {
+      this.archivoService.subir<UsuarioResponse>('usuarios', entidad.id_usuario, archivo).subscribe({
+        next: finalizar,
+        error: () => {
+          this.notifications.error('El usuario se guardó, pero no se pudo subir la foto.');
+          finalizar(entidad);
         },
-        error: () => this.formSubmitting.set(false),
       });
       return;
     }
 
-    const target = this.dialogTarget();
-    if (this.dialogMode() === 'edit' && target) {
-      this.usuarioService.editar(target.id_usuario, request).subscribe({
-        next: (actualizado) => {
-          this.usuarios.update((lista) =>
-            lista.map((u) => (u.id_usuario === actualizado.id_usuario ? actualizado : u)),
-          );
-          this.formSubmitting.set(false);
-          this.closeDialog();
-          this.notifications.success('Usuario actualizado correctamente.');
-        },
-        error: () => this.formSubmitting.set(false),
+    if (eliminarArchivo) {
+      this.archivoService.eliminar<UsuarioResponse>('usuarios', entidad.id_usuario).subscribe({
+        next: finalizar,
+        error: () => finalizar(entidad),
       });
+      return;
     }
+
+    finalizar(entidad);
   }
 
   protected requestDelete(usuario: UsuarioResponse): void {

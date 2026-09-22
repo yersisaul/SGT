@@ -4,6 +4,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ActivoRequest, ActivoResponse } from '../../../../../../core/models/activo.model';
 import { EspecialidadCatalogo } from '../../../../../../core/models/catalogo.model';
 import { Button } from '../../../../../../shared/components/button/button';
+import { FileUpload } from '../../../../../../shared/components/file-upload/file-upload';
 import { Input } from '../../../../../../shared/components/input/input';
 import { Select, SelectOption } from '../../../../../../shared/components/select/select';
 
@@ -13,14 +14,21 @@ interface ActivoForm {
   nombre: FormControl<string>;
   descripcion: FormControl<string>;
   ubicacion: FormControl<string>;
-  url_img: FormControl<string>;
 }
 
-const URL_PATTERN = /^https?:\/\/.+/i;
+/** Lo que emite el formulario al guardar: los datos de Activo más, por
+ * separado, la imagen nueva (si se seleccionó una) o el pedido de quitar la
+ * actual. El contenedor decide cuándo llamar a ArchivoService (CLAUDE.md
+ * sección 33: seleccionar -> preview -> guardar formulario -> subir). */
+export interface ActivoFormSubmit {
+  request: ActivoRequest;
+  archivo: File | null;
+  eliminarArchivo: boolean;
+}
 
 @Component({
   selector: 'app-activo-formulario',
-  imports: [ReactiveFormsModule, Button, Input, Select],
+  imports: [ReactiveFormsModule, Button, Input, Select, FileUpload],
   templateUrl: './formulario.html',
   styleUrl: './formulario.css',
 })
@@ -30,7 +38,7 @@ export class Formulario implements OnInit {
   readonly especialidades = input<EspecialidadCatalogo[]>([]);
   readonly submitting = input(false);
 
-  readonly submitForm = output<ActivoRequest>();
+  readonly submitForm = output<ActivoFormSubmit>();
   readonly cancel = output<void>();
 
   protected readonly form = new FormGroup<ActivoForm>({
@@ -39,8 +47,11 @@ export class Formulario implements OnInit {
     nombre: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(150)] }),
     descripcion: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(255)] }),
     ubicacion: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(150)] }),
-    url_img: new FormControl('', { nonNullable: true, validators: [Validators.pattern(URL_PATTERN)] }),
   });
+
+  protected readonly imagenControl = new FormControl<File | null>(null);
+  protected eliminarImagenActual = false;
+  protected urlImagenActual: string | null = null;
 
   ngOnInit(): void {
     const activo = this.initial();
@@ -51,13 +62,17 @@ export class Formulario implements OnInit {
         nombre: activo.nombre,
         descripcion: activo.descripcion ?? '',
         ubicacion: activo.ubicacion ?? '',
-        url_img: activo.url_img ?? '',
       });
+      this.urlImagenActual = activo.url_img;
     }
   }
 
   protected get especialidadOptions(): SelectOption[] {
     return this.especialidades().map((item) => ({ value: item.id_especialidad, label: item.nombre }));
+  }
+
+  protected onEliminarImagenActual(): void {
+    this.eliminarImagenActual = true;
   }
 
   protected submit(): void {
@@ -67,12 +82,15 @@ export class Formulario implements OnInit {
     }
     const value = this.form.getRawValue();
     this.submitForm.emit({
-      id_especialidad: value.id_especialidad,
-      codigo: value.codigo,
-      nombre: value.nombre,
-      descripcion: value.descripcion || null,
-      ubicacion: value.ubicacion || null,
-      url_img: value.url_img || null,
+      request: {
+        id_especialidad: value.id_especialidad,
+        codigo: value.codigo,
+        nombre: value.nombre,
+        descripcion: value.descripcion || null,
+        ubicacion: value.ubicacion || null,
+      },
+      archivo: this.imagenControl.value,
+      eliminarArchivo: this.eliminarImagenActual,
     });
   }
 }

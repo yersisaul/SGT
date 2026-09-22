@@ -29,8 +29,9 @@ export class OrdenService {
     return this.http.get<OrdenResponse>(`${this.apiBaseUrl}/ordenes/${id}`);
   }
 
-  /** PUT genérico: el backend solo aplica id_estado (transición validada) y
-   * url_adjunto; el resto del body se ignora (ver OrdenRequest). */
+  /** PUT genérico: el backend solo aplica id_estado (transición validada);
+   * el resto del body se ignora (ver OrdenRequest). El adjunto se gestiona
+   * aparte, vía ArchivoService. */
   editar(id: string, request: OrdenRequest): Observable<OrdenResponse> {
     return this.http.put<OrdenResponse>(`${this.apiBaseUrl}/ordenes/${id}`, request);
   }

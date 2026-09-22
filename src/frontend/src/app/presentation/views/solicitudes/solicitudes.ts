@@ -12,6 +12,7 @@ import {
   SolicitudRequest,
   SolicitudResponse,
 } from '../../../core/models/solicitud.model';
+import { ArchivoService } from '../../../core/services/archivo.service';
 import { CatalogoService } from '../../../core/services/catalogo.service';
 import { SolicitudService } from '../../../core/services/solicitud.service';
 import { Button } from '../../../shared/components/button/button';
@@ -21,7 +22,7 @@ import { Spinner } from '../../../shared/components/spinner/spinner';
 import { NotificationService } from '../../../shared/services/notification.service';
 import { extractApiErrorMessage } from '../../../shared/utils/api-error.util';
 import { estadoOrderRank } from '../../../shared/utils/estado-order.util';
-import { Formulario } from './components/formulario/formulario';
+import { Formulario, SolicitudFormSubmit } from './components/formulario/formulario';
 import { Kanban, SolicitudMovida } from './components/kanban/kanban';
 import { Tabla } from './components/tabla/tabla';
 import {
@@ -61,6 +62,7 @@ type DialogMode = 'create' | 'edit' | null;
 export class Solicitudes {
   private readonly authService = inject(AuthService);
   private readonly solicitudService = inject(SolicitudService);
+  private readonly archivoService = inject(ArchivoService);
   private readonly catalogoService = inject(CatalogoService);
   private readonly notifications = inject(NotificationService);
 
@@ -206,6 +208,18 @@ export class Solicitudes {
     this.loadAll();
   }
 
+  /** El adjunto exige JWT (Authorization header), así que no puede ser un
+   * <a href> plano: se descarga vía HttpClient (el interceptor ya adjunta el
+   * token) y se abre como blob local. */
+  protected verAdjunto(url: string | null): void {
+    if (!url) return;
+    this.archivoService.descargarBlob(url).subscribe((blob) => {
+      const objectUrl = URL.createObjectURL(blob);
+      window.open(objectUrl, '_blank');
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    });
+  }
+
   protected openCreate(): void {
     this.dialogMode.set('create');
     this.dialogTarget.set(null);
@@ -223,21 +237,22 @@ export class Solicitudes {
     this.historial.set([]);
   }
 
-  protected handleFormSubmit(request: SolicitudRequest): void {
+  protected handleFormSubmit(submission: SolicitudFormSubmit): void {
     const currentUser = this.authService.user();
     if (!currentUser) return;
 
     this.formSubmitting.set(true);
+    const { request, archivo, eliminarArchivo } = submission;
 
     if (this.dialogMode() === 'create') {
       const payload: SolicitudRequest = { ...request, id_usuario: currentUser.id };
       this.solicitudService.crear(payload).subscribe({
-        next: (creada) => {
-          this.solicitudes.update((lista) => [creada, ...lista]);
-          this.formSubmitting.set(false);
-          this.closeDialog();
-          this.notifications.success(`Solicitud ${creada.numeroSolicitud} creada correctamente.`);
-        },
+        next: (creada) =>
+          this.gestionarArchivoYFinalizar(creada, archivo, eliminarArchivo, (actualizada) => {
+            this.solicitudes.update((lista) => [actualizada, ...lista]);
+            this.closeDialog();
+            this.notifications.success(`Solicitud ${actualizada.numeroSolicitud} creada correctamente.`);
+          }),
         error: () => this.formSubmitting.set(false),
       });
       return;
@@ -247,17 +262,48 @@ export class Solicitudes {
     if (this.dialogMode() === 'edit' && original) {
       const payload: SolicitudRequest = { ...request, id_usuario: original.id_usuario };
       this.solicitudService.editar(original.id_solicitud, payload).subscribe({
-        next: (actualizada) => {
-          this.solicitudes.update((lista) =>
-            lista.map((s) => (s.id_solicitud === actualizada.id_solicitud ? actualizada : s)),
-          );
-          this.dialogTarget.set(actualizada);
-          this.formSubmitting.set(false);
-          this.notifications.success('Solicitud actualizada correctamente.');
-        },
+        next: (actualizada) =>
+          this.gestionarArchivoYFinalizar(actualizada, archivo, eliminarArchivo, (final) => {
+            this.solicitudes.update((lista) => lista.map((s) => (s.id_solicitud === final.id_solicitud ? final : s)));
+            this.dialogTarget.set(final);
+            this.notifications.success('Solicitud actualizada correctamente.');
+          }),
         error: () => this.formSubmitting.set(false),
       });
     }
+  }
+
+  private gestionarArchivoYFinalizar(
+    entidad: SolicitudResponse,
+    archivo: File | null,
+    eliminarArchivo: boolean,
+    onFinal: (actualizada: SolicitudResponse) => void,
+  ): void {
+    const finalizar = (actualizada: SolicitudResponse) => {
+      this.formSubmitting.set(false);
+      onFinal(actualizada);
+    };
+
+    if (archivo) {
+      this.archivoService.subir<SolicitudResponse>('solicitudes', entidad.id_solicitud, archivo).subscribe({
+        next: finalizar,
+        error: () => {
+          this.notifications.error('La solicitud se guardó, pero no se pudo subir el adjunto.');
+          finalizar(entidad);
+        },
+      });
+      return;
+    }
+
+    if (eliminarArchivo) {
+      this.archivoService.eliminar<SolicitudResponse>('solicitudes', entidad.id_solicitud).subscribe({
+        next: finalizar,
+        error: () => finalizar(entidad),
+      });
+      return;
+    }
+
+    finalizar(entidad);
   }
 
   protected requestDelete(solicitud: SolicitudResponse): void {
@@ -404,7 +450,6 @@ export class Solicitudes {
       id_especialidad: item.raw.id_especialidad,
       prioridad: item.raw.prioridad,
       descripcion: item.raw.descripcion,
-      url_adjunto: item.raw.url_adjunto,
     };
 
     this.solicitudService.editar(item.raw.id_solicitud, payload).subscribe({

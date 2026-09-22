@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 import cfbd.co.sgt.dto.request.UsuarioRequest;
 import cfbd.co.sgt.dto.response.UsuarioResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface UsuarioService {
     UsuarioResponse crearUsuario(UsuarioRequest usuario);
@@ -13,4 +14,8 @@ public interface UsuarioService {
     UsuarioResponse buscarUsuarioPorId(UUID id);
     UsuarioResponse buscarUsuarioPorEmail(String email);
     void eliminarUsuario(UUID id);
+
+    UsuarioResponse subirImagen(UUID id, MultipartFile file);
+    String obtenerReferenciaImagen(UUID id);
+    UsuarioResponse eliminarImagen(UUID id);
 }

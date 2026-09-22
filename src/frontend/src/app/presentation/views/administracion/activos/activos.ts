@@ -4,16 +4,17 @@ import { LucideCircleAlert, LucidePencil, LucidePlus, LucideSearch, LucideTrash 
 import { forkJoin } from 'rxjs';
 
 import { AuthService } from '../../../../core/auth/auth.service';
-import { ActivoRequest, ActivoResponse } from '../../../../core/models/activo.model';
+import { ActivoResponse } from '../../../../core/models/activo.model';
 import { EspecialidadCatalogo } from '../../../../core/models/catalogo.model';
 import { ActivoService } from '../../../../core/services/activo.service';
+import { ArchivoService } from '../../../../core/services/archivo.service';
 import { CatalogoService } from '../../../../core/services/catalogo.service';
 import { Button } from '../../../../shared/components/button/button';
 import { Dialog } from '../../../../shared/components/dialog/dialog';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { NotificationService } from '../../../../shared/services/notification.service';
 import { extractApiErrorMessage } from '../../../../shared/utils/api-error.util';
-import { Formulario } from './components/formulario/formulario';
+import { ActivoFormSubmit, Formulario } from './components/formulario/formulario';
 
 type DialogMode = 'create' | 'edit' | null;
 
@@ -26,6 +27,7 @@ type DialogMode = 'create' | 'edit' | null;
 export class Activos {
   private readonly authService = inject(AuthService);
   private readonly activoService = inject(ActivoService);
+  private readonly archivoService = inject(ArchivoService);
   private readonly catalogoService = inject(CatalogoService);
   private readonly notifications = inject(NotificationService);
 
@@ -87,34 +89,58 @@ export class Activos {
     this.dialogTarget.set(null);
   }
 
-  protected handleFormSubmit(request: ActivoRequest): void {
+  protected handleFormSubmit(submission: ActivoFormSubmit): void {
     this.formSubmitting.set(true);
+    const { request, archivo, eliminarArchivo } = submission;
+    const esCreacion = this.dialogMode() === 'create';
 
-    if (this.dialogMode() === 'create') {
-      this.activoService.crear(request).subscribe({
-        next: (creado) => {
-          this.activos.update((lista) => [...lista, creado]);
-          this.formSubmitting.set(false);
-          this.closeDialog();
-          this.notifications.success('Activo creado correctamente.');
+    const guardar$ = esCreacion
+      ? this.activoService.crear(request)
+      : this.activoService.editar(this.dialogTarget()!.id_activo, request);
+
+    guardar$.subscribe({
+      next: (entidad) => this.gestionarArchivoYFinalizar(entidad, archivo, eliminarArchivo, esCreacion),
+      error: () => this.formSubmitting.set(false),
+    });
+  }
+
+  private gestionarArchivoYFinalizar(
+    entidad: ActivoResponse,
+    archivo: File | null,
+    eliminarArchivo: boolean,
+    esCreacion: boolean,
+  ): void {
+    const finalizar = (actualizado: ActivoResponse) => {
+      this.activos.update((lista) =>
+        esCreacion
+          ? [...lista, actualizado]
+          : lista.map((a) => (a.id_activo === actualizado.id_activo ? actualizado : a)),
+      );
+      this.formSubmitting.set(false);
+      this.closeDialog();
+      this.notifications.success(esCreacion ? 'Activo creado correctamente.' : 'Activo actualizado correctamente.');
+    };
+
+    if (archivo) {
+      this.archivoService.subir<ActivoResponse>('activos', entidad.id_activo, archivo).subscribe({
+        next: finalizar,
+        error: () => {
+          this.notifications.error('El activo se guardó, pero no se pudo subir la imagen.');
+          finalizar(entidad);
         },
-        error: () => this.formSubmitting.set(false),
       });
       return;
     }
 
-    const target = this.dialogTarget();
-    if (this.dialogMode() === 'edit' && target) {
-      this.activoService.editar(target.id_activo, request).subscribe({
-        next: (actualizado) => {
-          this.activos.update((lista) => lista.map((a) => (a.id_activo === actualizado.id_activo ? actualizado : a)));
-          this.formSubmitting.set(false);
-          this.closeDialog();
-          this.notifications.success('Activo actualizado correctamente.');
-        },
-        error: () => this.formSubmitting.set(false),
+    if (eliminarArchivo) {
+      this.archivoService.eliminar<ActivoResponse>('activos', entidad.id_activo).subscribe({
+        next: finalizar,
+        error: () => finalizar(entidad),
       });
+      return;
     }
+
+    finalizar(entidad);
   }
 
   protected requestDelete(activo: ActivoResponse): void {

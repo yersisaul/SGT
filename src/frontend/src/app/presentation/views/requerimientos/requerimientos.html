@@ -161,7 +161,7 @@
         @if (view.raw.url_adjunto) {
           <div class="ficha-info-row">
             <span class="ficha-info-label">Adjunto</span>
-            <a [href]="view.raw.url_adjunto" target="_blank" rel="noopener">Ver adjunto</a>
+            <button type="button" class="ficha-link" (click)="verAdjunto(view.raw.url_adjunto)">Ver adjunto</button>
           </div>
         }
         <div class="ficha-info-row ficha-info-row-block">
@@ -272,6 +272,9 @@
             @if (registro.comentario) {
               <p class="ficha-historial-comentario">{{ registro.comentario }}</p>
             }
+            @if (registro.url_adjunto) {
+              <button type="button" class="ficha-link" (click)="verAdjunto(registro.url_adjunto)">Ver presupuesto</button>
+            }
           </div>
         }
       </div>
@@ -355,6 +358,14 @@
         placeholder="Motivo de la decisión…"
       ></textarea>
     </div>
+
+    <app-file-upload
+      label="Adjuntar presupuesto (opcional)"
+      tipo="adjunto"
+      [maxSizeMb]="10"
+      [ngModel]="aprobacionArchivo()"
+      (ngModelChange)="aprobacionArchivo.set($event)"
+    />
 
     @if (aprobacionError()) {
       <div class="confirm-error" role="alert">{{ aprobacionError() }}</div>

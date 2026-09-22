@@ -7,7 +7,6 @@ export interface AprobacionRequest {
   id_requerimiento: string;
   aprobado: boolean;
   comentario?: string | null;
-  url_adjunto?: string | null;
 }
 
 export interface AprobacionResponse {

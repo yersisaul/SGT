@@ -4,6 +4,7 @@ import cfbd.co.sgt.dto.response.ActivoResponse;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface ActivoService {
     ActivoResponse crearActivo(ActivoRequest activo);
@@ -11,4 +12,8 @@ public interface ActivoService {
     List<ActivoResponse> listarActivos();
     Optional<ActivoResponse> buscarActivoPorId(UUID id);
     void eliminarActivo(UUID id);
+
+    ActivoResponse subirImagen(UUID id, MultipartFile file);
+    String obtenerReferenciaImagen(UUID id);
+    ActivoResponse eliminarImagen(UUID id);
 }

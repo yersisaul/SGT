@@ -8,6 +8,7 @@ import cfbd.co.sgt.dto.response.ResumenEstadosResponse;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface RequerimientoService {
     RequerimientoResponse crearRequerimiento(RequerimientoRequest requerimiento);
@@ -18,4 +19,8 @@ public interface RequerimientoService {
     void eliminarRequerimiento(UUID id);
     ResumenEstadosResponse obtenerResumenPorEstado();
     OrdenResponse generarOrdenDesdeRequerimiento(UUID idRequerimiento, GenerarOrdenRequest request);
+
+    RequerimientoResponse subirAdjunto(UUID id, MultipartFile file);
+    String obtenerReferenciaAdjunto(UUID id);
+    RequerimientoResponse eliminarAdjunto(UUID id);
 }

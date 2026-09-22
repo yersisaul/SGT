@@ -8,7 +8,6 @@ export interface UsuarioRequest {
   password: string;
   nombres: string;
   apellidos: string;
-  url_img: string | null;
 }
 
 export interface UsuarioResponse {

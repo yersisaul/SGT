@@ -12,6 +12,7 @@ import {
   OrdenResponse,
   ReasignarOrdenRequest,
 } from '../../../core/models/orden.model';
+import { ArchivoService } from '../../../core/services/archivo.service';
 import { CatalogoService } from '../../../core/services/catalogo.service';
 import { OrdenService } from '../../../core/services/orden.service';
 import { RequerimientoService } from '../../../core/services/requerimiento.service';
@@ -58,6 +59,7 @@ type ViewMode = 'kanban' | 'tabla';
 export class Ordenes {
   private readonly authService = inject(AuthService);
   private readonly ordenService = inject(OrdenService);
+  private readonly archivoService = inject(ArchivoService);
   private readonly solicitudService = inject(SolicitudService);
   private readonly requerimientoService = inject(RequerimientoService);
   private readonly catalogoService = inject(CatalogoService);
@@ -211,16 +213,60 @@ export class Ordenes {
       id_especialidad: original.id_especialidad,
       id_solicitud: original.id_solicitud,
       id_requerimiento: original.id_requerimiento,
-      url_adjunto: resultado.url_adjunto,
     };
     this.ordenService.editar(original.id_orden, payload).subscribe({
-      next: (actualizada) => {
-        this.ordenes.update((lista) => lista.map((o) => (o.id_orden === actualizada.id_orden ? actualizada : o)));
-        this.dialogTarget.set(actualizada);
-        this.ejecutarSubmitting.set(false);
-        this.notifications.success('Orden actualizada correctamente.');
-      },
+      next: (actualizada) =>
+        this.gestionarArchivoYFinalizar(actualizada, resultado.archivo, resultado.eliminarArchivo, (final) => {
+          this.ordenes.update((lista) => lista.map((o) => (o.id_orden === final.id_orden ? final : o)));
+          this.dialogTarget.set(final);
+          this.notifications.success('Orden actualizada correctamente.');
+        }),
       error: () => this.ejecutarSubmitting.set(false),
+    });
+  }
+
+  private gestionarArchivoYFinalizar(
+    entidad: OrdenResponse,
+    archivo: File | null,
+    eliminarArchivo: boolean,
+    onFinal: (actualizada: OrdenResponse) => void,
+  ): void {
+    const finalizar = (actualizada: OrdenResponse) => {
+      this.ejecutarSubmitting.set(false);
+      onFinal(actualizada);
+    };
+
+    if (archivo) {
+      this.archivoService.subir<OrdenResponse>('ordenes', entidad.id_orden, archivo).subscribe({
+        next: finalizar,
+        error: () => {
+          this.notifications.error('La orden se actualizó, pero no se pudo subir el informe técnico.');
+          finalizar(entidad);
+        },
+      });
+      return;
+    }
+
+    if (eliminarArchivo) {
+      this.archivoService.eliminar<OrdenResponse>('ordenes', entidad.id_orden).subscribe({
+        next: finalizar,
+        error: () => finalizar(entidad),
+      });
+      return;
+    }
+
+    finalizar(entidad);
+  }
+
+  /** El adjunto exige JWT (Authorization header), así que no puede ser un
+   * <a href> plano: se descarga vía HttpClient (el interceptor ya adjunta el
+   * token) y se abre como blob local. */
+  protected verAdjunto(url: string | null): void {
+    if (!url) return;
+    this.archivoService.descargarBlob(url).subscribe((blob) => {
+      const objectUrl = URL.createObjectURL(blob);
+      window.open(objectUrl, '_blank');
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
     });
   }
 
@@ -349,7 +395,6 @@ export class Ordenes {
       id_especialidad: item.raw.id_especialidad,
       id_solicitud: item.raw.id_solicitud,
       id_requerimiento: item.raw.id_requerimiento,
-      url_adjunto: item.raw.url_adjunto,
     };
 
     this.ordenService.editar(item.raw.id_orden, payload).subscribe({

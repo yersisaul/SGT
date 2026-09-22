@@ -4,7 +4,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ActivoCatalogo, EstadoCatalogo } from '../../../../../core/models/catalogo.model';
 import { SolicitudRequest, SolicitudResponse } from '../../../../../core/models/solicitud.model';
 import { Button } from '../../../../../shared/components/button/button';
-import { Input } from '../../../../../shared/components/input/input';
+import { FileUpload } from '../../../../../shared/components/file-upload/file-upload';
 import { Select, SelectOption } from '../../../../../shared/components/select/select';
 import { PRIORIDAD_OPTIONS } from '../../../../../shared/utils/prioridad-badge.util';
 import { esEstadoEditablePorPut } from '../../solicitud-estados.config';
@@ -15,10 +15,17 @@ interface SolicitudForm {
   id_estado: FormControl<string>;
   prioridad: FormControl<string>;
   descripcion: FormControl<string>;
-  url_adjunto: FormControl<string>;
 }
 
-const URL_PATTERN = /^https?:\/\/.+/i;
+/** Lo que emite el formulario al guardar: los datos de Solicitud (aún con
+ * id_usuario en blanco — lo completa el contenedor, ver Solicitudes.
+ * handleFormSubmit) más, por separado, el adjunto nuevo o el pedido de
+ * quitar el actual (CLAUDE.md sección 33). */
+export interface SolicitudFormSubmit {
+  request: SolicitudRequest;
+  archivo: File | null;
+  eliminarArchivo: boolean;
+}
 
 /**
  * Formulario reactivo para crear/editar Solicitud (contrato real de
@@ -33,7 +40,7 @@ const URL_PATTERN = /^https?:\/\/.+/i;
  */
 @Component({
   selector: 'app-solicitud-formulario',
-  imports: [ReactiveFormsModule, Button, Input, Select],
+  imports: [ReactiveFormsModule, Button, Select, FileUpload],
   templateUrl: './formulario.html',
   styleUrl: './formulario.css',
 })
@@ -44,7 +51,7 @@ export class Formulario implements OnInit {
   readonly estados = input<EstadoCatalogo[]>([]);
   readonly submitting = input(false);
 
-  readonly submitForm = output<SolicitudRequest>();
+  readonly submitForm = output<SolicitudFormSubmit>();
   readonly cancel = output<void>();
 
   protected readonly prioridadOptions = PRIORIDAD_OPTIONS;
@@ -55,8 +62,11 @@ export class Formulario implements OnInit {
     id_estado: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     prioridad: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     descripcion: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(1000)] }),
-    url_adjunto: new FormControl('', { nonNullable: true, validators: [Validators.pattern(URL_PATTERN)] }),
   });
+
+  protected readonly imagenControl = new FormControl<File | null>(null);
+  protected eliminarImagenActual = false;
+  protected urlAdjuntoActual: string | null = null;
 
   constructor() {
     // El formulario se proyecta dentro de app-dialog (que solo oculta su
@@ -83,8 +93,8 @@ export class Formulario implements OnInit {
         id_estado: solicitudInicial.id_estado,
         prioridad: solicitudInicial.prioridad,
         descripcion: solicitudInicial.descripcion,
-        url_adjunto: solicitudInicial.url_adjunto ?? '',
       });
+      this.urlAdjuntoActual = solicitudInicial.url_adjunto;
     }
 
     this.form.controls.id_activo.valueChanges.subscribe((idActivo) => {
@@ -110,6 +120,10 @@ export class Formulario implements OnInit {
       .map((estado) => ({ value: estado.id_estado, label: estado.nombre }));
   }
 
+  protected onEliminarImagenActual(): void {
+    this.eliminarImagenActual = true;
+  }
+
   protected submit(): void {
     if (this.form.invalid || this.submitting()) {
       this.form.markAllAsTouched();
@@ -118,13 +132,16 @@ export class Formulario implements OnInit {
 
     const value = this.form.getRawValue();
     this.submitForm.emit({
-      id_usuario: '',
-      id_activo: value.id_activo,
-      id_estado: value.id_estado,
-      id_especialidad: value.id_especialidad,
-      prioridad: value.prioridad,
-      descripcion: value.descripcion,
-      url_adjunto: value.url_adjunto || null,
+      request: {
+        id_usuario: '',
+        id_activo: value.id_activo,
+        id_estado: value.id_estado,
+        id_especialidad: value.id_especialidad,
+        prioridad: value.prioridad,
+        descripcion: value.descripcion,
+      },
+      archivo: this.imagenControl.value,
+      eliminarArchivo: this.eliminarImagenActual,
     });
   }
 }

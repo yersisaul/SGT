@@ -4,8 +4,11 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.multipart.MultipartFile;
 import lombok.RequiredArgsConstructor;
 import cfbd.co.sgt.service.UsuarioService;
+import cfbd.co.sgt.service.FileStorageService;
+import cfbd.co.sgt.service.TipoRecursoArchivo;
 import org.springframework.transaction.annotation.Transactional;
 import cfbd.co.sgt.repository.UsuarioRepository;
 import cfbd.co.sgt.repository.RolRepository;
@@ -17,13 +20,14 @@ import cfbd.co.sgt.mapper.UsuarioMapper;
 import cfbd.co.sgt.exception.ResourceNotFoundException;
 import cfbd.co.sgt.exception.DuplicateResourceException;
 
-@Service 
+@Service
 @RequiredArgsConstructor
 public class UsuarioServiceImpl implements UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
     private final UsuarioMapper usuarioMapper;
+    private final FileStorageService fileStorageService;
 
     @Override
     @Transactional    
@@ -37,11 +41,12 @@ public class UsuarioServiceImpl implements UsuarioService {
         Rol rol = rolRepository.findById(usuarioDTO.getId_rol())
                 .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
 
+        // La foto se gestiona exclusivamente vía subirImagen/eliminarImagen
+        // (fileserver propio, CLAUDE.md sección 26/30): no se acepta desde este DTO.
         Usuario usuario = Usuario.builder()
                 .email(usuarioDTO.getEmail())
                 .nombres(usuarioDTO.getNombres())
-                .apellidos(usuarioDTO.getApellidos())                
-                .url_img(usuarioDTO.getUrl_img())
+                .apellidos(usuarioDTO.getApellidos())
                 .rol(rol)
                 .password_hash(passwordEncoder.encode(usuarioDTO.getPassword()))
                 .build();
@@ -57,7 +62,6 @@ public class UsuarioServiceImpl implements UsuarioService {
         usuario.setEmail(usuarioDTO.getEmail());
         usuario.setNombres(usuarioDTO.getNombres());
         usuario.setApellidos(usuarioDTO.getApellidos());
-        usuario.setUrl_img(usuarioDTO.getUrl_img());
         usuario.setRol(rolRepository.findById(usuarioDTO.getId_rol())
                 .orElseThrow(() -> new ResourceNotFoundException("Role not found")));
 
@@ -100,5 +104,44 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     public void eliminarUsuario(UUID id) {
         usuarioRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public UsuarioResponse subirImagen(UUID id, MultipartFile file) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        String referenciaAnterior = usuario.getUrl_img();
+        String nuevaReferencia = fileStorageService.store(file, TipoRecursoArchivo.USUARIOS, id);
+        usuario.setUrl_img(nuevaReferencia);
+        Usuario guardado = usuarioRepository.save(usuario);
+        if (referenciaAnterior != null) {
+            fileStorageService.delete(referenciaAnterior);
+        }
+        return usuarioMapper.toResponse(guardado);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String obtenerReferenciaImagen(UUID id) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (usuario.getUrl_img() == null) {
+            throw new ResourceNotFoundException("El usuario no tiene foto.");
+        }
+        return usuario.getUrl_img();
+    }
+
+    @Override
+    @Transactional
+    public UsuarioResponse eliminarImagen(UUID id) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (usuario.getUrl_img() != null) {
+            fileStorageService.delete(usuario.getUrl_img());
+            usuario.setUrl_img(null);
+            usuarioRepository.save(usuario);
+        }
+        return usuarioMapper.toResponse(usuario);
     }
 }

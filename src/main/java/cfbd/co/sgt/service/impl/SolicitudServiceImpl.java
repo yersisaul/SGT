@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
@@ -43,8 +44,10 @@ import cfbd.co.sgt.repository.OrdenRepository;
 import cfbd.co.sgt.repository.RequerimientoRepository;
 import cfbd.co.sgt.repository.SolicitudRepository;
 import cfbd.co.sgt.repository.UsuarioRepository;
+import cfbd.co.sgt.service.FileStorageService;
 import cfbd.co.sgt.service.SlaCalculator;
 import cfbd.co.sgt.service.SolicitudService;
+import cfbd.co.sgt.service.TipoRecursoArchivo;
 import jakarta.transaction.Transactional;
 
 @Service
@@ -99,6 +102,9 @@ public class SolicitudServiceImpl implements SolicitudService {
     @Autowired
     private SlaCalculator slaCalculator;
 
+    @Autowired
+    private FileStorageService fileStorageService;
+
     @Override
     public SolicitudResponse crearSolicitud(SolicitudRequest solicitudDTO) {
         Solicitud solicitud = new Solicitud();
@@ -113,7 +119,8 @@ public class SolicitudServiceImpl implements SolicitudService {
                 .orElseThrow(() -> new ResourceNotFoundException("Especialidad not found")));
         solicitud.setPrioridad(solicitudDTO.getPrioridad());
         solicitud.setDescripcion(solicitudDTO.getDescripcion());
-        solicitud.setUrl_adjunto(solicitudDTO.getUrl_adjunto());
+        // El adjunto se gestiona exclusivamente vía subirAdjunto/eliminarAdjunto
+        // (fileserver propio, CLAUDE.md sección 26/30): no se acepta desde este DTO.
         Long correlativo = solicitudRepository.count() + 1;
         solicitud.setNumeroSolicitud("ST-" + correlativo);
         solicitud.setFecha_registro(Instant.now());
@@ -136,7 +143,6 @@ public class SolicitudServiceImpl implements SolicitudService {
                 .orElseThrow(() -> new ResourceNotFoundException("Especialidad not found")));
         solicitud.setPrioridad(solicitudDTO.getPrioridad());
         solicitud.setDescripcion(solicitudDTO.getDescripcion());
-        solicitud.setUrl_adjunto(solicitudDTO.getUrl_adjunto());
         return convertToResponse(solicitudRepository.save(solicitud));
     }
 
@@ -333,6 +339,51 @@ public class SolicitudServiceImpl implements SolicitudService {
         return convertirRequerimientoAResponse(requerimientoGuardado);
     }
 
+    @Override
+    public SolicitudResponse subirAdjunto(UUID id, MultipartFile file) {
+        Solicitud solicitud = solicitudRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Solicitud not found"));
+        if (!puedeVer(usuarioAutenticado(), solicitud)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tiene acceso a esta Solicitud.");
+        }
+        String referenciaAnterior = solicitud.getUrl_adjunto();
+        String nuevaReferencia = fileStorageService.store(file, TipoRecursoArchivo.SOLICITUDES, id);
+        solicitud.setUrl_adjunto(nuevaReferencia);
+        Solicitud guardada = solicitudRepository.save(solicitud);
+        if (referenciaAnterior != null) {
+            fileStorageService.delete(referenciaAnterior);
+        }
+        return convertToResponse(guardada);
+    }
+
+    @Override
+    public String obtenerReferenciaAdjunto(UUID id) {
+        Solicitud solicitud = solicitudRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Solicitud not found"));
+        if (!puedeVer(usuarioAutenticado(), solicitud)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tiene acceso a esta Solicitud.");
+        }
+        if (solicitud.getUrl_adjunto() == null) {
+            throw new ResourceNotFoundException("La Solicitud no tiene adjunto.");
+        }
+        return solicitud.getUrl_adjunto();
+    }
+
+    @Override
+    public SolicitudResponse eliminarAdjunto(UUID id) {
+        Solicitud solicitud = solicitudRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Solicitud not found"));
+        if (!puedeVer(usuarioAutenticado(), solicitud)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tiene acceso a esta Solicitud.");
+        }
+        if (solicitud.getUrl_adjunto() != null) {
+            fileStorageService.delete(solicitud.getUrl_adjunto());
+            solicitud.setUrl_adjunto(null);
+            solicitudRepository.save(solicitud);
+        }
+        return convertToResponse(solicitud);
+    }
+
     private String descripcionRequerimientoDesdeSolicitud(Solicitud solicitud) {
         return solicitud.getDescripcion()
                 + "\n\nRequerimiento generado a partir de la Solicitud " + solicitud.getNumeroSolicitud() + ".";
@@ -388,7 +439,8 @@ public class SolicitudServiceImpl implements SolicitudService {
         response.setPrioridad(solicitud.getPrioridad());
         response.setFecha_registro(solicitud.getFecha_registro());
         response.setDescripcion(solicitud.getDescripcion());
-        response.setUrl_adjunto(solicitud.getUrl_adjunto());
+        response.setUrl_adjunto(solicitud.getUrl_adjunto() != null
+                ? "/api/archivos/solicitudes/" + solicitud.getId_solicitud() : null);
         response.setFecha_limite_despacho(
                 slaCalculator.deadlineSolicitud(solicitud.getFecha_registro(), solicitud.getPrioridad()));
         return response;
@@ -404,7 +456,8 @@ public class SolicitudServiceImpl implements SolicitudService {
         response.setNumeroRequerimiento(requerimiento.getNumeroRequerimiento());
         response.setFecha_registro(requerimiento.getFecha_registro());
         response.setDescripcion(requerimiento.getDescripcion());
-        response.setUrl_adjunto(requerimiento.getUrl_adjunto());
+        response.setUrl_adjunto(requerimiento.getUrl_adjunto() != null
+                ? "/api/archivos/requerimientos/" + requerimiento.getId_requerimiento() : null);
         response.setFecha_limite_despacho(slaCalculator.deadlineRequerimiento(requerimiento.getFecha_registro()));
         return response;
     }
@@ -420,7 +473,8 @@ public class SolicitudServiceImpl implements SolicitudService {
         response.setNumeroOrden(orden.getNumeroOrden());
         response.setFecha_registro(orden.getFecha_registro());
         response.setFecha_cierre(orden.getFecha_cierre());
-        response.setUrl_adjunto(orden.getUrl_adjunto());
+        response.setUrl_adjunto(orden.getUrl_adjunto() != null
+                ? "/api/archivos/ordenes/" + orden.getId_orden() : null);
         return response;
     }
 }
