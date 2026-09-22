@@ -7,9 +7,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import jakarta.transaction.Transactional;
+import cfbd.co.sgt.service.FileStorageService;
 import cfbd.co.sgt.service.OrdenService;
+import cfbd.co.sgt.service.TipoRecursoArchivo;
 import cfbd.co.sgt.repository.OrdenRepository;
 import cfbd.co.sgt.repository.UsuarioRepository;
 import cfbd.co.sgt.repository.EstadoRepository;
@@ -75,6 +78,9 @@ public class OrdenServiceImpl implements OrdenService {
     @Autowired
     private HistorialRequerimientoRepository historialRequerimientoRepository;
 
+    @Autowired
+    private FileStorageService fileStorageService;
+
     @Override
     public OrdenResponse crearOrden(OrdenRequest ordenDTO) {
         Orden orden = new Orden();
@@ -89,7 +95,8 @@ public class OrdenServiceImpl implements OrdenService {
                 ? solicitudRepository.findById(ordenDTO.getId_solicitud()).orElse(null) : null);
         orden.setRequerimiento(ordenDTO.getId_requerimiento() != null
                 ? requerimientoRepository.findById(ordenDTO.getId_requerimiento()).orElse(null) : null);
-        orden.setUrl_adjunto(ordenDTO.getUrl_adjunto());
+        // El adjunto se gestiona exclusivamente vía subirAdjunto/eliminarAdjunto
+        // (fileserver propio, CLAUDE.md sección 26/30): no se acepta desde este DTO.
         Long correlativo = ordenRepository.count() + 1;
         orden.setNumeroOrden("OT-"+Long.toString(correlativo));
         orden.setFecha_registro(Instant.now());
@@ -119,7 +126,6 @@ public class OrdenServiceImpl implements OrdenService {
         // reasigna (evita que se pueda "reenlazar" una OT a otro origen o
         // ejecutor — para eso existe reasignarOrden).
         orden.setEstado(estadoNuevo);
-        orden.setUrl_adjunto(ordenDTO.getUrl_adjunto());
         return convertToResponse(ordenRepository.save(orden));
     }
 
@@ -251,6 +257,51 @@ public class OrdenServiceImpl implements OrdenService {
         return convertToResponse(ordenReasignada);
     }
 
+    @Override
+    public OrdenResponse subirAdjunto(UUID id, MultipartFile file) {
+        Orden orden = ordenRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Orden not found"));
+        if (!puedeVer(usuarioAutenticado(), orden)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tiene acceso a esta Orden.");
+        }
+        String referenciaAnterior = orden.getUrl_adjunto();
+        String nuevaReferencia = fileStorageService.store(file, TipoRecursoArchivo.ORDENES, id);
+        orden.setUrl_adjunto(nuevaReferencia);
+        Orden guardada = ordenRepository.save(orden);
+        if (referenciaAnterior != null) {
+            fileStorageService.delete(referenciaAnterior);
+        }
+        return convertToResponse(guardada);
+    }
+
+    @Override
+    public String obtenerReferenciaAdjunto(UUID id) {
+        Orden orden = ordenRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Orden not found"));
+        if (!puedeVer(usuarioAutenticado(), orden)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tiene acceso a esta Orden.");
+        }
+        if (orden.getUrl_adjunto() == null) {
+            throw new ResourceNotFoundException("La Orden no tiene adjunto.");
+        }
+        return orden.getUrl_adjunto();
+    }
+
+    @Override
+    public OrdenResponse eliminarAdjunto(UUID id) {
+        Orden orden = ordenRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Orden not found"));
+        if (!puedeVer(usuarioAutenticado(), orden)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tiene acceso a esta Orden.");
+        }
+        if (orden.getUrl_adjunto() != null) {
+            fileStorageService.delete(orden.getUrl_adjunto());
+            orden.setUrl_adjunto(null);
+            ordenRepository.save(orden);
+        }
+        return convertToResponse(orden);
+    }
+
     private void finalizarSolicitudAsociada(Orden ordenCerrada, Usuario actor) {
         finalizarSolicitud(ordenCerrada.getSolicitud(), actor,
                 "Orden de trabajo " + ordenCerrada.getNumeroOrden() + " cerrada; Solicitud finalizada.");
@@ -350,7 +401,8 @@ public class OrdenServiceImpl implements OrdenService {
         response.setNumeroOrden(orden.getNumeroOrden());
         response.setFecha_registro(orden.getFecha_registro());
         response.setFecha_cierre(orden.getFecha_cierre());
-        response.setUrl_adjunto(orden.getUrl_adjunto());
+        response.setUrl_adjunto(orden.getUrl_adjunto() != null
+                ? "/api/archivos/ordenes/" + orden.getId_orden() : null);
         return response;
     }
 }

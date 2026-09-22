@@ -6,7 +6,6 @@ export interface ActivoRequest {
   nombre: string;
   descripcion: string | null;
   ubicacion: string | null;
-  url_img: string | null;
 }
 
 export interface ActivoResponse {

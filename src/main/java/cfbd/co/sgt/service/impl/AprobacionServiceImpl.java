@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import cfbd.co.sgt.dto.request.AprobacionRequest;
@@ -26,6 +27,8 @@ import cfbd.co.sgt.repository.HistorialRequerimientoRepository;
 import cfbd.co.sgt.repository.RequerimientoRepository;
 import cfbd.co.sgt.repository.UsuarioRepository;
 import cfbd.co.sgt.service.AprobacionService;
+import cfbd.co.sgt.service.FileStorageService;
+import cfbd.co.sgt.service.TipoRecursoArchivo;
 import jakarta.transaction.Transactional;
 
 @Service
@@ -46,6 +49,9 @@ public class AprobacionServiceImpl implements AprobacionService {
 
     @Autowired
     private HistorialRequerimientoRepository historialRequerimientoRepository;
+
+    @Autowired
+    private FileStorageService fileStorageService;
 
     /**
      * Aprobar/rechazar un Requerimiento es una única operación de negocio
@@ -82,7 +88,9 @@ public class AprobacionServiceImpl implements AprobacionService {
         aprobacion.setUsuario(actor);
         aprobacion.setAprobado(aprobacionDTO.getAprobado());
         aprobacion.setComentario(aprobacionDTO.getComentario());
-        aprobacion.setUrl_adjunto(aprobacionDTO.getUrl_adjunto());
+        // El adjunto (presupuesto/documento) se gestiona exclusivamente vía
+        // subirAdjunto/eliminarAdjunto (fileserver propio, CLAUDE.md sección
+        // 26/30), después de creada la Aprobacion.
         aprobacion.setFecha_aprobacion(Instant.now());
         Aprobacion aprobacionGuardada = aprobacionRepository.save(aprobacion);
 
@@ -113,6 +121,42 @@ public class AprobacionServiceImpl implements AprobacionService {
         return aprobacionRepository.findById(id).map(this::convertToResponse);
     }
 
+    @Override
+    public AprobacionResponse subirAdjunto(UUID id, MultipartFile file) {
+        Aprobacion aprobacion = aprobacionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Aprobacion not found"));
+        String referenciaAnterior = aprobacion.getUrl_adjunto();
+        String nuevaReferencia = fileStorageService.store(file, TipoRecursoArchivo.APROBACIONES, id);
+        aprobacion.setUrl_adjunto(nuevaReferencia);
+        Aprobacion guardada = aprobacionRepository.save(aprobacion);
+        if (referenciaAnterior != null) {
+            fileStorageService.delete(referenciaAnterior);
+        }
+        return convertToResponse(guardada);
+    }
+
+    @Override
+    public String obtenerReferenciaAdjunto(UUID id) {
+        Aprobacion aprobacion = aprobacionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Aprobacion not found"));
+        if (aprobacion.getUrl_adjunto() == null) {
+            throw new ResourceNotFoundException("La Aprobacion no tiene adjunto.");
+        }
+        return aprobacion.getUrl_adjunto();
+    }
+
+    @Override
+    public AprobacionResponse eliminarAdjunto(UUID id) {
+        Aprobacion aprobacion = aprobacionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Aprobacion not found"));
+        if (aprobacion.getUrl_adjunto() != null) {
+            fileStorageService.delete(aprobacion.getUrl_adjunto());
+            aprobacion.setUrl_adjunto(null);
+            aprobacionRepository.save(aprobacion);
+        }
+        return convertToResponse(aprobacion);
+    }
+
     private Usuario usuarioAutenticado() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return usuarioRepository.findByEmail(email)
@@ -127,7 +171,8 @@ public class AprobacionServiceImpl implements AprobacionService {
         response.setAprobado(aprobacion.getAprobado());
         response.setComentario(aprobacion.getComentario());
         response.setFecha_aprobacion(aprobacion.getFecha_aprobacion());
-        response.setUrl_adjunto(aprobacion.getUrl_adjunto());
+        response.setUrl_adjunto(aprobacion.getUrl_adjunto() != null
+                ? "/api/archivos/aprobaciones/" + aprobacion.getId_aprobacion() : null);
         return response;
     }
 }

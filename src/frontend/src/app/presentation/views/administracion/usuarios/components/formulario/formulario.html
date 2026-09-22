@@ -47,6 +47,15 @@
     "
   />
 
+  <app-file-upload
+    label="Foto"
+    tipo="imagen"
+    [maxSizeMb]="5"
+    [currentUrl]="urlImagenActual"
+    [formControl]="imagenControl"
+    (eliminarActual)="onEliminarImagenActual()"
+  />
+
   <div class="admin-form-actions">
     <app-button type="button" variant="secondary" (click)="cancel.emit()">Cancelar</app-button>
     <app-button type="submit" variant="primary" [loading]="submitting()">

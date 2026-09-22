@@ -1,5 +1,8 @@
 HELP.md
 target/
+
+### Archivos subidos por usuarios (fileserver local) ###
+/uploads/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

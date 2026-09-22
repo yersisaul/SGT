@@ -4,7 +4,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { EspecialidadCatalogo, EstadoCatalogo } from '../../../../../core/models/catalogo.model';
 import { RequerimientoRequest, RequerimientoResponse } from '../../../../../core/models/requerimiento.model';
 import { Button } from '../../../../../shared/components/button/button';
-import { Input } from '../../../../../shared/components/input/input';
+import { FileUpload } from '../../../../../shared/components/file-upload/file-upload';
 import { Select, SelectOption } from '../../../../../shared/components/select/select';
 import { esEstadoEditablePorPut } from '../../requerimiento-estados.config';
 
@@ -12,21 +12,27 @@ interface RequerimientoForm {
   id_especialidad: FormControl<string>;
   id_estado: FormControl<string>;
   descripcion: FormControl<string>;
-  url_adjunto: FormControl<string>;
 }
 
-const URL_PATTERN = /^https?:\/\/.+/i;
+/** Lo que emite el formulario al guardar: los datos de Requerimiento (aún
+ * con id_usuario en blanco — lo completa el contenedor) más, por separado,
+ * el adjunto nuevo o el pedido de quitar el actual (CLAUDE.md sección 33). */
+export interface RequerimientoFormSubmit {
+  request: RequerimientoRequest;
+  archivo: File | null;
+  eliminarArchivo: boolean;
+}
 
 /**
  * Formulario reactivo para crear/editar Requerimiento (contrato real de
- * RequerimientoRequest: id_usuario, id_estado, id_especialidad, descripcion,
- * url_adjunto). Sin id_activo ni prioridad — Requerimiento no tiene esos
- * campos. id_usuario no aparece acá: se asigna el usuario autenticado en
- * creación y no es reasignable en edición (mismo criterio que Solicitud).
+ * RequerimientoRequest: id_usuario, id_estado, id_especialidad, descripcion).
+ * Sin id_activo ni prioridad — Requerimiento no tiene esos campos. id_usuario
+ * no aparece acá: se asigna el usuario autenticado en creación y no es
+ * reasignable en edición (mismo criterio que Solicitud).
  */
 @Component({
   selector: 'app-requerimiento-formulario',
-  imports: [ReactiveFormsModule, Button, Input, Select],
+  imports: [ReactiveFormsModule, Button, Select, FileUpload],
   templateUrl: './formulario.html',
   styleUrl: './formulario.css',
 })
@@ -37,15 +43,18 @@ export class Formulario implements OnInit {
   readonly estados = input<EstadoCatalogo[]>([]);
   readonly submitting = input(false);
 
-  readonly submitForm = output<RequerimientoRequest>();
+  readonly submitForm = output<RequerimientoFormSubmit>();
   readonly cancel = output<void>();
 
   protected readonly form = new FormGroup<RequerimientoForm>({
     id_especialidad: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     id_estado: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     descripcion: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(1000)] }),
-    url_adjunto: new FormControl('', { nonNullable: true, validators: [Validators.pattern(URL_PATTERN)] }),
   });
+
+  protected readonly imagenControl = new FormControl<File | null>(null);
+  protected eliminarImagenActual = false;
+  protected urlAdjuntoActual: string | null = null;
 
   constructor() {
     // El formulario se proyecta dentro de app-dialog (que solo oculta su
@@ -74,8 +83,8 @@ export class Formulario implements OnInit {
         id_especialidad: requerimientoInicial.id_especialidad,
         id_estado: requerimientoInicial.id_estado,
         descripcion: requerimientoInicial.descripcion,
-        url_adjunto: requerimientoInicial.url_adjunto ?? '',
       });
+      this.urlAdjuntoActual = requerimientoInicial.url_adjunto;
     }
   }
 
@@ -95,6 +104,10 @@ export class Formulario implements OnInit {
       .map((estado) => ({ value: estado.id_estado, label: estado.nombre }));
   }
 
+  protected onEliminarImagenActual(): void {
+    this.eliminarImagenActual = true;
+  }
+
   protected submit(): void {
     if (this.form.invalid || this.submitting()) {
       this.form.markAllAsTouched();
@@ -103,11 +116,14 @@ export class Formulario implements OnInit {
 
     const value = this.form.getRawValue();
     this.submitForm.emit({
-      id_usuario: '',
-      id_estado: value.id_estado,
-      id_especialidad: value.id_especialidad,
-      descripcion: value.descripcion,
-      url_adjunto: value.url_adjunto || null,
+      request: {
+        id_usuario: '',
+        id_estado: value.id_estado,
+        id_especialidad: value.id_especialidad,
+        descripcion: value.descripcion,
+      },
+      archivo: this.imagenControl.value,
+      eliminarArchivo: this.eliminarImagenActual,
     });
   }
 }

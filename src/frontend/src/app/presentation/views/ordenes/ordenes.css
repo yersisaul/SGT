@@ -256,3 +256,14 @@
   justify-content: flex-end;
   gap: var(--space-3);
 }
+
+.ficha-link {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}

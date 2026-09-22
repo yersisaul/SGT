@@ -17,8 +17,9 @@ export interface OrdenResponse {
 /** Contrato real de OrdenRequest (backend: dto.request.OrdenRequest), body de
  * PUT /ordenes/{id}. OrdenServiceImpl.editarOrden ignora id_usuario,
  * id_especialidad, id_solicitud e id_requerimiento del body (preserva los
- * valores existentes) — solo id_estado (transición validada) y url_adjunto
- * se aplican realmente. Igual se envían los valores originales de esos
+ * valores existentes) — solo id_estado (transición validada) se aplica
+ * realmente; el adjunto se gestiona aparte vía ArchivoService/fileserver
+ * propio, no por este PUT. Igual se envían los valores originales de esos
  * campos (no vacíos) por higiene del contrato. */
 export interface OrdenRequest {
   id_usuario: string;
@@ -26,7 +27,6 @@ export interface OrdenRequest {
   id_especialidad: string;
   id_solicitud: string | null;
   id_requerimiento: string | null;
-  url_adjunto: string | null;
 }
 
 /** Contrato real de GenerarOrdenRequest (backend: dto.request.GenerarOrdenRequest),

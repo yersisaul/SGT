@@ -4,32 +4,30 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { EstadoCatalogo } from '../../../../../core/models/catalogo.model';
 import { OrdenResponse } from '../../../../../core/models/orden.model';
 import { Button } from '../../../../../shared/components/button/button';
-import { Input } from '../../../../../shared/components/input/input';
+import { FileUpload } from '../../../../../shared/components/file-upload/file-upload';
 import { Select, SelectOption } from '../../../../../shared/components/select/select';
 import { esEstadoEditablePorPut } from '../../orden-estados.config';
 
 interface EjecutarForm {
   id_estado: FormControl<string>;
-  url_adjunto: FormControl<string>;
 }
-
-const URL_PATTERN = /^https?:\/\/.+/i;
 
 export interface EjecutarResultado {
   id_estado: string;
-  url_adjunto: string | null;
+  archivo: File | null;
+  eliminarArchivo: boolean;
 }
 
 /**
  * Formulario de ejecución de Orden — NO es un CRUD: solo expone id_estado
- * (transición validada) y url_adjunto, los dos únicos campos que
- * OrdenServiceImpl.editarOrden aplica realmente del PUT (id_usuario,
- * id_especialidad, id_solicitud e id_requerimiento se ignoran en backend;
- * no tiene sentido ofrecerlos como editables acá).
+ * (transición validada, único campo que OrdenServiceImpl.editarOrden aplica
+ * realmente del PUT genérico — CLAUDE.md sección 21) y, por separado, el
+ * informe técnico/entregable, que se sube vía ArchivoService al fileserver
+ * propio del backend (no es un campo del PUT: ver Ordenes.handleEjecutar).
  */
 @Component({
   selector: 'app-orden-ejecutar',
-  imports: [ReactiveFormsModule, Button, Input, Select],
+  imports: [ReactiveFormsModule, Button, Select, FileUpload],
   templateUrl: './ejecutar.html',
   styleUrl: './ejecutar.css',
 })
@@ -42,15 +40,16 @@ export class Ejecutar implements OnInit {
 
   protected readonly form = new FormGroup<EjecutarForm>({
     id_estado: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-    url_adjunto: new FormControl('', { nonNullable: true, validators: [Validators.pattern(URL_PATTERN)] }),
   });
+
+  protected readonly imagenControl = new FormControl<File | null>(null);
+  protected eliminarImagenActual = false;
+  protected urlAdjuntoActual: string | null = null;
 
   ngOnInit(): void {
     const orden = this.initial();
-    this.form.patchValue({
-      id_estado: orden.id_estado,
-      url_adjunto: orden.url_adjunto ?? '',
-    });
+    this.form.patchValue({ id_estado: orden.id_estado });
+    this.urlAdjuntoActual = orden.url_adjunto;
   }
 
   // Solo Pendiente/En revisión/En progreso (OrdenServiceImpl.validarTransicion):
@@ -61,12 +60,20 @@ export class Ejecutar implements OnInit {
       .map((estado) => ({ value: estado.id_estado, label: estado.nombre }));
   }
 
+  protected onEliminarImagenActual(): void {
+    this.eliminarImagenActual = true;
+  }
+
   protected submit(): void {
     if (this.form.invalid || this.submitting()) {
       this.form.markAllAsTouched();
       return;
     }
     const value = this.form.getRawValue();
-    this.submitForm.emit({ id_estado: value.id_estado, url_adjunto: value.url_adjunto || null });
+    this.submitForm.emit({
+      id_estado: value.id_estado,
+      archivo: this.imagenControl.value,
+      eliminarArchivo: this.eliminarImagenActual,
+    });
   }
 }

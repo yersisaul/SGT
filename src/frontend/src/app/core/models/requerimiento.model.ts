@@ -26,7 +26,6 @@ export interface RequerimientoRequest {
   id_estado: string;
   id_especialidad: string;
   descripcion: string;
-  url_adjunto: string | null;
 }
 
 /** Contrato real de HistorialRequerimientoResponse (backend: dto.response). */

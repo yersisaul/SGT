@@ -25,18 +25,20 @@ import {
 } from '../../../core/models/requerimiento.model';
 import { SolicitudResponse } from '../../../core/models/solicitud.model';
 import { AprobacionService } from '../../../core/services/aprobacion.service';
+import { ArchivoService } from '../../../core/services/archivo.service';
 import { CatalogoService } from '../../../core/services/catalogo.service';
 import { OrdenService } from '../../../core/services/orden.service';
 import { RequerimientoService } from '../../../core/services/requerimiento.service';
 import { SolicitudService } from '../../../core/services/solicitud.service';
 import { Button } from '../../../shared/components/button/button';
 import { Dialog } from '../../../shared/components/dialog/dialog';
+import { FileUpload } from '../../../shared/components/file-upload/file-upload';
 import { Select, SelectOption } from '../../../shared/components/select/select';
 import { Spinner } from '../../../shared/components/spinner/spinner';
 import { NotificationService } from '../../../shared/services/notification.service';
 import { extractApiErrorMessage } from '../../../shared/utils/api-error.util';
 import { estadoOrderRank } from '../../../shared/utils/estado-order.util';
-import { Formulario } from './components/formulario/formulario';
+import { Formulario, RequerimientoFormSubmit } from './components/formulario/formulario';
 import { Kanban, RequerimientoMovido } from './components/kanban/kanban';
 import { Tabla } from './components/tabla/tabla';
 import {
@@ -65,6 +67,7 @@ type DialogMode = 'create' | 'edit' | null;
     Kanban,
     Tabla,
     Formulario,
+    FileUpload,
     LucidePlus,
     LucideLayoutGrid,
     LucideTable,
@@ -82,6 +85,7 @@ export class Requerimientos {
   private readonly requerimientoService = inject(RequerimientoService);
   private readonly solicitudService = inject(SolicitudService);
   private readonly aprobacionService = inject(AprobacionService);
+  private readonly archivoService = inject(ArchivoService);
   private readonly catalogoService = inject(CatalogoService);
   private readonly ordenService = inject(OrdenService);
   private readonly notifications = inject(NotificationService);
@@ -141,6 +145,7 @@ export class Requerimientos {
 
   protected readonly aprobacionAccion = signal<{ target: RequerimientoResponse; aprobado: boolean } | null>(null);
   protected readonly aprobacionComentario = signal('');
+  protected readonly aprobacionArchivo = signal<File | null>(null);
   protected readonly aprobacionSubmitting = signal(false);
   protected readonly aprobacionError = signal<string | null>(null);
 
@@ -320,21 +325,22 @@ export class Requerimientos {
     });
   }
 
-  protected handleFormSubmit(request: RequerimientoRequest): void {
+  protected handleFormSubmit(submission: RequerimientoFormSubmit): void {
     const currentUser = this.authService.user();
     if (!currentUser) return;
 
     this.formSubmitting.set(true);
+    const { request, archivo, eliminarArchivo } = submission;
 
     if (this.dialogMode() === 'create') {
       const payload: RequerimientoRequest = { ...request, id_usuario: currentUser.id };
       this.requerimientoService.crear(payload).subscribe({
-        next: (creado) => {
-          this.requerimientos.update((lista) => [creado, ...lista]);
-          this.formSubmitting.set(false);
-          this.closeDialog();
-          this.notifications.success(`Requerimiento ${creado.numeroRequerimiento} creado correctamente.`);
-        },
+        next: (creado) =>
+          this.gestionarArchivoYFinalizar(creado, archivo, eliminarArchivo, (actualizado) => {
+            this.requerimientos.update((lista) => [actualizado, ...lista]);
+            this.closeDialog();
+            this.notifications.success(`Requerimiento ${actualizado.numeroRequerimiento} creado correctamente.`);
+          }),
         error: () => this.formSubmitting.set(false),
       });
       return;
@@ -344,17 +350,62 @@ export class Requerimientos {
     if (this.dialogMode() === 'edit' && original) {
       const payload: RequerimientoRequest = { ...request, id_usuario: original.id_usuario };
       this.requerimientoService.editar(original.id_requerimiento, payload).subscribe({
-        next: (actualizado) => {
-          this.requerimientos.update((lista) =>
-            lista.map((r) => (r.id_requerimiento === actualizado.id_requerimiento ? actualizado : r)),
-          );
-          this.dialogTarget.set(actualizado);
-          this.formSubmitting.set(false);
-          this.notifications.success('Requerimiento actualizado correctamente.');
-        },
+        next: (actualizado) =>
+          this.gestionarArchivoYFinalizar(actualizado, archivo, eliminarArchivo, (final) => {
+            this.requerimientos.update((lista) =>
+              lista.map((r) => (r.id_requerimiento === final.id_requerimiento ? final : r)),
+            );
+            this.dialogTarget.set(final);
+            this.notifications.success('Requerimiento actualizado correctamente.');
+          }),
         error: () => this.formSubmitting.set(false),
       });
     }
+  }
+
+  private gestionarArchivoYFinalizar(
+    entidad: RequerimientoResponse,
+    archivo: File | null,
+    eliminarArchivo: boolean,
+    onFinal: (actualizado: RequerimientoResponse) => void,
+  ): void {
+    const finalizar = (actualizado: RequerimientoResponse) => {
+      this.formSubmitting.set(false);
+      onFinal(actualizado);
+    };
+
+    if (archivo) {
+      this.archivoService.subir<RequerimientoResponse>('requerimientos', entidad.id_requerimiento, archivo).subscribe({
+        next: finalizar,
+        error: () => {
+          this.notifications.error('El requerimiento se guardó, pero no se pudo subir el adjunto.');
+          finalizar(entidad);
+        },
+      });
+      return;
+    }
+
+    if (eliminarArchivo) {
+      this.archivoService.eliminar<RequerimientoResponse>('requerimientos', entidad.id_requerimiento).subscribe({
+        next: finalizar,
+        error: () => finalizar(entidad),
+      });
+      return;
+    }
+
+    finalizar(entidad);
+  }
+
+  /** El adjunto exige JWT (Authorization header), así que no puede ser un
+   * <a href> plano: se descarga vía HttpClient (el interceptor ya adjunta el
+   * token) y se abre como blob local. */
+  protected verAdjunto(url: string | null): void {
+    if (!url) return;
+    this.archivoService.descargarBlob(url).subscribe((blob) => {
+      const objectUrl = URL.createObjectURL(blob);
+      window.open(objectUrl, '_blank');
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    });
   }
 
   protected requestDelete(requerimiento: RequerimientoResponse): void {
@@ -390,6 +441,7 @@ export class Requerimientos {
   protected requestAprobacion(target: RequerimientoResponse, aprobado: boolean): void {
     this.aprobacionAccion.set({ target, aprobado });
     this.aprobacionComentario.set('');
+    this.aprobacionArchivo.set(null);
     this.aprobacionError.set(null);
   }
 
@@ -405,6 +457,7 @@ export class Requerimientos {
 
     this.aprobacionSubmitting.set(true);
     this.aprobacionError.set(null);
+    const archivo = this.aprobacionArchivo();
     this.aprobacionService
       .crear({
         id_requerimiento: accion.target.id_requerimiento,
@@ -412,11 +465,12 @@ export class Requerimientos {
         comentario: this.aprobacionComentario().trim() || null,
       })
       .subscribe({
-        next: () => {
-          // El estado real lo fija el backend (Aprobado/Rechazado); se
-          // refresca el requerimiento puntual para reflejarlo sin recargar
-          // toda la bandeja.
-          this.requerimientoService.obtener(accion.target.id_requerimiento).subscribe((actualizado) => {
+        next: (aprobacionCreada) => {
+          // El presupuesto/documento de respaldo se sube recién con el id de
+          // la Aprobacion ya creada (fileserver propio, CLAUDE.md sección
+          // 33); si la subida falla, la aprobación/rechazo ya quedó
+          // registrada — no se revierte por eso.
+          const actualizadoCallback = (actualizado: RequerimientoResponse) => {
             this.requerimientos.update((lista) =>
               lista.map((r) => (r.id_requerimiento === actualizado.id_requerimiento ? actualizado : r)),
             );
@@ -434,16 +488,38 @@ export class Requerimientos {
               this.generarOrdenEjecutor.set('');
               this.postAprobacionTarget.set(actualizado);
             }
-          });
-          this.aprobacionSubmitting.set(false);
-          this.aprobacionAccion.set(null);
-          this.notifications.success(accion.aprobado ? 'Requerimiento aprobado.' : 'Requerimiento rechazado.');
+          };
+          const continuar = () => this.finalizarAprobacion(accion, actualizadoCallback);
+
+          if (archivo) {
+            this.archivoService.subir('aprobaciones', aprobacionCreada.id_aprobacion, archivo).subscribe({
+              next: () => continuar(),
+              error: () => {
+                this.notifications.error('Se registró la decisión, pero no se pudo subir el presupuesto.');
+                continuar();
+              },
+            });
+          } else {
+            continuar();
+          }
         },
         error: (error: unknown) => {
           this.aprobacionSubmitting.set(false);
           this.aprobacionError.set(extractApiErrorMessage(error));
         },
       });
+  }
+
+  private finalizarAprobacion(
+    accion: { target: RequerimientoResponse; aprobado: boolean },
+    actualizadoCallback: (actualizado: RequerimientoResponse) => void,
+  ): void {
+    // El estado real lo fija el backend (Aprobado/Rechazado); se refresca el
+    // requerimiento puntual para reflejarlo sin recargar toda la bandeja.
+    this.requerimientoService.obtener(accion.target.id_requerimiento).subscribe(actualizadoCallback);
+    this.aprobacionSubmitting.set(false);
+    this.aprobacionAccion.set(null);
+    this.notifications.success(accion.aprobado ? 'Requerimiento aprobado.' : 'Requerimiento rechazado.');
   }
 
   protected requestGenerarOrden(requerimiento: RequerimientoResponse): void {
@@ -525,7 +601,6 @@ export class Requerimientos {
       id_estado: estadoDestinoId,
       id_especialidad: item.raw.id_especialidad,
       descripcion: item.raw.descripcion,
-      url_adjunto: item.raw.url_adjunto,
     };
 
     this.requerimientoService.editar(item.raw.id_requerimiento, payload).subscribe({

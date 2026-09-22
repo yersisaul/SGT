@@ -7,16 +7,13 @@
     [errorMessage]="form.controls.id_estado.touched && form.controls.id_estado.invalid ? 'Selecciona un estado' : null"
   />
 
-  <app-input
-    label="URL adjunto (opcional)"
-    type="text"
-    placeholder="https://…"
-    formControlName="url_adjunto"
-    [errorMessage]="
-      form.controls.url_adjunto.touched && form.controls.url_adjunto.invalid
-        ? 'Ingresa una URL válida (http:// o https://)'
-        : null
-    "
+  <app-file-upload
+    label="Informe técnico / entregable"
+    tipo="adjunto"
+    [maxSizeMb]="10"
+    [currentUrl]="urlAdjuntoActual"
+    [formControl]="imagenControl"
+    (eliminarActual)="onEliminarImagenActual()"
   />
 
   <div class="ejecutar-form-actions">

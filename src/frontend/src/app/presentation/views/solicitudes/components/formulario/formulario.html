@@ -42,16 +42,13 @@
     }
   </div>
 
-  <app-input
-    label="URL adjunto (opcional)"
-    type="text"
-    placeholder="https://…"
-    formControlName="url_adjunto"
-    [errorMessage]="
-      form.controls.url_adjunto.touched && form.controls.url_adjunto.invalid
-        ? 'Ingresa una URL válida (http:// o https://)'
-        : null
-    "
+  <app-file-upload
+    label="Adjunto (opcional)"
+    tipo="adjunto"
+    [maxSizeMb]="10"
+    [currentUrl]="urlAdjuntoActual"
+    [formControl]="imagenControl"
+    (eliminarActual)="onEliminarImagenActual()"
   />
 
   <div class="solicitud-form-actions">

@@ -4,6 +4,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { RolCatalogo } from '../../../../../../core/models/catalogo.model';
 import { UsuarioRequest, UsuarioResponse } from '../../../../../../core/models/usuario.model';
 import { Button } from '../../../../../../shared/components/button/button';
+import { FileUpload } from '../../../../../../shared/components/file-upload/file-upload';
 import { Input } from '../../../../../../shared/components/input/input';
 import { Select, SelectOption } from '../../../../../../shared/components/select/select';
 
@@ -15,11 +16,21 @@ interface UsuarioForm {
   apellidos: FormControl<string>;
 }
 
+/** Lo que emite el formulario al guardar: los datos de Usuario más, por
+ * separado, la foto nueva (si se seleccionó una) o el pedido de quitar la
+ * actual (CLAUDE.md sección 33: el archivo se sube recién después de crear/
+ * editar el Usuario, cuando ya existe un id). */
+export interface UsuarioFormSubmit {
+  request: UsuarioRequest;
+  archivo: File | null;
+  eliminarArchivo: boolean;
+}
+
 /** En creación la contraseña es obligatoria; en edición, vacía = no cambiarla
  * (UsuarioServiceImpl solo actualiza password_hash si viene no-blank). */
 @Component({
   selector: 'app-usuario-formulario',
-  imports: [ReactiveFormsModule, Button, Input, Select],
+  imports: [ReactiveFormsModule, Button, Input, Select, FileUpload],
   templateUrl: './formulario.html',
   styleUrl: './formulario.css',
 })
@@ -30,7 +41,7 @@ export class Formulario implements OnInit {
   readonly submitting = input(false);
   readonly currentUserId = input<string | null>(null);
 
-  readonly submitForm = output<UsuarioRequest>();
+  readonly submitForm = output<UsuarioFormSubmit>();
   readonly cancel = output<void>();
 
   protected readonly form = new FormGroup<UsuarioForm>({
@@ -43,6 +54,10 @@ export class Formulario implements OnInit {
       validators: [Validators.required, Validators.maxLength(100)],
     }),
   });
+
+  protected readonly imagenControl = new FormControl<File | null>(null);
+  protected eliminarImagenActual = false;
+  protected urlImagenActual: string | null = null;
 
   ngOnInit(): void {
     if (this.mode() === 'create') {
@@ -60,7 +75,12 @@ export class Formulario implements OnInit {
         nombres: usuario.nombres,
         apellidos: usuario.apellidos,
       });
+      this.urlImagenActual = usuario.url_img;
     }
+  }
+
+  protected onEliminarImagenActual(): void {
+    this.eliminarImagenActual = true;
   }
 
   protected get esUsuarioActual(): boolean {
@@ -78,12 +98,15 @@ export class Formulario implements OnInit {
     }
     const value = this.form.getRawValue();
     this.submitForm.emit({
-      id_rol: value.id_rol,
-      email: value.email,
-      password: value.password,
-      nombres: value.nombres,
-      apellidos: value.apellidos,
-      url_img: this.initial()?.url_img ?? null,
+      request: {
+        id_rol: value.id_rol,
+        email: value.email,
+        password: value.password,
+        nombres: value.nombres,
+        apellidos: value.apellidos,
+      },
+      archivo: this.imagenControl.value,
+      eliminarArchivo: this.eliminarImagenActual,
     });
   }
 }
