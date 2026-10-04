@@ -20,7 +20,7 @@ interface SolicitudForm {
 /** Lo que emite el formulario al guardar: los datos de Solicitud (aún con
  * id_usuario en blanco — lo completa el contenedor, ver Solicitudes.
  * handleFormSubmit) más, por separado, el adjunto nuevo o el pedido de
- * quitar el actual (CLAUDE.md sección 33). */
+ * quitar el actual. */
 export interface SolicitudFormSubmit {
   request: SolicitudRequest;
   archivo: File | null;

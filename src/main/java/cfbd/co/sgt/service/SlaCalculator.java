@@ -8,8 +8,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Calcula la fecha límite de despacho (fecha_registro + SLA) para Solicitud y
- * Requerimiento. Los valores en horas vienen de variables de entorno
- * (CLAUDE.md 7 / sección 9-12 del pedido de ajustes), nunca hardcodeados.
+ * Requerimiento. Los valores en horas vienen de variables de entorno nunca hardcodeados.
  */
 @Component
 public class SlaCalculator {

@@ -2,7 +2,7 @@ package cfbd.co.sgt.security;
 
 /**
  * Códigos de permiso usados por la lógica de autorización a nivel de recurso
- * (CLAUDE.md 6.2/6.5). Los @PreAuthorize de los Controllers siguen usando el
+ * Los @PreAuthorize de los Controllers siguen usando el
  * literal; aquí solo están los que el código de negocio consulta.
  */
 public final class Permisos {

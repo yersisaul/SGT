@@ -63,8 +63,8 @@ public class DataSeeder implements ApplicationRunner {
             "historial_solicitud", List.of("read", "create"));
 
     // Permisos de negocio: no son un par <recurso>.<acción CRUD>, sino una
-    // operación diferenciada que requiere su propia autorización (CLAUDE.md
-    // 5.3). orden.create deliberadamente NO se agrega aquí ni se asigna a
+    // operación diferenciada que requiere su propia autorización
+    // orden.create deliberadamente NO se agrega aquí ni se asigna a
     // ningún rol: generar una Orden solo puede ocurrir a través de
     // solicitud.generar_orden o requerimiento.generar_orden, nunca por CRUD
     // genérico (evita saltarse el flujo).
@@ -75,7 +75,7 @@ public class DataSeeder implements ApplicationRunner {
             "requerimiento.aprobar",
             "orden.cerrar",
             "orden.reasignar",
-            // Alcance de lectura (CLAUDE.md 6.5): sin ellos solo se ve lo propio.
+            // Alcance de lectura: sin ellos solo se ve lo propio.
             "solicitud.read_all",
             "requerimiento.read_all",
             "orden.read_all",

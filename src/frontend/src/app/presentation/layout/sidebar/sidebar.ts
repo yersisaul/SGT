@@ -73,7 +73,7 @@ const NAV_ITEMS: NavItem[] = [
 /**
  * Sección "Administración" (catálogos/configuración): cada ítem se muestra
  * únicamente si el usuario tiene el permiso .read correspondiente — nunca por
- * nombre de rol (CLAUDE.md 5.2/Fase 9).
+ * nombre de rol.
  */
 const ADMIN_NAV_ITEMS: NavItem[] = [
   // usuario.read ya no es exclusivo de quien administra usuarios (Cliente y

@@ -23,7 +23,7 @@ import lombok.Setter;
 /**
  * Pertenencia de un usuario a una especialidad (PRD D2, N:M) y si es
  * responsable de ella (D5). Unidireccional: Usuario y Especialidad no
- * exponen la colección inversa (CLAUDE.md 5).
+ * exponen la colección inversa.
  */
 @Entity
 @Table(name = "usuario_especialidad",

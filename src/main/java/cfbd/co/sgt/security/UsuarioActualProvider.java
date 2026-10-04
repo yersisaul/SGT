@@ -12,8 +12,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * Único punto para obtener la identidad y los permisos del usuario
- * autenticado desde el contexto de Spring Security (CLAUDE.md 6.1: nunca
- * desde un id enviado por el cliente). Los permisos provienen del JWT
+ * autenticado desde el contexto de Spring Security Los permisos provienen del JWT
  * validado por JwtAuthenticationFilter.
  */
 @Component

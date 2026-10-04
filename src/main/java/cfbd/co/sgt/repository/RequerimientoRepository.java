@@ -18,7 +18,7 @@ public interface RequerimientoRepository extends  JpaRepository<Requerimiento, U
     @Query("select r.estado.nombre, count(r) from Requerimiento r group by r.estado.nombre")
     List<Object[]> countByEstado();
 
-    // Visibilidad sin requerimiento.read_all (CLAUDE.md 6.5): los creados por
+    // Visibilidad sin requerimiento.read_all: los creados por
     // el actor, los originados en sus Solicitudes y los que tienen una OT
     // asignada al actor.
     @Query("select distinct r from Requerimiento r left join r.solicitud s where r.usuario.id_usuario = :idUsuario "

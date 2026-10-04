@@ -38,7 +38,7 @@ import lombok.RequiredArgsConstructor;
  * validación de archivo viven en FileStorageService; la autorización de
  * permiso (@PreAuthorize) y de recurso (puedeVer) vive en el Service de cada
  * entidad — este Controller solo enruta, reutilizando exactamente los mismos
- * permisos que ya protegen el CRUD de cada recurso (CLAUDE.md 5.3/5.5).
+ * permisos que ya protegen el CRUD de cada recurso.
  */
 @RestController
 @RequestMapping("/api/archivos")

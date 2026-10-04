@@ -40,3 +40,12 @@ build/
 
 ### Temporales de Claude ###
 /.claude-tmp/
+
+# CLAUDE.md
+CLAUDE.md
+
+# Documentación de IA
+/docs
+
+# Graphify
+/graphify-out

@@ -66,8 +66,7 @@ public class SolicitudServiceImpl implements SolicitudService {
     // "En progreso" vía generarOrdenDesdeSolicitud (bajo contrato) o "En
     // revisión" vía generarRequerimientoDesdeSolicitud (fuera de contrato) —
     // y "Finalizado" solo se alcanza cuando se cierra la Orden asociada
-    // (directamente, o vía el Requerimiento que se aprobó y generó OT), nunca
-    // por PUT genérico (CLAUDE.md 5.3).
+    // (directamente, o vía el Requerimiento que se aprobó y generó OT), nunca por PUT genérico.
     private static final String ESTADO_PENDIENTE = "Pendiente";
 
     private static final Map<String, Set<String>> TRANSICIONES_PERMITIDAS = Map.of(
@@ -125,22 +124,19 @@ public class SolicitudServiceImpl implements SolicitudService {
     @Override
     public SolicitudResponse crearSolicitud(SolicitudRequest solicitudDTO) {
         Solicitud solicitud = new Solicitud();
-        // El solicitante es el usuario autenticado, nunca un id enviado por
-        // el cliente (CLAUDE.md 6.1/5.1; mismo patrón de AprobacionServiceImpl).
+        // El solicitante es el usuario autenticado, nunca un id enviado por el cliente.
         solicitud.setUsuario(usuarioAutenticado());
         Activo activo = activoRepository.findById(solicitudDTO.getId_activo())
                 .orElseThrow(() -> new ResourceNotFoundException("Activo not found"));
         solicitud.setActivo(activo);
-        // Toda Solicitud nace "Pendiente" para que el Despachador la revise
-        // (CLAUDE.md §1 pasos 1-3); se ignora cualquier id_estado del body.
+        // Toda Solicitud nace "Pendiente" para que el Despachador la revise se ignora cualquier id_estado del body.
         solicitud.setEstado(estadoPorNombre(ESTADO_PENDIENTE));
         // La especialidad inicial es la del activo (decisión 2026-10-03): el
         // Cliente no la elige; el Despachador la confirma o cambia al despachar.
         solicitud.setEspecialidad(activo.getEspecialidad());
         solicitud.setPrioridad(solicitudDTO.getPrioridad());
         solicitud.setDescripcion(solicitudDTO.getDescripcion());
-        // El adjunto se gestiona exclusivamente vía subirAdjunto/eliminarAdjunto
-        // (fileserver propio, CLAUDE.md sección 26/30): no se acepta desde este DTO.
+        // El adjunto se gestiona exclusivamente vía subirAdjunto/eliminarAdjunto no se acepta desde este DTO.
         solicitud.setNumeroSolicitud(numeracion.siguienteNumeroSolicitud());
         solicitud.setFecha_registro(Instant.now());
         return convertToResponse(solicitudRepository.save(solicitud));
@@ -152,8 +148,7 @@ public class SolicitudServiceImpl implements SolicitudService {
                 .orElseThrow(() -> new ResourceNotFoundException("Solicitud not found"));
         autorizacion.exigirVisible(usuarioActual.obtener(), solicitud);
         boolean pendiente = ESTADO_PENDIENTE.equalsIgnoreCase(solicitud.getEstado().getNombre());
-        // Sin alcance global (p. ej. Cliente) solo se edita la propia y
-        // mientras siga "Pendiente" (CLAUDE.md 6.5).
+        // Sin alcance global (p. ej. Cliente) solo se edita la propia y mientras siga "Pendiente".
         if (!autorizacion.veTodasLasSolicitudes() && !pendiente) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Solo se puede editar la Solicitud mientras está 'Pendiente'.");

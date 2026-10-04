@@ -16,7 +16,7 @@ interface RequerimientoForm {
 
 /** Lo que emite el formulario al guardar: los datos de Requerimiento (aún
  * con id_usuario en blanco — lo completa el contenedor) más, por separado,
- * el adjunto nuevo o el pedido de quitar el actual (CLAUDE.md sección 33). */
+ * el adjunto nuevo o el pedido de quitar el actual. */
 export interface RequerimientoFormSubmit {
   request: RequerimientoRequest;
   archivo: File | null;

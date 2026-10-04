@@ -33,7 +33,7 @@ public class UsuarioController {
     }
 
     // Candidatos a integrar un equipo de especialidad: usuarios cuyo rol
-    // puede ejecutar OT (permiso orden.tomar), no por nombre de rol (CLAUDE.md 6.2).
+    // puede ejecutar OT (permiso orden.tomar), no por nombre de rol.
     @PreAuthorize("hasAuthority('especialidad.gestionar_equipo')")
     @GetMapping("/ejecutores")
     public List<UsuarioResponse> getUsuariosEjecutores() {

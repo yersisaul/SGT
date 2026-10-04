@@ -26,7 +26,7 @@ const ACCEPT_MIME: Record<'imagen' | 'adjunto', string> = {
  * (o null): este componente NUNCA sube el archivo por sí mismo. El flujo es
  * seleccionar -> preview local -> guardar formulario -> el contenedor sube
  * el archivo (vía ArchivoService) recién después de crear/editar la entidad,
- * cuando ya existe un id (dos fases, CLAUDE.md sección 33).
+ * cuando ya existe un id.
  *
  * `currentUrl` es la ruta de descarga que ya devuelve el backend
  * (ActivoResponse.url_img, etc., algo como "/api/archivos/activos/{id}") si

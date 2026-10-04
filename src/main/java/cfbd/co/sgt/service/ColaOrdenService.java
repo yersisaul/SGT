@@ -11,7 +11,7 @@ import cfbd.co.sgt.dto.response.CargaMiembroResponse;
 import cfbd.co.sgt.dto.response.OrdenResponse;
 
 /**
- * Cola de OT por especialidad (CLAUDE.md §1 pasos 10-12, PRD E3). Es el único
+ * Cola de OT por especialidad. Es el único
  * componente que cambia el ejecutor o la especialidad de una OT.
  */
 public interface ColaOrdenService {

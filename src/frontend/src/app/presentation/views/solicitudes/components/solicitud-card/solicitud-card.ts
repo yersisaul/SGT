@@ -25,8 +25,7 @@ export class SolicitudCard {
   protected readonly prioridadBadgeVariant = prioridadBadgeVariant;
 
   /** El SLA de despacho solo aplica mientras la Solicitud sigue "Pendiente"
-   * (una vez despachada, el backend deja de medirlo — CLAUDE.md SLA sección
-   * 15). Se decide por el nombre de estado real, no por un flag propio. */
+   * Se decide por el nombre de estado real, no por un flag propio. */
   protected get mostrarSla(): boolean {
     return this.item().estadoNombre.toLowerCase() === 'pendiente';
   }

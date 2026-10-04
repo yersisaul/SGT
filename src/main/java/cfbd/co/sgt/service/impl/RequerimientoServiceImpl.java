@@ -125,8 +125,7 @@ public class RequerimientoServiceImpl implements RequerimientoService {
         requerimiento.setEspecialidad(especialidadRepository.findById(requerimientoDTO.getId_especialidad())
                 .orElseThrow(() -> new ResourceNotFoundException("Especialidad not found")));
         requerimiento.setDescripcion(requerimientoDTO.getDescripcion());
-        // El adjunto se gestiona exclusivamente vía subirAdjunto/eliminarAdjunto
-        // (fileserver propio, CLAUDE.md sección 26/30): no se acepta desde este DTO.
+        // El adjunto se gestiona exclusivamente vía subirAdjunto/eliminarAdjunto no se acepta desde este DTO.
         requerimiento.setNumeroRequerimiento(numeracion.siguienteNumeroRequerimiento());
         requerimiento.setFecha_registro(Instant.now());
         Requerimiento requerimientoGuardado = requerimientoRepository.save(requerimiento);

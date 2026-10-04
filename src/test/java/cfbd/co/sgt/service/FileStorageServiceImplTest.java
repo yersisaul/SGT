@@ -24,8 +24,7 @@ import cfbd.co.sgt.service.impl.FileStorageServiceImpl;
 
 /**
  * Pruebas unitarias del fileserver propio (sin Spring context): validación
- * de archivo, almacenamiento/reemplazo/eliminación y protección contra path
- * traversal (CLAUDE.md sección 40).
+ * de archivo, almacenamiento/reemplazo/eliminación y protección contra path traversal.
  */
 class FileStorageServiceImplTest {
 
@@ -114,7 +113,7 @@ class FileStorageServiceImplTest {
         assertThat(Files.exists(tempDir.resolve(referenciaNueva))).isTrue();
         assertThat(referenciaNueva).isNotEqualTo(referenciaOriginal);
         // El anterior sigue existiendo hasta que el llamador confirme la BD y
-        // pida borrarlo explícitamente (CLAUDE.md sección 30).
+        // pida borrarlo explícitamente.
         assertThat(Files.exists(tempDir.resolve(referenciaOriginal))).isTrue();
 
         service.delete(referenciaOriginal);

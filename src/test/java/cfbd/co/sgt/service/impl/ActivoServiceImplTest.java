@@ -29,9 +29,7 @@ import cfbd.co.sgt.service.FileStorageService;
 import cfbd.co.sgt.service.TipoRecursoArchivo;
 
 /**
- * Cubre la gestión de imagen de Activo a nivel de Service (CLAUDE.md sección
- * 40: subir, reemplazar, eliminar, recurso inexistente, operación sin
- * archivo) sin necesitar la BD real ni el contexto de Spring.
+ * Cubre la gestión de imagen de Activo a nivel de Service sin necesitar la BD real ni el contexto de Spring.
  */
 @ExtendWith(MockitoExtension.class)
 class ActivoServiceImplTest {

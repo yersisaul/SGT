@@ -47,8 +47,7 @@ export const routes: Routes = [
         // resolver nombres de usuario en Solicitud/Requerimiento/Orden), así
         // que ya no sirve para distinguir quién administra usuarios. La
         // pantalla de administración se gatea con usuario.create, que solo
-        // tiene Administrador (CLAUDE.md 6: no usar un permiso de lectura
-        // amplio como excusa para exponer una capacidad administrativa).
+        // tiene Administrador.
         path: 'administracion/usuarios',
         component: Usuarios,
         canActivate: [permissionGuard],

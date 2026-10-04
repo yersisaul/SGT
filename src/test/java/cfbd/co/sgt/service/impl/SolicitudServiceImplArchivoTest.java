@@ -40,8 +40,7 @@ import cfbd.co.sgt.service.TipoRecursoArchivo;
 
 /**
  * El adjunto de Solicitud debe respetar la misma autorización de recurso que
- * ya protege buscarSolicitudPorId (Cliente solo ve las suyas — CLAUDE.md
- * sección 5.5/12): el fileserver no debe convertirse en una puerta para
+ * ya protege buscarSolicitudPorId: el fileserver no debe convertirse en una puerta para
  * saltarse esa regla.
  */
 @ExtendWith(MockitoExtension.class)

@@ -43,8 +43,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         Rol rol = rolRepository.findById(usuarioDTO.getId_rol())
                 .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
 
-        // La foto se gestiona exclusivamente vía subirImagen/eliminarImagen
-        // (fileserver propio, CLAUDE.md sección 26/30): no se acepta desde este DTO.
+        // La foto se gestiona exclusivamente vía subirImagen/eliminarImagen no se acepta desde este DTO.
         Usuario usuario = Usuario.builder()
                 .email(email)
                 .nombres(usuarioDTO.getNombres())

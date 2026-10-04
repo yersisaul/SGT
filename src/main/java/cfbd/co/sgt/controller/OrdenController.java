@@ -74,7 +74,7 @@ public class OrdenController {
     }
 
     // Cierre de OT: operación de negocio específica (fecha_cierre + estado
-    // final), separada del PUT genérico (CLAUDE.md 5.3).
+    // final), separada del PUT genérico.
     @PreAuthorize("hasAuthority('orden.cerrar')")
     @PostMapping("/{id}/cerrar")
     public ResponseEntity<OrdenResponse> cerrarOrden(@PathVariable UUID id,
@@ -82,7 +82,7 @@ public class OrdenController {
         return ResponseEntity.status(HttpStatus.OK).body(ordenService.cerrarOrden(id, request));
     }
 
-    // ---- Cola de OT por especialidad (CLAUDE.md §1 pasos 10-12) ----
+    // ---- Cola de OT por especialidad ----
     // El permiso habilita la operación; la regla por recurso (miembro,
     // responsable, ejecutor) la valida ColaOrdenService.
 

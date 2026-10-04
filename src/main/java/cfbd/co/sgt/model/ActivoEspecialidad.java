@@ -24,7 +24,7 @@ import lombok.Setter;
  * Especialidades en las que un activo puede generar Solicitudes (decisión
  * 2026-10-04: un activo puede pertenecer a varias). La principal sigue
  * siendo activo.id_especialidad, con la que nace la Solicitud; esta tabla
- * la incluye junto con las demás. Unidireccional (CLAUDE.md 5).
+ * la incluye junto con las demás. Unidireccional.
  */
 @Entity
 @Table(name = "activo_especialidad",

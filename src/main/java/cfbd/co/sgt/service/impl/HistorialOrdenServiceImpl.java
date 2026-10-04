@@ -56,7 +56,7 @@ public class HistorialOrdenServiceImpl implements HistorialOrdenService {
         historial.setEstado_nuevo(estadoRepository.findById(historialDTO.getId_estado_nuevo())
                 .orElseThrow(() -> new ResourceNotFoundException("Estado nuevo not found")));
         // El usuario que registra el cambio se obtiene del contexto de seguridad,
-        // nunca de un id enviado por el cliente (CLAUDE.md 14.1).
+        // nunca de un id enviado por el cliente.
         historial.setUsuario(usuarioAutenticado());
         historial.setComentario(historialDTO.getComentario());
         historial.setFecha(Instant.now());
@@ -65,7 +65,7 @@ public class HistorialOrdenServiceImpl implements HistorialOrdenService {
 
     @Override
     public List<HistorialOrdenResponse> listarHistoriales(UUID idPadre) {
-        // Visibilidad heredada del registro padre (CLAUDE.md 6.5): antes se
+        // Visibilidad heredada del registro padre: antes se
         // devolvía todo el historial a cualquiera con historial_orden.read.
         Usuario actor = usuarioActual.obtener();
         List<HistorialOrden> historiales;

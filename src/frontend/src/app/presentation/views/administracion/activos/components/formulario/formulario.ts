@@ -18,8 +18,7 @@ interface ActivoForm {
 
 /** Lo que emite el formulario al guardar: los datos de Activo más, por
  * separado, la imagen nueva (si se seleccionó una) o el pedido de quitar la
- * actual. El contenedor decide cuándo llamar a ArchivoService (CLAUDE.md
- * sección 33: seleccionar -> preview -> guardar formulario -> subir). */
+ * actual. El contenedor decide cuándo llamar a ArchivoService. */
 export interface ActivoFormSubmit {
   request: ActivoRequest;
   archivo: File | null;

@@ -15,7 +15,7 @@ import java.util.UUID;
 public interface SolicitudRepository extends JpaRepository<Solicitud, UUID> {
     Optional<Solicitud> findByNumeroSolicitud(String numeroSolicitud);
 
-    // Ownership (CLAUDE.md 5.5): Cliente solo puede listar sus propias
+    // Cliente solo puede listar sus propias
     // Solicitudes. JPQL explícito (no "findBy...Usuario_IdUsuario" derivado):
     // el id de Usuario se llama literalmente "id_usuario", y Spring Data no
     // resuelve ese nombre vía el parser de propiedades derivado (mismo tipo
@@ -26,7 +26,7 @@ public interface SolicitudRepository extends JpaRepository<Solicitud, UUID> {
     @Query("select s.estado.nombre, count(s) from Solicitud s group by s.estado.nombre")
     List<Object[]> countByEstado();
 
-    // Visibilidad sin solicitud.read_all (CLAUDE.md 6.5): las propias y las
+    // Visibilidad sin solicitud.read_all: las propias y las
     // que originaron una OT (directa o vía Requerimiento) asignada al actor o
     // de una especialidad de la que es miembro.
     @Query("select distinct s from Solicitud s where s.usuario.id_usuario = :idUsuario "

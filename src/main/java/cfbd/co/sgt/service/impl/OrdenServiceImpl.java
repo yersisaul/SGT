@@ -48,11 +48,10 @@ public class OrdenServiceImpl implements OrdenService {
     // Orden. Orden solo maneja Pendiente/En progreso/Finalizado (sin "En
     // revisión"). "Finalizado" está excluido a propósito: cerrar una Orden es
     // una operación de negocio específica (ver cerrarOrden), no un cambio de
-    // campo más (CLAUDE.md 5.3 — el PUT genérico no debe permitir saltarse
-    // el flujo de cierre).
+    // campo más.
     // El PUT genérico ya no cambia el estado de la OT: la cola (tomar,
     // asignar, verificar, reasignar) y el cierre son operaciones de negocio
-    // dedicadas (PRD E3, CLAUDE.md 6.3). Se conserva solo el no-op.
+    // dedicadas. Se conserva solo el no-op.
 
     @Autowired
     private OrdenRepository ordenRepository;
@@ -96,7 +95,7 @@ public class OrdenServiceImpl implements OrdenService {
     public OrdenResponse crearOrden(OrdenRequest ordenDTO) {
         Orden orden = new Orden();
         // El usuario se obtiene del contexto de seguridad, nunca del body
-        // (CLAUDE.md 6.1/5.1). Nota: ningún rol tiene hoy orden.create — la
+        // Nota: ningún rol tiene hoy orden.create — la
         // creación real ocurre vía generarOrdenDesdeSolicitud/Requerimiento;
         // este método queda disponible por si se habilita en el futuro.
         orden.setUsuario(usuarioAutenticado());
@@ -112,8 +111,7 @@ public class OrdenServiceImpl implements OrdenService {
                 ? requerimientoRepository.findById(ordenDTO.getId_requerimiento())
                         .orElseThrow(() -> new ResourceNotFoundException("Requerimiento not found"))
                 : null);
-        // El adjunto se gestiona exclusivamente vía subirAdjunto/eliminarAdjunto
-        // (fileserver propio, CLAUDE.md sección 26/30): no se acepta desde este DTO.
+        // El adjunto se gestiona exclusivamente vía subirAdjunto/eliminarAdjunto no se acepta desde este DTO.
         orden.setNumeroOrden(numeracion.siguienteNumeroOrden());
         orden.setFecha_registro(Instant.now());
         return convertToResponse(ordenRepository.save(orden));
@@ -224,8 +222,7 @@ public class OrdenServiceImpl implements OrdenService {
                 : "Orden cerrada.");
         historialOrdenRepository.save(historial);
 
-        // Trazabilidad Solicitud/Requerimiento -> OT (CLAUDE.md, flujo de
-        // negocio): cerrar la OT es lo que finaliza la atención de la
+        // Trazabilidad Solicitud/Requerimiento -> OT cerrar la OT es lo que finaliza la atención de la
         // Solicitud o el Requerimiento que la originó.
         if (ordenCerrada.getSolicitud() != null) {
             finalizarSolicitudAsociada(ordenCerrada, actor);

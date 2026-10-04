@@ -10,7 +10,7 @@ interface PermisoForm {
   descripcion: FormControl<string>;
 }
 
-/** codigo sigue la nomenclatura real <recurso>.<accion> (ver PermisoController/CLAUDE.md 5.2). */
+/** codigo sigue la nomenclatura real <recurso>.<accion>. */
 const CODIGO_PATTERN = /^[a-z_]+\.[a-z_]+$/;
 
 @Component({

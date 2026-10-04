@@ -76,7 +76,7 @@ public class SolicitudController {
 
     // Generar una Orden de Trabajo directamente desde una Solicitud "bajo
     // contrato". Permiso de negocio distinto de solicitud.update/orden.create
-    // (CLAUDE.md 5.3): evita que el CRUD genérico de Orden permita saltarse
+    // evita que el CRUD genérico de Orden permita saltarse
     // el flujo de clasificación del Despachador.
     @PreAuthorize("hasAuthority('solicitud.generar_orden')")
     @PostMapping("/{id}/generar-orden")
@@ -89,8 +89,7 @@ public class SolicitudController {
 
     // Generar un Requerimiento desde una Solicitud "fuera de contrato".
     // Permiso de negocio propio (mismo criterio que solicitud.generar_orden):
-    // ambos son las dos ramas de la misma decisión de clasificación del
-    // Despachador (CLAUDE.md 5.3).
+    // ambos son las dos ramas de la misma decisión de clasificación del Despachador.
     @PreAuthorize("hasAuthority('solicitud.generar_requerimiento')")
     @PostMapping("/{id}/generar-requerimiento")
     public ResponseEntity<RequerimientoResponse> generarRequerimientoDesdeSolicitud(

@@ -78,8 +78,7 @@ public class FileStorageServiceImpl implements FileStorageService {
         try {
             Files.deleteIfExists(archivo);
         } catch (IOException e) {
-            // No hay una transacción única entre filesystem y BD (CLAUDE.md
-            // 30): si el borrado físico falla, no debe tumbar la operación de
+            // No hay una transacción única entre filesystem y BD si el borrado físico falla, no debe tumbar la operación de
             // negocio que lo originó (reemplazo/eliminación ya confirmados en
             // BD); queda un archivo huérfano documentado aquí.
             log.warn("No se pudo eliminar el archivo físico '{}': {}", referencia, e.getMessage());
@@ -114,8 +113,7 @@ public class FileStorageServiceImpl implements FileStorageService {
         }
     }
 
-    /** Resuelve una referencia lógica dentro de root, rechazando cualquier
-     * intento de salir de él (path traversal, CLAUDE.md 34). */
+    //Resuelve una referencia lógica dentro de root, rechazando cualquier intento de escapar del directorio raíz (por ejemplo, "../" o "/etc/passwd"). Si la referencia no está dentro de root, lanza FileStorageException. Esto protege contra ataques de path traversal y asegura que los archivos se almacenen y accedan solo dentro del directorio designado.
     private Path resolverDentroDeRoot(String referencia) {
         Path resuelto = root.resolve(referencia).normalize();
         if (!resuelto.startsWith(root)) {
@@ -149,7 +147,7 @@ public class FileStorageServiceImpl implements FileStorageService {
     }
 
     /** Nunca confía en el nombre original del archivo salvo para leer su
-     * extensión (CLAUDE.md 6); Paths.get(...).getFileName() descarta
+     * extensión; Paths.get(...).getFileName() descarta
      * cualquier componente de ruta que venga en el nombre enviado por el
      * navegador. */
     private String extensionDe(String nombreOriginal) {

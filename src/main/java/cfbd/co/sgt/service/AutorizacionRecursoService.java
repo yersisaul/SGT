@@ -7,7 +7,7 @@ import cfbd.co.sgt.model.Solicitud;
 import cfbd.co.sgt.model.Usuario;
 
 /**
- * Autorización a nivel de recurso (CLAUDE.md 6.5), basada en permisos de
+ * Autorización a nivel de recurso, basada en permisos de
  * alcance (solicitud.read_all, requerimiento.read_all, orden.read_all) y en
  * la relación del actor con el recurso, nunca en el nombre del rol (6.2).
  * El permiso de la operación (p. ej. solicitud.read) lo valida antes el

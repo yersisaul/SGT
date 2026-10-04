@@ -40,7 +40,7 @@ public class DerivacionServiceImpl implements DerivacionService {
         derivacion.setSolicitud(solicitudRepository.findById(derivacionDTO.getId_solicitud())
                 .orElseThrow(() -> new ResourceNotFoundException("Solicitud not found")));
         // El usuario origen (quien deriva) se obtiene del contexto de seguridad,
-        // nunca de un id enviado por el cliente (CLAUDE.md 14.1).
+        // nunca de un id enviado por el cliente.
         derivacion.setUsuario_origen(usuarioAutenticado());
         derivacion.setUsuario_destino(usuarioRepository.findById(derivacionDTO.getId_usuario_destino())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario destino not found")));

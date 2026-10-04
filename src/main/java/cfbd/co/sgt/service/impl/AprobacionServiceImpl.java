@@ -102,14 +102,12 @@ public class AprobacionServiceImpl implements AprobacionService {
 
         Aprobacion aprobacion = new Aprobacion();
         aprobacion.setRequerimiento(requerimiento);
-        // El usuario aprobador se obtiene del contexto de seguridad, nunca de un id
-        // enviado por el cliente (CLAUDE.md 6.1/5.1).
+        // El usuario aprobador se obtiene del contexto de seguridad, nunca de un id enviado por el cliente.
         aprobacion.setUsuario(actor);
         aprobacion.setAprobado(aprobacionDTO.getAprobado());
         aprobacion.setComentario(aprobacionDTO.getComentario());
         // El adjunto (presupuesto/documento) se gestiona exclusivamente vía
-        // subirAdjunto/eliminarAdjunto (fileserver propio, CLAUDE.md sección
-        // 26/30), después de creada la Aprobacion.
+        // subirAdjunto/eliminarAdjunto después de creada la Aprobacion.
         aprobacion.setFecha_aprobacion(Instant.now());
         Aprobacion aprobacionGuardada = aprobacionRepository.save(aprobacion);
 

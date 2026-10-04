@@ -33,7 +33,7 @@ public interface OrdenRepository extends JpaRepository<Orden, UUID> {
     @Query("select o from Orden o where o.usuario.id_usuario = :idUsuario")
     List<Orden> findByUsuario(@Param("idUsuario") UUID idUsuario);
 
-    // Visibilidad sin orden.read_all (CLAUDE.md 6.5): OT asignadas al actor,
+    // Visibilidad sin orden.read_all: OT asignadas al actor,
     // OT de las especialidades de las que es miembro y OT originadas por una
     // Solicitud del actor (directa o vía Requerimiento).
     @Query("select distinct o from Orden o left join o.usuario u left join o.solicitud s "

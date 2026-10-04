@@ -468,8 +468,7 @@ export class Requerimientos {
       .subscribe({
         next: (aprobacionCreada) => {
           // El presupuesto/documento de respaldo se sube recién con el id de
-          // la Aprobacion ya creada (fileserver propio, CLAUDE.md sección
-          // 33); si la subida falla, la aprobación/rechazo ya quedó
+          // la Aprobacion ya creada; si la subida falla, la aprobación/rechazo ya quedó
           // registrada — no se revierte por eso.
           const actualizadoCallback = (actualizado: RequerimientoResponse) => {
             this.requerimientos.update((lista) =>

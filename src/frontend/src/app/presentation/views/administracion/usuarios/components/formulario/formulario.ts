@@ -18,8 +18,7 @@ interface UsuarioForm {
 
 /** Lo que emite el formulario al guardar: los datos de Usuario más, por
  * separado, la foto nueva (si se seleccionó una) o el pedido de quitar la
- * actual (CLAUDE.md sección 33: el archivo se sube recién después de crear/
- * editar el Usuario, cuando ya existe un id). */
+ * actual. */
 export interface UsuarioFormSubmit {
   request: UsuarioRequest;
   archivo: File | null;

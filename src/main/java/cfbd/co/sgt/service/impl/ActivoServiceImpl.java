@@ -49,8 +49,7 @@ public class ActivoServiceImpl implements ActivoService {
         activo.setNombre(activoDTO.getNombre());
         activo.setDescripcion(activoDTO.getDescripcion());
         activo.setUbicacion(activoDTO.getUbicacion());
-        // La imagen se gestiona exclusivamente vía subirImagen/eliminarImagen
-        // (fileserver propio, CLAUDE.md sección 26/30): no se acepta desde este DTO.
+        // La imagen se gestiona exclusivamente vía subirImagen/eliminarImagen no se acepta desde este DTO.
         Activo guardado = activoRepository.save(activo);
         reemplazarEspecialidades(guardado, activoDTO.getIds_especialidad());
         return convertToResponse(guardado);
@@ -100,8 +99,6 @@ public class ActivoServiceImpl implements ActivoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Activo not found"));
         String referenciaAnterior = activo.getUrl_img();
         // Guardar el nuevo archivo antes de tocar BD/borrar el anterior
-        // (CLAUDE.md 30: nunca dejar la entidad apuntando a un archivo
-        // inexistente si algo falla a mitad de camino).
         String nuevaReferencia = fileStorageService.store(file, TipoRecursoArchivo.ACTIVOS, id);
         activo.setUrl_img(nuevaReferencia);
         Activo guardado = activoRepository.save(activo);

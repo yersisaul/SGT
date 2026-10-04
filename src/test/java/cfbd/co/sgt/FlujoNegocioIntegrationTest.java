@@ -33,12 +33,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * Verifica de extremo a extremo (contra la BD del .env, decisión D23) el
- * flujo de negocio de CLAUDE.md §1 (14 pasos): Cliente → Solicitud →
- * Despachador → (OT en cola | RQ → Administrador aprueba/rechaza → OT en
- * cola) → miembro toma / responsable asigna → verificar (corresponde o
- * devuelve) → reasignar a otra especialidad → ejecutar → cerrar en cascada.
- *
  * Los métodos están ordenados porque comparten estado: son una traza
  * secuencial del flujo real, no unidades independientes.
  */
