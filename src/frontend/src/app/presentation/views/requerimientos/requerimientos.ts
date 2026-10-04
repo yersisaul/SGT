@@ -125,7 +125,6 @@ export class Requerimientos {
   private readonly estados = signal<EstadoCatalogo[]>([]);
   private readonly especialidades = signal<EspecialidadCatalogo[]>([]);
   private readonly usuarios = signal<UsuarioCatalogo[]>([]);
-  private readonly usuariosOperaciones = signal<UsuarioCatalogo[]>([]);
 
   protected readonly viewMode = signal<ViewMode>('kanban');
 
@@ -154,10 +153,12 @@ export class Requerimientos {
   protected readonly generarOrdenError = signal<string | null>(null);
 
   // Compartido por ambos diálogos de generación de OT (el normal y el
-  // posterior a aprobar): solo uno puede estar abierto a la vez.
-  protected readonly generarOrdenEjecutor = signal('');
-  protected readonly ejecutorOptions = computed<SelectOption[]>(() =>
-    this.usuariosOperaciones().map((u) => ({ value: u.id_usuario, label: `${u.nombres} ${u.apellidos}` })),
+  // posterior a aprobar): solo uno puede estar abierto a la vez. La OT entra
+  // a la cola de la especialidad elegida entre las 5 (PRD D16); no se elige
+  // persona (D3).
+  protected readonly generarOrdenEspecialidad = signal('');
+  protected readonly especialidadOptions = computed<SelectOption[]>(() =>
+    this.especialidades().map((e) => ({ value: e.id_especialidad, label: e.nombre })),
   );
 
   // Decisión posterior a aprobar (Observación 6): "generar ahora" ejecuta el
@@ -485,7 +486,7 @@ export class Requerimientos {
             // "Aprobado" para que otro rol continúe más tarde.
             if (accion.aprobado && this.canGenerarOrden) {
               this.postAprobacionError.set(null);
-              this.generarOrdenEjecutor.set('');
+              this.generarOrdenEspecialidad.set(actualizado.id_especialidad);
               this.postAprobacionTarget.set(actualizado);
             }
           };
@@ -524,7 +525,7 @@ export class Requerimientos {
 
   protected requestGenerarOrden(requerimiento: RequerimientoResponse): void {
     this.generarOrdenTarget.set(requerimiento);
-    this.generarOrdenEjecutor.set('');
+    this.generarOrdenEspecialidad.set(requerimiento.id_especialidad);
     this.generarOrdenError.set(null);
   }
 
@@ -536,12 +537,12 @@ export class Requerimientos {
 
   protected confirmGenerarOrdenAction(): void {
     const target = this.generarOrdenTarget();
-    const ejecutor = this.generarOrdenEjecutor();
-    if (!target || !ejecutor) return;
+    const especialidad = this.generarOrdenEspecialidad();
+    if (!target || !especialidad) return;
 
     this.generarOrdenSubmitting.set(true);
     this.generarOrdenError.set(null);
-    this.requerimientoService.generarOrden(target.id_requerimiento, { id_usuario_ejecutor: ejecutor }).subscribe({
+    this.requerimientoService.generarOrden(target.id_requerimiento, { id_especialidad: especialidad }).subscribe({
       next: (orden) => {
         this.generarOrdenSubmitting.set(false);
         this.generarOrdenTarget.set(null);
@@ -565,12 +566,12 @@ export class Requerimientos {
 
   protected confirmGenerarOrdenAhora(): void {
     const target = this.postAprobacionTarget();
-    const ejecutor = this.generarOrdenEjecutor();
-    if (!target || !ejecutor) return;
+    const especialidad = this.generarOrdenEspecialidad();
+    if (!target || !especialidad) return;
 
     this.postAprobacionSubmitting.set(true);
     this.postAprobacionError.set(null);
-    this.requerimientoService.generarOrden(target.id_requerimiento, { id_usuario_ejecutor: ejecutor }).subscribe({
+    this.requerimientoService.generarOrden(target.id_requerimiento, { id_especialidad: especialidad }).subscribe({
       next: (orden) => {
         this.postAprobacionSubmitting.set(false);
         this.postAprobacionTarget.set(null);
@@ -656,14 +657,12 @@ export class Requerimientos {
       estados: this.catalogoService.getEstados(),
       especialidades: this.catalogoService.getEspecialidades(),
       usuarios: this.catalogoService.getUsuarios(),
-      usuariosOperaciones: this.catalogoService.getUsuariosOperaciones(),
     }).subscribe({
-      next: ({ requerimientos, estados, especialidades, usuarios, usuariosOperaciones }) => {
+      next: ({ requerimientos, estados, especialidades, usuarios }) => {
         this.requerimientos.set(requerimientos);
         this.estados.set(estados);
         this.especialidades.set(especialidades);
         this.usuarios.set(usuarios);
-        this.usuariosOperaciones.set(usuariosOperaciones);
         this.loading.set(false);
       },
       error: () => {

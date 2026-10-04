@@ -2,7 +2,7 @@
   <header class="ordenes-header">
     <div>
       <h1 class="ordenes-title">Órdenes de trabajo</h1>
-      <p class="ordenes-subtitle">Centro de operaciones — ejecución y cierre de OT</p>
+      <p class="ordenes-subtitle">Cola por especialidad, ejecución y cierre de OT</p>
     </div>
 
     <div class="ordenes-header-actions">
@@ -31,6 +31,55 @@
     </div>
   </header>
 
+  @if (bandejasDisponibles().length > 1) {
+    <div class="bandejas" role="tablist" aria-label="Bandejas de órdenes">
+      @for (opcion of bandejasDisponibles(); track opcion.id) {
+        <button
+          type="button"
+          role="tab"
+          class="bandeja-tab"
+          [class.bandeja-tab-active]="bandeja() === opcion.id"
+          [attr.aria-selected]="bandeja() === opcion.id"
+          (click)="cambiarBandeja(opcion.id)"
+        >
+          {{ opcion.etiqueta }}
+        </button>
+      }
+    </div>
+  }
+
+  @if (bandeja() === 'equipo') {
+    <section class="equipo-panel" aria-label="Carga del equipo">
+      @if (equipoOptions().length > 1) {
+        <app-select
+          label="Especialidad"
+          [options]="equipoOptions()"
+          [ngModel]="equipoEspecialidad()"
+          (ngModelChange)="cambiarEquipo($event)"
+        />
+      }
+      @if (cargaLoading()) {
+        <app-spinner size="sm" label="Cargando equipo" />
+      } @else {
+        <ul class="equipo-lista">
+          @for (miembro of carga(); track miembro.id_usuario) {
+            <li class="equipo-miembro">
+              <span class="equipo-nombre">
+                {{ miembro.nombres }} {{ miembro.apellidos }}
+                @if (miembro.es_responsable) {
+                  <app-badge variant="info">Responsable</app-badge>
+                }
+              </span>
+              <span class="equipo-carga">{{ miembro.ordenes_abiertas }} abiertas</span>
+            </li>
+          } @empty {
+            <li class="ficha-nota">Esta especialidad aún no tiene miembros.</li>
+          }
+        </ul>
+      }
+    </section>
+  }
+
   @if (!estadosDisponibles() && !loading()) {
     <div class="ordenes-warning" role="status">
       <svg lucideCircleAlert [size]="16" aria-hidden="true"></svg>
@@ -53,16 +102,28 @@
   } @else if (views().length === 0) {
     <div class="ordenes-state">
       <svg lucideInbox [size]="28" aria-hidden="true"></svg>
-      <span>Aún no hay órdenes de trabajo generadas.</span>
+      @switch (bandeja()) {
+        @case ('cola') {
+          <span>No hay órdenes esperando en la cola de tus especialidades.</span>
+        }
+        @case ('mias') {
+          <span>No tienes órdenes asignadas abiertas.</span>
+        }
+        @case ('equipo') {
+          <span>Tu equipo no tiene órdenes abiertas en esta especialidad.</span>
+        }
+        @default {
+          <span>Aún no hay órdenes de trabajo generadas.</span>
+        }
+      }
     </div>
   } @else if (viewMode() === 'kanban' && estadosDisponibles()) {
     <app-orden-kanban
       [columns]="kanbanColumns()"
-      [canUpdate]="canUpdate"
+      [canUpdate]="false"
       [canDelete]="canDelete"
       (cardOpen)="openDetail($event)"
       (cardDelete)="requestDelete($event.raw)"
-      (moved)="handleMoved($event)"
     />
   } @else {
     <app-orden-tabla
@@ -106,14 +167,12 @@
       }
       @if (view.raw.url_adjunto) {
         <div class="ficha-info-row">
-          <span class="ficha-info-label">Adjunto</span>
+          <span class="ficha-info-label">Informe</span>
           <button type="button" class="ficha-link" (click)="verAdjunto(view.raw.url_adjunto)">Ver adjunto</button>
         </div>
       }
     </div>
 
-    <!-- Origen: distingue Solicitud vs Requerimiento según id_solicitud/id_requerimiento.
-         No hay una tercera opción ni un enlace simulado. -->
     <div class="ficha-origen">
       <h3 class="ficha-historial-title">Origen</h3>
       @if (origenLoading()) {
@@ -144,37 +203,74 @@
       }
     </div>
 
-    @if ((canUpdate && !dialogEstaCerrada()) || (canCerrar && !dialogEstaCerrada()) || (dialogPuedeReasignar() && !dialogEstaCerrada()) || canDelete) {
-      <div class="ficha-acciones ficha-acciones-columna">
-        @if (canUpdate && !dialogEstaCerrada()) {
-          <app-orden-ejecutar
-            [initial]="view.raw"
-            [estados]="estadosCatalogo()"
-            [submitting]="ejecutarSubmitting()"
-            (submitForm)="handleEjecutar($event)"
-          />
-        }
-        <div class="ficha-acciones">
-          @if (dialogPuedeReasignar() && !dialogEstaCerrada()) {
-            <app-button variant="secondary" (click)="requestReasignar(view.raw)">Reasignar Orden</app-button>
+    @if (acciones(); as a) {
+      @if (a.tomar || a.asignar || a.verificar || a.reasignar || a.cerrar || a.informe || canDelete) {
+        <div class="ficha-acciones ficha-acciones-columna">
+          @if (a.verificar) {
+            <p class="ficha-nota">¿Esta orden corresponde a tus funciones?</p>
           }
-          @if (canCerrar && !dialogEstaCerrada()) {
-            <app-button variant="primary" (click)="requestCerrar(view.raw)">Cerrar Orden</app-button>
+          @if (a.informe) {
+            <app-orden-ejecutar
+              [initial]="view.raw"
+              [submitting]="ejecutarSubmitting()"
+              (submitForm)="handleEjecutar($event)"
+            />
           }
-          @if (canDelete) {
-            <app-button variant="danger" (click)="requestDelete(view.raw)">Eliminar</app-button>
-          }
+          <div class="ficha-acciones">
+            @if (a.tomar) {
+              <app-button variant="primary" [loading]="accionSubmitting()" (click)="tomar(view.raw)">
+                Tomar orden
+              </app-button>
+            }
+            @if (a.verificar) {
+              <app-button variant="primary" [loading]="accionSubmitting()" (click)="confirmarCorresponde(view.raw)">
+                Me corresponde
+              </app-button>
+              <app-button variant="secondary" (click)="requestDevolver(view.raw)">No me corresponde</app-button>
+            }
+            @if (a.asignar) {
+              <app-button variant="primary" (click)="requestAsignar(view.raw)">Asignar a un miembro</app-button>
+            }
+            @if (a.reasignar) {
+              <app-button variant="secondary" (click)="requestReasignar(view.raw)">Reasignar especialidad</app-button>
+            }
+            @if (a.cerrar) {
+              <app-button variant="primary" (click)="requestCerrar(view.raw)">Cerrar orden</app-button>
+            }
+            @if (canDelete) {
+              <app-button variant="danger" (click)="requestDelete(view.raw)">Eliminar</app-button>
+            }
+          </div>
         </div>
-      </div>
+      }
     }
 
     @if (dialogEstaCerrada()) {
       <p class="ficha-nota">Esta orden ya está cerrada; no admite más cambios.</p>
     }
 
+    @if (asignaciones().length > 0) {
+      <div class="ficha-historial">
+        <h3 class="ficha-historial-title">Asignaciones</h3>
+        <ol class="ficha-historial-list">
+          @for (asignacion of asignaciones(); track asignacion.id_asignacion_orden) {
+            <li class="ficha-historial-item">
+              <div class="ficha-historial-transicion">{{ etiquetaAsignacion(asignacion) }}</div>
+              <div class="ficha-historial-fecha">
+                {{ asignacion.nombre_actor }} · {{ asignacion.fecha | date: 'd MMM yyyy, HH:mm' }}
+              </div>
+              @if (asignacion.motivo) {
+                <p class="ficha-historial-comentario">{{ asignacion.motivo }}</p>
+              }
+            </li>
+          }
+        </ol>
+      </div>
+    }
+
     @if (canReadHistorial) {
       <div class="ficha-historial">
-        <h3 class="ficha-historial-title">Historial</h3>
+        <h3 class="ficha-historial-title">Historial de estados</h3>
         @if (historialLoading()) {
           <div class="ficha-historial-loading">
             <app-spinner size="sm" label="Cargando historial" />
@@ -191,7 +287,7 @@
                   {{ estadoNombreHistorial(registro.id_estado_nuevo) }}
                 </div>
                 <div class="ficha-historial-fecha">
-                  {{ nombreUsuarioPorId(registro.id_usuario) }} · {{ registro.fecha | date: 'd MMM yyyy, HH:mm' }}
+                  {{ registro.nombre_usuario }} · {{ registro.fecha | date: 'd MMM yyyy, HH:mm' }}
                 </div>
                 @if (registro.comentario) {
                   <p class="ficha-historial-comentario">{{ registro.comentario }}</p>
@@ -205,12 +301,7 @@
   }
 </app-dialog>
 
-<app-dialog
-  variant="modal"
-  title="Eliminar orden"
-  [open]="confirmTarget() !== null"
-  (closed)="cancelDelete()"
->
+<app-dialog variant="modal" title="Eliminar orden" [open]="confirmTarget() !== null" (closed)="cancelDelete()">
   @if (confirmTarget(); as target) {
     <p class="confirm-text">
       ¿Seguro que deseas eliminar la orden <strong>{{ target.numeroOrden }}</strong>? Esta acción no se puede deshacer.
@@ -222,12 +313,7 @@
   }
 </app-dialog>
 
-<app-dialog
-  variant="modal"
-  title="Cerrar Orden de Trabajo"
-  [open]="cerrarTarget() !== null"
-  (closed)="cancelCerrar()"
->
+<app-dialog variant="modal" title="Cerrar orden de trabajo" [open]="cerrarTarget() !== null" (closed)="cancelCerrar()">
   @if (cerrarTarget(); as target) {
     <p class="confirm-text">
       Vas a cerrar la orden <strong>{{ target.numeroOrden }}</strong>. Quedará en estado
@@ -259,7 +345,7 @@
     <div class="confirm-actions">
       <app-button variant="secondary" [disabled]="cerrarSubmitting()" (click)="cancelCerrar()">Cancelar</app-button>
       <app-button variant="primary" [loading]="cerrarSubmitting()" (click)="confirmCerrarAction()">
-        Cerrar Orden
+        Cerrar orden
       </app-button>
     </div>
   }
@@ -267,32 +353,33 @@
 
 <app-dialog
   variant="modal"
-  title="Reasignar Orden"
+  title="Reasignar a otra especialidad"
   [open]="reasignarTarget() !== null"
   (closed)="cancelReasignar()"
 >
   @if (reasignarTarget(); as target) {
     <p class="confirm-text">
-      Vas a reasignar la orden <strong>{{ target.numeroOrden }}</strong> a otro ejecutor de Operaciones.
+      La orden <strong>{{ target.numeroOrden }}</strong> saldrá de su especialidad actual y entrará a la cola de la
+      especialidad elegida, sin ejecutor.
     </p>
 
     <app-select
-      label="Nuevo ejecutor"
-      placeholder="Selecciona un ejecutor de Operaciones"
-      [options]="ejecutorOptions()"
-      [ngModel]="reasignarSeleccionado()"
-      (ngModelChange)="reasignarSeleccionado.set($event)"
+      label="Especialidad destino"
+      placeholder="Selecciona la especialidad"
+      [options]="especialidadDestinoOptions()"
+      [ngModel]="reasignarEspecialidad()"
+      (ngModelChange)="reasignarEspecialidad.set($event)"
     />
 
     <div class="field">
-      <label for="reasignar-comentario" class="field-label">Comentario (opcional)</label>
+      <label for="reasignar-motivo" class="field-label">Motivo</label>
       <textarea
-        id="reasignar-comentario"
+        id="reasignar-motivo"
         class="textarea"
         rows="3"
-        [ngModel]="reasignarComentario()"
-        (ngModelChange)="reasignarComentario.set($event)"
-        placeholder="Motivo de la reasignación…"
+        [ngModel]="reasignarMotivo()"
+        (ngModelChange)="reasignarMotivo.set($event)"
+        placeholder="Por qué corresponde a otra especialidad…"
       ></textarea>
     </div>
 
@@ -306,11 +393,83 @@
       </app-button>
       <app-button
         variant="primary"
-        [disabled]="!reasignarSeleccionado()"
+        [disabled]="!reasignarEspecialidad() || !reasignarMotivo().trim()"
         [loading]="reasignarSubmitting()"
         (click)="confirmReasignarAction()"
       >
         Reasignar
+      </app-button>
+    </div>
+  }
+</app-dialog>
+
+<app-dialog variant="modal" title="Asignar orden" [open]="asignarTarget() !== null" (closed)="cancelAsignar()">
+  @if (asignarTarget(); as target) {
+    <p class="confirm-text">Elige el miembro del equipo que ejecutará la orden <strong>{{ target.numeroOrden }}</strong>.</p>
+
+    <app-select
+      label="Miembro del equipo"
+      placeholder="Selecciona un miembro"
+      [options]="miembroOptions()"
+      [ngModel]="asignarSeleccionado()"
+      (ngModelChange)="asignarSeleccionado.set($event)"
+    />
+
+    @if (asignarError()) {
+      <div class="confirm-error" role="alert">{{ asignarError() }}</div>
+    }
+
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="asignarSubmitting()" (click)="cancelAsignar()">Cancelar</app-button>
+      <app-button
+        variant="primary"
+        [disabled]="!asignarSeleccionado()"
+        [loading]="asignarSubmitting()"
+        (click)="confirmAsignarAction()"
+      >
+        Asignar
+      </app-button>
+    </div>
+  }
+</app-dialog>
+
+<app-dialog
+  variant="modal"
+  title="La orden no me corresponde"
+  [open]="devolverTarget() !== null"
+  (closed)="cancelDevolver()"
+>
+  @if (devolverTarget(); as target) {
+    <p class="confirm-text">
+      La orden <strong>{{ target.numeroOrden }}</strong> quedará <strong>Devuelta</strong> y sin ejecutor. El responsable
+      de la especialidad decidirá si la reasigna a otra especialidad o a otro miembro.
+    </p>
+
+    <div class="field">
+      <label for="devolver-motivo" class="field-label">Motivo</label>
+      <textarea
+        id="devolver-motivo"
+        class="textarea"
+        rows="3"
+        [ngModel]="devolverMotivo()"
+        (ngModelChange)="devolverMotivo.set($event)"
+        placeholder="Por qué no corresponde a tus funciones…"
+      ></textarea>
+    </div>
+
+    @if (devolverError()) {
+      <div class="confirm-error" role="alert">{{ devolverError() }}</div>
+    }
+
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="devolverSubmitting()" (click)="cancelDevolver()">Cancelar</app-button>
+      <app-button
+        variant="primary"
+        [disabled]="!devolverMotivo().trim()"
+        [loading]="devolverSubmitting()"
+        (click)="confirmDevolverAction()"
+      >
+        Devolver
       </app-button>
     </div>
   }

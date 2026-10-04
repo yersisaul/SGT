@@ -9,6 +9,30 @@
     </div>
   }
 
+  @if (esEjecutor) {
+    <section aria-labelledby="mis-pendientes-heading">
+      <h2 id="mis-pendientes-heading" class="section-title">Mi trabajo</h2>
+      <a routerLink="/app/ordenes" class="atencion-item">
+        <svg lucideClipboardList [size]="18" aria-hidden="true"></svg>
+        <span class="atencion-texto">
+          @if (misPendientes() > 0) {
+            <strong>{{ misPendientes() }}</strong> orden(es) esperan tu acción: en la cola de tus especialidades o
+            asignadas sin confirmar
+          } @else {
+            No tienes órdenes pendientes de acción.
+          }
+        </span>
+        @if (misPendientes() > 0) {
+          <app-badge variant="warning">Pendiente</app-badge>
+        }
+      </a>
+    </section>
+  }
+
+  @if (canViewKpis) {
+    <app-kpi-panel />
+  }
+
   @if (tieneResumenes()) {
     <section aria-labelledby="kpi-heading">
       <h2 id="kpi-heading" class="section-title">Resumen ejecutivo</h2>
@@ -50,6 +74,18 @@
       <section aria-labelledby="atencion-heading">
         <h2 id="atencion-heading" class="section-title">Requiere atención</h2>
         <div class="atencion-list">
+          @for (escalada of escaladas(); track escalada.id_orden) {
+            <a routerLink="/app/ordenes" class="atencion-item">
+              <svg lucideClock [size]="18" aria-hidden="true"></svg>
+              <span class="atencion-texto">
+                <strong>{{ escalada.numero_orden }}</strong> lleva {{ formatoEspera(escalada.minutos_en_cola) }} en la cola
+                de {{ escalada.especialidad }} sin tomar (prioridad {{ escalada.prioridad }})
+              </span>
+              <app-badge [variant]="escalada.nivel === 2 ? 'danger' : 'warning'">
+                {{ escalada.nivel === 2 ? 'Escalada al Administrador' : 'Escalada al responsable' }}
+              </app-badge>
+            </a>
+          }
           @if (canViewSolicitudes && solicitudesPorClasificar() > 0) {
             <a routerLink="/app/solicitudes" class="atencion-item">
               <svg lucideClipboardList [size]="18" aria-hidden="true"></svg>
@@ -72,7 +108,7 @@
             <a routerLink="/app/ordenes" class="atencion-item">
               <svg lucideClipboardList [size]="18" aria-hidden="true"></svg>
               <span class="atencion-texto">
-                <strong>{{ ordenesPorIniciar() }}</strong> orden(es) de trabajo pendientes de iniciar
+                <strong>{{ ordenesPorIniciar() }}</strong> orden(es) de trabajo en cola, aún sin tomar
               </span>
               <app-badge variant="warning">Pendiente</app-badge>
             </a>

@@ -127,7 +127,12 @@
       />
     } @else {
       <div class="ficha-info">
-        @if (dialogEstaFinalizada()) {
+        @if (dialogEstaRechazada()) {
+          <p class="ficha-nota">
+            Esta solicitud fue <strong>rechazada</strong> porque no está cubierta por el contrato. El motivo figura en
+            el historial.
+          </p>
+        } @else if (dialogEstaFinalizada()) {
           <p class="ficha-nota">Esta solicitud ya fue finalizada; no admite más ediciones.</p>
         }
         @if (dialogEstaEnRevision()) {
@@ -198,7 +203,9 @@
                   →
                   {{ estadoNombreHistorial(registro.id_estado_nuevo) }}
                 </div>
-                <div class="ficha-historial-fecha">{{ registro.fecha | date: 'd MMM yyyy, HH:mm' }}</div>
+                <div class="ficha-historial-fecha">
+                  {{ registro.nombre_usuario }} · {{ registro.fecha | date: 'd MMM yyyy, HH:mm' }}
+                </div>
                 @if (registro.comentario) {
                   <p class="ficha-historial-comentario">{{ registro.comentario }}</p>
                 }
@@ -238,15 +245,16 @@
   @if (generarOrdenTarget(); as target) {
     <p class="confirm-text">
       Se generará una Orden de Trabajo a partir de la solicitud <strong>{{ target.numeroSolicitud }}</strong> y la
-      Solicitud pasará a <strong>En progreso</strong>. Esta acción no se puede deshacer.
+      Solicitud pasará a <strong>En progreso</strong>. La orden entra a la cola de la especialidad elegida: la toma un
+      miembro del equipo o la asigna su responsable.
     </p>
 
     <app-select
-      label="Ejecutor responsable"
-      placeholder="Selecciona un usuario de Operaciones"
-      [options]="ejecutorOptions()"
-      [ngModel]="generarOrdenEjecutor()"
-      (ngModelChange)="generarOrdenEjecutor.set($event)"
+      label="Especialidad"
+      placeholder="Selecciona la especialidad"
+      [options]="especialidadOptions()"
+      [ngModel]="generarOrdenEspecialidad()"
+      (ngModelChange)="generarOrdenEspecialidad.set($event)"
     />
 
     @if (generarOrdenError()) {
@@ -258,7 +266,7 @@
       </app-button>
       <app-button
         variant="primary"
-        [disabled]="!generarOrdenEjecutor()"
+        [disabled]="!generarOrdenEspecialidad()"
         [loading]="generarOrdenSubmitting()"
         (click)="confirmGenerarOrdenAction()"
       >
@@ -280,6 +288,14 @@
       contrato) y la Solicitud pasará a <strong>En revisión</strong>, siguiendo el flujo de aprobación. Esta acción no
       se puede deshacer.
     </p>
+
+    <app-select
+      label="Especialidad"
+      placeholder="Selecciona la especialidad"
+      [options]="especialidadOptions()"
+      [ngModel]="generarRequerimientoEspecialidad()"
+      (ngModelChange)="generarRequerimientoEspecialidad.set($event)"
+    />
 
     <div class="field">
       <label for="req-desc-origen" class="field-label">Descripción del Requerimiento</label>

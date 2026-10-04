@@ -1,5 +1,10 @@
 package cfbd.co.sgt.service.impl;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +14,8 @@ import jakarta.transaction.Transactional;
 import cfbd.co.sgt.service.ActivoService;
 import cfbd.co.sgt.service.FileStorageService;
 import cfbd.co.sgt.service.TipoRecursoArchivo;
+import cfbd.co.sgt.model.ActivoEspecialidad;
+import cfbd.co.sgt.repository.ActivoEspecialidadRepository;
 import cfbd.co.sgt.repository.ActivoRepository;
 import cfbd.co.sgt.dto.request.ActivoRequest;
 import cfbd.co.sgt.dto.response.ActivoResponse;
@@ -30,36 +37,49 @@ public class ActivoServiceImpl implements ActivoService {
     @Autowired
     private FileStorageService fileStorageService;
 
+    @Autowired
+    private ActivoEspecialidadRepository activoEspecialidadRepository;
+
     @Override
     public ActivoResponse crearActivo(ActivoRequest activoDTO) {
         Activo activo = new Activo();
-        activo.setEspecialidad(especialidadRepository.findById(activoDTO.getId_especialidad()).orElse(null));
+        activo.setEspecialidad(especialidadRepository.findById(activoDTO.getId_especialidad())
+                .orElseThrow(() -> new ResourceNotFoundException("Especialidad not found")));
         activo.setCodigo(activoDTO.getCodigo());
         activo.setNombre(activoDTO.getNombre());
         activo.setDescripcion(activoDTO.getDescripcion());
         activo.setUbicacion(activoDTO.getUbicacion());
         // La imagen se gestiona exclusivamente vía subirImagen/eliminarImagen
         // (fileserver propio, CLAUDE.md sección 26/30): no se acepta desde este DTO.
-        return convertToResponse(activoRepository.save(activo));
+        Activo guardado = activoRepository.save(activo);
+        reemplazarEspecialidades(guardado, activoDTO.getIds_especialidad());
+        return convertToResponse(guardado);
     }
 
     @Override
     public ActivoResponse editarActivo(ActivoRequest activoDTO, UUID id) {
         Activo activo = activoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Activo not found"));
-        activo.setEspecialidad(especialidadRepository.findById(activoDTO.getId_especialidad()).orElse(null));
+        activo.setEspecialidad(especialidadRepository.findById(activoDTO.getId_especialidad())
+                .orElseThrow(() -> new ResourceNotFoundException("Especialidad not found")));
         activo.setCodigo(activoDTO.getCodigo());
         activo.setNombre(activoDTO.getNombre());
         activo.setDescripcion(activoDTO.getDescripcion());
         activo.setUbicacion(activoDTO.getUbicacion());
-        return convertToResponse(activoRepository.save(activo));
+        Activo guardado = activoRepository.save(activo);
+        reemplazarEspecialidades(guardado, activoDTO.getIds_especialidad());
+        return convertToResponse(guardado);
     }
 
     @Override
     public List<ActivoResponse> listarActivos() {
         List<Activo> activos = activoRepository.findAll();
+        Map<UUID, List<UUID>> especialidades = new HashMap<>();
+        for (Object[] par : activoEspecialidadRepository.findTodosLosPares()) {
+            especialidades.computeIfAbsent((UUID) par[0], id -> new ArrayList<>()).add((UUID) par[1]);
+        }
         return activos.stream()
-                .map(this::convertToResponse)
+                .map(activo -> convertToResponse(activo, especialidades.getOrDefault(activo.getId_activo(), List.of())))
                 .collect(Collectors.toList());
     }
 
@@ -70,6 +90,7 @@ public class ActivoServiceImpl implements ActivoService {
 
     @Override
     public void eliminarActivo(UUID id) {
+        activoEspecialidadRepository.deleteByActivo(id);
         activoRepository.deleteById(id);
     }
 
@@ -112,10 +133,35 @@ public class ActivoServiceImpl implements ActivoService {
         return convertToResponse(activo);
     }
 
+    /** La principal siempre forma parte del conjunto; se reemplaza el conjunto completo. */
+    private void reemplazarEspecialidades(Activo activo, List<UUID> idsEspecialidad) {
+        Set<UUID> ids = new LinkedHashSet<>();
+        ids.add(activo.getEspecialidad().getId_especialidad());
+        if (idsEspecialidad != null) {
+            ids.addAll(idsEspecialidad);
+        }
+        activoEspecialidadRepository.deleteByActivo(activo.getId_activo());
+        activoEspecialidadRepository.flush();
+        for (UUID idEspecialidad : ids) {
+            ActivoEspecialidad relacion = new ActivoEspecialidad();
+            relacion.setActivo(activo);
+            relacion.setEspecialidad(especialidadRepository.findById(idEspecialidad)
+                    .orElseThrow(() -> new ResourceNotFoundException("Especialidad not found")));
+            activoEspecialidadRepository.save(relacion);
+        }
+    }
+
     private ActivoResponse convertToResponse(Activo activo) {
+        return convertToResponse(activo, activoEspecialidadRepository.findIdsEspecialidad(activo.getId_activo()));
+    }
+
+    private ActivoResponse convertToResponse(Activo activo, List<UUID> idsEspecialidad) {
         ActivoResponse response = new ActivoResponse();
         response.setId_activo(activo.getId_activo());
         response.setId_especialidad(activo.getEspecialidad().getId_especialidad());
+        // Activos anteriores a la tabla N:M solo tienen la principal.
+        response.setIds_especialidad(idsEspecialidad.isEmpty()
+                ? List.of(activo.getEspecialidad().getId_especialidad()) : idsEspecialidad);
         response.setCodigo(activo.getCodigo());
         response.setNombre(activo.getNombre());
         response.setDescripcion(activo.getDescripcion());

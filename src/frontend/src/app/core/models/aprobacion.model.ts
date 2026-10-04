@@ -7,6 +7,8 @@ export interface AprobacionRequest {
   id_requerimiento: string;
   aprobado: boolean;
   comentario?: string | null;
+  /** Solo al aprobar con el modal confirmado: genera la OT en esa especialidad (PRD D7/D17). */
+  id_especialidad_orden?: string;
 }
 
 export interface AprobacionResponse {

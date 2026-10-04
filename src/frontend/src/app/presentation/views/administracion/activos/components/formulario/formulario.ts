@@ -1,4 +1,4 @@
-import { Component, OnInit, input, output } from '@angular/core';
+import { Component, OnInit, input, output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { ActivoRequest, ActivoResponse } from '../../../../../../core/models/activo.model';
@@ -49,6 +49,9 @@ export class Formulario implements OnInit {
     ubicacion: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(150)] }),
   });
 
+  /** Especialidades adicionales (además de la principal) donde el activo puede tener Solicitudes. */
+  protected readonly adicionales = signal<Set<string>>(new Set());
+
   protected readonly imagenControl = new FormControl<File | null>(null);
   protected eliminarImagenActual = false;
   protected urlImagenActual: string | null = null;
@@ -64,11 +67,28 @@ export class Formulario implements OnInit {
         ubicacion: activo.ubicacion ?? '',
       });
       this.urlImagenActual = activo.url_img;
+      this.adicionales.set(new Set((activo.ids_especialidad ?? []).filter((id) => id !== activo.id_especialidad)));
     }
   }
 
   protected get especialidadOptions(): SelectOption[] {
     return this.especialidades().map((item) => ({ value: item.id_especialidad, label: item.nombre }));
+  }
+
+  protected esAdicional(id: string): boolean {
+    return this.adicionales().has(id);
+  }
+
+  protected toggleAdicional(id: string, marcado: boolean): void {
+    this.adicionales.update((actual) => {
+      const copia = new Set(actual);
+      if (marcado) {
+        copia.add(id);
+      } else {
+        copia.delete(id);
+      }
+      return copia;
+    });
   }
 
   protected onEliminarImagenActual(): void {
@@ -84,6 +104,7 @@ export class Formulario implements OnInit {
     this.submitForm.emit({
       request: {
         id_especialidad: value.id_especialidad,
+        ids_especialidad: [value.id_especialidad, ...[...this.adicionales()].filter((id) => id !== value.id_especialidad)],
         codigo: value.codigo,
         nombre: value.nombre,
         descripcion: value.descripcion || null,

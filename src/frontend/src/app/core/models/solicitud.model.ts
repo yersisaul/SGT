@@ -3,6 +3,7 @@
 export interface SolicitudResponse {
   id_solicitud: string;
   id_usuario: string;
+  nombre_usuario: string;
   id_activo: string;
   id_estado: string;
   id_especialidad: string;
@@ -23,6 +24,8 @@ export interface SolicitudResponse {
  * Solicitud + nota de origen) — nunca queda en blanco. */
 export interface GenerarRequerimientoRequest {
   descripcion?: string;
+  /** Opcional: el Despachador confirma o cambia la especialidad al despachar (PRD D22). */
+  id_especialidad?: string;
 }
 
 export interface SolicitudRequest {
@@ -47,6 +50,7 @@ export interface HistorialSolicitudResponse {
   id_historial_solicitud: string;
   id_solicitud: string;
   id_usuario: string;
+  nombre_usuario: string;
   id_estado_anterior: string;
   id_estado_nuevo: string;
   fecha: string;

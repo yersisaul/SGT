@@ -5,7 +5,7 @@ import { LucideCircleAlert, LucideInbox, LucideLayoutGrid, LucidePlus, LucideTab
 import { forkJoin } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
-import { ActivoCatalogo, EspecialidadCatalogo, EstadoCatalogo, UsuarioCatalogo } from '../../../core/models/catalogo.model';
+import { ActivoCatalogo, EspecialidadCatalogo, EstadoCatalogo } from '../../../core/models/catalogo.model';
 import {
   GenerarRequerimientoRequest,
   HistorialSolicitudResponse,
@@ -31,6 +31,7 @@ import {
   esEstadoFinalizado,
   esEstadoKanbanDeSolicitud,
   esEstadoPendiente,
+  esEstadoRechazado,
   esEstadoValidoDeSolicitud,
 } from './solicitud-estados.config';
 import { KanbanColumn, SolicitudView } from './solicitud-view.model';
@@ -80,8 +81,6 @@ export class Solicitudes {
   private readonly estados = signal<EstadoCatalogo[]>([]);
   private readonly activos = signal<ActivoCatalogo[]>([]);
   private readonly especialidades = signal<EspecialidadCatalogo[]>([]);
-  private readonly usuarios = signal<UsuarioCatalogo[]>([]);
-  private readonly usuariosOperaciones = signal<UsuarioCatalogo[]>([]);
 
   protected readonly viewMode = signal<ViewMode>('kanban');
 
@@ -97,8 +96,11 @@ export class Solicitudes {
   protected readonly confirmTarget = signal<SolicitudResponse | null>(null);
   protected readonly deleteSubmitting = signal(false);
 
+  // Al despachar (OT o RQ) el Despachador confirma o cambia la especialidad
+  // entre las 5 del catálogo, precargada con la del activo (PRD D16/D22). La
+  // OT entra a la cola de esa especialidad: no se elige persona (D3).
   protected readonly generarOrdenTarget = signal<SolicitudResponse | null>(null);
-  protected readonly generarOrdenEjecutor = signal('');
+  protected readonly generarOrdenEspecialidad = signal('');
   protected readonly generarOrdenSubmitting = signal(false);
   protected readonly generarOrdenError = signal<string | null>(null);
 
@@ -109,12 +111,25 @@ export class Solicitudes {
   // queda editable para que el usuario la revise antes de confirmar.
   protected readonly generarRequerimientoTarget = signal<SolicitudResponse | null>(null);
   protected readonly generarRequerimientoDescripcion = signal('');
+  protected readonly generarRequerimientoEspecialidad = signal('');
   protected readonly generarRequerimientoSubmitting = signal(false);
   protected readonly generarRequerimientoError = signal<string | null>(null);
 
-  protected readonly ejecutorOptions = computed<SelectOption[]>(() =>
-    this.usuariosOperaciones().map((u) => ({ value: u.id_usuario, label: `${u.nombres} ${u.apellidos}` })),
-  );
+  // Primero las especialidades del activo de la Solicitud en despacho; luego
+  // el resto del catálogo (el Despachador puede elegir cualquiera de las 5).
+  protected readonly especialidadOptions = computed<SelectOption[]>(() => {
+    const target = this.generarOrdenTarget() ?? this.generarRequerimientoTarget();
+    const activo = target ? this.activos().find((a) => a.id_activo === target.id_activo) : undefined;
+    const delActivo = new Set(activo?.ids_especialidad ?? []);
+    const opcion = (e: EspecialidadCatalogo) => ({
+      value: e.id_especialidad,
+      label: delActivo.has(e.id_especialidad) ? `${e.nombre} · del activo` : e.nombre,
+    });
+    return [
+      ...this.especialidades().filter((e) => delActivo.has(e.id_especialidad)).map(opcion),
+      ...this.especialidades().filter((e) => !delActivo.has(e.id_especialidad)).map(opcion),
+    ];
+  });
 
   protected readonly historial = signal<HistorialSolicitudResponse[]>([]);
   protected readonly historialLoading = signal(false);
@@ -134,7 +149,7 @@ export class Solicitudes {
         (e) => e.nombre,
         '—',
       ),
-      usuarioNombre: this.nombreUsuario(raw.id_usuario),
+      usuarioNombre: raw.nombre_usuario || '—',
     })),
   );
 
@@ -155,7 +170,9 @@ export class Solicitudes {
       .map((estado) => ({
         estadoId: estado.id_estado,
         estadoNombre: estado.nombre,
-        items: agrupado.get(estado.id_estado) ?? [],
+        items: esEstadoPendiente(estado.nombre)
+          ? this.ordenarPorVencimiento(agrupado.get(estado.id_estado) ?? [])
+          : (agrupado.get(estado.id_estado) ?? []),
         transicionable: esEstadoEditablePorPut(estado.nombre),
       }));
   });
@@ -172,7 +189,12 @@ export class Solicitudes {
   // Pendiente, entrara en la rama de "finalizada").
   protected readonly dialogEstaFinalizada = computed(() => {
     const view = this.dialogView();
-    return !!view && esEstadoFinalizado(view.estadoNombre);
+    return !!view && (esEstadoFinalizado(view.estadoNombre) || esEstadoRechazado(view.estadoNombre));
+  });
+
+  protected readonly dialogEstaRechazada = computed(() => {
+    const view = this.dialogView();
+    return !!view && esEstadoRechazado(view.estadoNombre);
   });
 
   // El Despachador clasifica una Solicitud Pendiente en una de dos ramas
@@ -338,7 +360,7 @@ export class Solicitudes {
    * (excluida en Formulario). */
   protected requestGenerarOrden(solicitud: SolicitudResponse): void {
     this.generarOrdenTarget.set(solicitud);
-    this.generarOrdenEjecutor.set('');
+    this.generarOrdenEspecialidad.set(solicitud.id_especialidad);
     this.generarOrdenError.set(null);
   }
 
@@ -350,8 +372,8 @@ export class Solicitudes {
 
   protected confirmGenerarOrdenAction(): void {
     const target = this.generarOrdenTarget();
-    const ejecutor = this.generarOrdenEjecutor();
-    if (!target || !ejecutor) return;
+    const especialidad = this.generarOrdenEspecialidad();
+    if (!target || !especialidad) return;
 
     // Generar la OT ya no finaliza la Solicitud: el backend la mueve a "En
     // progreso" (SolicitudServiceImpl.generarOrdenDesdeSolicitud) y solo
@@ -360,10 +382,14 @@ export class Solicitudes {
 
     this.generarOrdenSubmitting.set(true);
     this.generarOrdenError.set(null);
-    this.solicitudService.generarOrden(target.id_solicitud, { id_usuario_ejecutor: ejecutor }).subscribe({
+    this.solicitudService.generarOrden(target.id_solicitud, { id_especialidad: especialidad }).subscribe({
       next: (orden) => {
         if (estadoEnProgreso) {
-          const actualizada: SolicitudResponse = { ...target, id_estado: estadoEnProgreso.id_estado };
+          const actualizada: SolicitudResponse = {
+            ...target,
+            id_estado: estadoEnProgreso.id_estado,
+            id_especialidad: especialidad,
+          };
           this.solicitudes.update((lista) =>
             lista.map((s) => (s.id_solicitud === target.id_solicitud ? actualizada : s)),
           );
@@ -373,7 +399,9 @@ export class Solicitudes {
         }
         this.generarOrdenSubmitting.set(false);
         this.generarOrdenTarget.set(null);
-        this.notifications.success(`Orden de trabajo ${orden.numeroOrden} generada correctamente.`);
+        this.notifications.success(
+          `Orden de trabajo ${orden.numeroOrden} generada en la cola de ${this.nombreEspecialidad(especialidad)}.`,
+        );
       },
       error: (error: unknown) => {
         this.generarOrdenSubmitting.set(false);
@@ -395,6 +423,7 @@ export class Solicitudes {
     this.generarRequerimientoDescripcion.set(
       `${solicitud.descripcion}\n\nRequerimiento generado a partir de la Solicitud ${solicitud.numeroSolicitud}.`,
     );
+    this.generarRequerimientoEspecialidad.set(solicitud.id_especialidad);
     this.generarRequerimientoError.set(null);
   }
 
@@ -408,7 +437,10 @@ export class Solicitudes {
     const target = this.generarRequerimientoTarget();
     if (!target) return;
 
-    const request: GenerarRequerimientoRequest = { descripcion: this.generarRequerimientoDescripcion().trim() };
+    const request: GenerarRequerimientoRequest = {
+      descripcion: this.generarRequerimientoDescripcion().trim(),
+      id_especialidad: this.generarRequerimientoEspecialidad() || undefined,
+    };
 
     this.generarRequerimientoSubmitting.set(true);
     this.generarRequerimientoError.set(null);
@@ -416,7 +448,11 @@ export class Solicitudes {
       next: (requerimiento) => {
         const estadoEnRevision = this.estados().find((e) => e.nombre.toLowerCase() === 'en revisión');
         if (estadoEnRevision) {
-          const actualizada: SolicitudResponse = { ...target, id_estado: estadoEnRevision.id_estado };
+          const actualizada: SolicitudResponse = {
+            ...target,
+            id_estado: estadoEnRevision.id_estado,
+            id_especialidad: requerimiento.id_especialidad,
+          };
           this.solicitudes.update((lista) =>
             lista.map((s) => (s.id_solicitud === target.id_solicitud ? actualizada : s)),
           );
@@ -498,16 +534,12 @@ export class Solicitudes {
       estados: this.catalogoService.getEstados(),
       activos: this.catalogoService.getActivos(),
       especialidades: this.catalogoService.getEspecialidades(),
-      usuarios: this.catalogoService.getUsuarios(),
-      usuariosOperaciones: this.catalogoService.getUsuariosOperaciones(),
     }).subscribe({
-      next: ({ solicitudes, estados, activos, especialidades, usuarios, usuariosOperaciones }) => {
+      next: ({ solicitudes, estados, activos, especialidades }) => {
         this.solicitudes.set(solicitudes);
         this.estados.set(estados);
         this.activos.set(activos);
         this.especialidades.set(especialidades);
-        this.usuarios.set(usuarios);
-        this.usuariosOperaciones.set(usuariosOperaciones);
         this.loading.set(false);
       },
       error: () => {
@@ -522,9 +554,15 @@ export class Solicitudes {
     return activo ? `${activo.codigo} · ${activo.nombre}` : '—';
   }
 
-  private nombreUsuario(id: string): string {
-    const usuario = this.usuarios().find((item) => item.id_usuario === id);
-    return usuario ? `${usuario.nombres} ${usuario.apellidos}` : '—';
+  private nombreEspecialidad(id: string): string {
+    return this.buscarNombre(this.especialidades(), id, (e) => e.id_especialidad, (e) => e.nombre, 'la especialidad');
+  }
+
+  /** Bandeja del Despachador: primero las que vencen antes (SLA de despacho). */
+  private ordenarPorVencimiento(items: SolicitudView[]): SolicitudView[] {
+    return [...items].sort((a, b) =>
+      (a.raw.fecha_limite_despacho ?? '').localeCompare(b.raw.fecha_limite_despacho ?? ''),
+    );
   }
 
   private buscarNombre<T>(

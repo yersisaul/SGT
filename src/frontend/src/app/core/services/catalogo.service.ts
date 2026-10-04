@@ -41,13 +41,11 @@ export class CatalogoService {
       .pipe(catchError(() => of([])));
   }
 
-  /** Usuarios de rol Operaciones, para el selector de ejecutor al generar o
-   * reasignar una Orden. A diferencia de getUsuarios() (requiere
-   * usuario.read, que Despachador/Operaciones no tienen), este endpoint está
-   * autorizado a quien puede generar_orden o reasignar (ver UsuarioController). */
-  getUsuariosOperaciones(): Observable<UsuarioCatalogo[]> {
+  /** Usuarios cuyo rol puede ejecutar OT (permiso orden.tomar): candidatos a
+   * integrar un equipo de especialidad. Requiere especialidad.gestionar_equipo. */
+  getUsuariosEjecutores(): Observable<UsuarioCatalogo[]> {
     return this.http
-      .get<UsuarioCatalogo[]>(`${this.apiBaseUrl}/usuarios/operaciones`)
+      .get<UsuarioCatalogo[]>(`${this.apiBaseUrl}/usuarios/ejecutores`)
       .pipe(catchError(() => of([])));
   }
 

@@ -61,6 +61,11 @@
                 <td>{{ item.nombre }}</td>
                 <td class="admin-tabla-secundario">{{ item.descripcion || '—' }}</td>
                 <td class="admin-tabla-col-acciones">
+                  @if (canGestionarEquipo) {
+                    <button type="button" class="admin-icon-btn" aria-label="Gestionar equipo" title="Equipo" (click)="$event.stopPropagation(); openEquipo(item)">
+                      <svg lucideUsers [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
                   @if (canUpdate) {
                     <button type="button" class="admin-icon-btn" aria-label="Editar especialidad" (click)="$event.stopPropagation(); openEdit(item)">
                       <svg lucidePencil [size]="14" aria-hidden="true"></svg>
@@ -110,6 +115,58 @@
     <div class="confirm-actions">
       <app-button variant="secondary" [disabled]="deleteSubmitting()" (click)="cancelDelete()">Cancelar</app-button>
       <app-button variant="danger" [loading]="deleteSubmitting()" (click)="confirmDeleteAction()">Eliminar</app-button>
+    </div>
+  }
+</app-dialog>
+
+<app-dialog
+  variant="modal"
+  [title]="equipoTarget() ? 'Equipo de ' + equipoTarget()!.nombre : 'Equipo'"
+  [open]="equipoTarget() !== null"
+  (closed)="closeEquipo()"
+>
+  @if (equipoTarget()) {
+    <p class="confirm-text">
+      Los miembros ven la cola de esta especialidad y pueden tomar sus órdenes. Los responsables además asignan órdenes
+      a su equipo y deciden qué hacer con las devueltas.
+    </p>
+    @if (equipoLoading()) {
+      <app-spinner label="Cargando equipo" />
+    } @else {
+      <ul class="equipo-candidatos">
+        @for (usuario of equipoCandidatos(); track usuario.id_usuario) {
+          <li class="equipo-candidato">
+            <label class="equipo-check">
+              <input
+                type="checkbox"
+                [checked]="esMiembro(usuario.id_usuario)"
+                (change)="toggleMiembro(usuario.id_usuario, $any($event.target).checked)"
+              />
+              {{ usuario.nombres }} {{ usuario.apellidos }}
+            </label>
+            <label class="equipo-check equipo-check-secundario">
+              <input
+                type="checkbox"
+                [disabled]="!esMiembro(usuario.id_usuario)"
+                [checked]="esResponsable(usuario.id_usuario)"
+                (change)="toggleResponsable(usuario.id_usuario, $any($event.target).checked)"
+              />
+              Responsable
+            </label>
+          </li>
+        } @empty {
+          <li class="admin-tabla-empty">No hay usuarios con un rol que ejecute órdenes de trabajo.</li>
+        }
+      </ul>
+    }
+    @if (equipoError()) {
+      <div class="confirm-error" role="alert">{{ equipoError() }}</div>
+    }
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="equipoSubmitting()" (click)="closeEquipo()">Cancelar</app-button>
+      <app-button variant="primary" [loading]="equipoSubmitting()" [disabled]="equipoLoading()" (click)="guardarEquipo()">
+        Guardar equipo
+      </app-button>
     </div>
   }
 </app-dialog>

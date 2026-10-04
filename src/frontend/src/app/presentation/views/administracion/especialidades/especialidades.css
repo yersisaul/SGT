@@ -1,1 +1,38 @@
 @import '../administracion.css';
+
+/* Equipo de la especialidad (miembros y responsables). */
+.equipo-candidatos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.equipo-candidato {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.equipo-candidato:last-child {
+  border-bottom: none;
+}
+
+.equipo-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.equipo-check-secundario {
+  color: var(--color-muted-foreground);
+  white-space: nowrap;
+}

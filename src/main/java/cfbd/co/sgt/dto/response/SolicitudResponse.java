@@ -11,6 +11,8 @@ import lombok.Setter;
 public class SolicitudResponse {
     private UUID id_solicitud;
     private UUID id_usuario;
+    /** Nombre del solicitante, para mostrarlo sin exigir usuario.read. */
+    private String nombre_usuario;
     private UUID id_activo;
     private UUID id_estado;
     private UUID id_especialidad;

@@ -1,17 +1,10 @@
 /**
- * El catálogo /api/estados es compartido con Solicitud y Requerimiento.
- * Este archivo fija, por nombre (no por posición), el subconjunto de Orden
- * — mismo criterio que solicitud-estados.config.ts / requerimiento-estados.config.ts.
- *
- * Orden maneja ÚNICAMENTE Pendiente/En progreso/Finalizado — sin "En
- * revisión". "Finalizado" es válido para mostrar (columna del Kanban) pero
- * NO editable por PUT: solo se alcanza vía POST /api/ordenes/{id}/cerrar
- * (OrdenServiceImpl.validarTransicion solo permite moverse entre
- * Pendiente/En progreso).
+ * Estados de Orden del catálogo compartido /api/estados (PRD D13):
+ * Pendiente (en cola) → Asignada → En progreso → Finalizado, y Devuelta
+ * cuando el ejecutor declara que no le corresponde. Ningún estado se cambia
+ * por arrastre ni por PUT: la OT avanza solo con operaciones de negocio.
  */
-export const ORDEN_ESTADOS_VALIDOS: readonly string[] = ['Pendiente', 'En progreso', 'Finalizado'];
-
-export const ORDEN_ESTADOS_EDITABLES_POR_PUT: readonly string[] = ['Pendiente', 'En progreso'];
+export const ORDEN_ESTADOS_VALIDOS: readonly string[] = ['Pendiente', 'Devuelta', 'Asignada', 'En progreso', 'Finalizado'];
 
 function normalizar(nombre: string): string {
   return nombre.trim().toLowerCase();
@@ -22,11 +15,22 @@ export function esEstadoValidoDeOrden(nombre: string): boolean {
   return ORDEN_ESTADOS_VALIDOS.some((valido) => normalizar(valido) === objetivo);
 }
 
-export function esEstadoEditablePorPut(nombre: string): boolean {
-  const objetivo = normalizar(nombre);
-  return ORDEN_ESTADOS_EDITABLES_POR_PUT.some((editable) => normalizar(editable) === objetivo);
-}
-
 export function esEstadoFinalizado(nombre: string): boolean {
   return normalizar(nombre) === 'finalizado';
+}
+
+export function esEstadoPendiente(nombre: string): boolean {
+  return normalizar(nombre) === 'pendiente';
+}
+
+export function esEstadoAsignada(nombre: string): boolean {
+  return normalizar(nombre) === 'asignada';
+}
+
+export function esEstadoDevuelta(nombre: string): boolean {
+  return normalizar(nombre) === 'devuelta';
+}
+
+export function esEstadoEnProgreso(nombre: string): boolean {
+  return normalizar(nombre) === 'en progreso';
 }

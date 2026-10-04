@@ -13,6 +13,7 @@ import cfbd.co.sgt.dto.LoginResponse;
 import cfbd.co.sgt.model.Usuario;
 import cfbd.co.sgt.repository.UsuarioRepository;
 import cfbd.co.sgt.security.JwtService;
+import cfbd.co.sgt.service.EmailNormalizador;
 import cfbd.co.sgt.service.AuthService;
 import lombok.RequiredArgsConstructor;
 
@@ -29,7 +30,7 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse login(LoginRequest request) {
         // Mismo mensaje para email inexistente y password incorrecta:
         // evita revelar si un email está registrado (enumeration).
-        Usuario usuario = usuarioRepository.findByEmail(request.email())
+        Usuario usuario = usuarioRepository.findByEmail(EmailNormalizador.normalizar(request.email()))
                 .orElseThrow(() -> new BadCredentialsException("Credenciales inválidas"));
 
         if (!passwordEncoder.matches(request.password(), usuario.getPassword_hash())) {

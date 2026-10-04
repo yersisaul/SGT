@@ -17,7 +17,7 @@
  * permite ninguna transición manual). "Aprobado"/"Rechazado" son exclusivos
  * de Requerimiento y nunca deben aparecer acá.
  */
-export const SOLICITUD_ESTADOS_VALIDOS: readonly string[] = ['Pendiente', 'En revisión', 'En progreso', 'Finalizado'];
+export const SOLICITUD_ESTADOS_VALIDOS: readonly string[] = ['Pendiente', 'En revisión', 'En progreso', 'Finalizado', 'Rechazado'];
 
 export const SOLICITUD_ESTADOS_EDITABLES_POR_PUT: readonly string[] = [];
 
@@ -28,7 +28,7 @@ export const SOLICITUD_ESTADOS_EDITABLES_POR_PUT: readonly string[] = [];
  * el flujo operativo directo de la Solicitud. Sigue existiendo como estado
  * real y se muestra igual en la Tabla (que no usa este subconjunto).
  */
-export const SOLICITUD_ESTADOS_KANBAN: readonly string[] = ['Pendiente', 'En progreso', 'Finalizado'];
+export const SOLICITUD_ESTADOS_KANBAN: readonly string[] = ['Pendiente', 'En progreso', 'Finalizado', 'Rechazado'];
 
 function normalizar(nombre: string): string {
   return nombre.trim().toLowerCase();
@@ -63,4 +63,9 @@ export function esEstadoEnRevision(nombre: string): boolean {
 
 export function esEstadoFinalizado(nombre: string): boolean {
   return normalizar(nombre) === 'finalizado';
+}
+
+/** RQ rechazado por el Administrador → la Solicitud queda "Rechazado" (paso 8, PRD D6). */
+export function esEstadoRechazado(nombre: string): boolean {
+  return normalizar(nombre) === 'rechazado';
 }

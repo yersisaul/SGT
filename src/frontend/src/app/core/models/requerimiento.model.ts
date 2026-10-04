@@ -33,6 +33,7 @@ export interface HistorialRequerimientoResponse {
   id_historial_requerimiento: string;
   id_requerimiento: string;
   id_usuario: string;
+  nombre_usuario: string;
   id_estado_anterior: string;
   id_estado_nuevo: string;
   fecha: string;

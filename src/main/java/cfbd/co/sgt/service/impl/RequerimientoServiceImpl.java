@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -25,7 +24,6 @@ import cfbd.co.sgt.dto.response.RequerimientoResponse;
 import cfbd.co.sgt.dto.response.ResumenEstadosResponse;
 import cfbd.co.sgt.exception.ResourceNotFoundException;
 import cfbd.co.sgt.model.Estado;
-import cfbd.co.sgt.model.HistorialOrden;
 import cfbd.co.sgt.model.HistorialRequerimiento;
 import cfbd.co.sgt.model.HistorialSolicitud;
 import cfbd.co.sgt.model.Orden;
@@ -34,14 +32,22 @@ import cfbd.co.sgt.model.Solicitud;
 import cfbd.co.sgt.model.Usuario;
 import cfbd.co.sgt.repository.EspecialidadRepository;
 import cfbd.co.sgt.repository.EstadoRepository;
-import cfbd.co.sgt.repository.HistorialOrdenRepository;
 import cfbd.co.sgt.repository.HistorialRequerimientoRepository;
 import cfbd.co.sgt.repository.HistorialSolicitudRepository;
 import cfbd.co.sgt.repository.OrdenRepository;
 import cfbd.co.sgt.repository.RequerimientoRepository;
 import cfbd.co.sgt.repository.SolicitudRepository;
 import cfbd.co.sgt.repository.UsuarioRepository;
+import cfbd.co.sgt.security.UsuarioActualProvider;
+import cfbd.co.sgt.service.AutorizacionRecursoService;
+import cfbd.co.sgt.mapper.OrdenMapper;
+import cfbd.co.sgt.model.Especialidad;
+import cfbd.co.sgt.service.EstadoResolver;
+import cfbd.co.sgt.service.EstadosNegocio;
 import cfbd.co.sgt.service.FileStorageService;
+import cfbd.co.sgt.service.GeneradorOrdenService;
+import cfbd.co.sgt.service.RegistroHistorialService;
+import cfbd.co.sgt.service.NumeracionService;
 import cfbd.co.sgt.service.RequerimientoService;
 import cfbd.co.sgt.service.SlaCalculator;
 import cfbd.co.sgt.service.TipoRecursoArchivo;
@@ -51,12 +57,6 @@ import jakarta.transaction.Transactional;
 @Transactional
 public class RequerimientoServiceImpl implements RequerimientoService {
 
-    // Transiciones válidas vía PUT genérico. "Aprobado"/"Rechazado"/"En
-    // progreso"/"Finalizado" están excluidos deliberadamente: solo se
-    // alcanzan a través de operaciones de negocio reales (crearAprobacion,
-    // generarOrdenDesdeRequerimiento, cierre de la Orden asociada), no por
-    // edición libre (CLAUDE.md 5.3). Requerimiento maneja 6 estados en total:
-    // Pendiente, En revisión, Aprobado, Rechazado, En progreso, Finalizado.
     private static final Map<String, Set<String>> TRANSICIONES_PERMITIDAS = Map.of(
             "pendiente", Set.of("en revisión"),
             "en revisión", Set.of("pendiente"),
@@ -83,8 +83,6 @@ public class RequerimientoServiceImpl implements RequerimientoService {
     @Autowired
     private HistorialRequerimientoRepository historialRequerimientoRepository;
 
-    @Autowired
-    private HistorialOrdenRepository historialOrdenRepository;
 
     @Autowired
     private SolicitudRepository solicitudRepository;
@@ -97,6 +95,20 @@ public class RequerimientoServiceImpl implements RequerimientoService {
 
     @Autowired
     private FileStorageService fileStorageService;
+    @Autowired
+    private AutorizacionRecursoService autorizacion;
+    @Autowired
+    private NumeracionService numeracion;
+    @Autowired
+    private UsuarioActualProvider usuarioActual;
+    @Autowired
+    private GeneradorOrdenService generadorOrden;
+    @Autowired
+    private RegistroHistorialService registro;
+    @Autowired
+    private EstadoResolver estados;
+    @Autowired
+    private OrdenMapper ordenMapper;
 
     @Override
     public RequerimientoResponse crearRequerimiento(RequerimientoRequest requerimientoDTO) {
@@ -115,8 +127,7 @@ public class RequerimientoServiceImpl implements RequerimientoService {
         requerimiento.setDescripcion(requerimientoDTO.getDescripcion());
         // El adjunto se gestiona exclusivamente vía subirAdjunto/eliminarAdjunto
         // (fileserver propio, CLAUDE.md sección 26/30): no se acepta desde este DTO.
-        Long correlativo = requerimientoRepository.count() + 1;
-        requerimiento.setNumeroRequerimiento("RQ-" + correlativo);
+        requerimiento.setNumeroRequerimiento(numeracion.siguienteNumeroRequerimiento());
         requerimiento.setFecha_registro(Instant.now());
         Requerimiento requerimientoGuardado = requerimientoRepository.save(requerimiento);
 
@@ -136,7 +147,7 @@ public class RequerimientoServiceImpl implements RequerimientoService {
     public RequerimientoResponse editarRequerimiento(RequerimientoRequest requerimientoDTO, UUID id) {
         Requerimiento requerimiento = requerimientoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Requerimiento not found"));
-
+        autorizacion.exigirVisible(usuarioActual.obtener(), requerimiento);
         String actualNombre = requerimiento.getEstado().getNombre().toLowerCase();
         if (actualNombre.equals("aprobado") || actualNombre.equals("rechazado")
                 || actualNombre.equals("en progreso") || actualNombre.equals("finalizado")) {
@@ -158,31 +169,54 @@ public class RequerimientoServiceImpl implements RequerimientoService {
 
     @Override
     public List<RequerimientoResponse> listarRequerimientos() {
-        return requerimientoRepository.findAll().stream()
+        return requerimientosVisibles().stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
     public Optional<RequerimientoResponse> buscarRequerimientoPorId(UUID id) {
-        return requerimientoRepository.findById(id).map(this::convertToResponse);
+        Usuario actor = usuarioActual.obtener();
+        return requerimientoRepository.findById(id)
+                .filter(requerimiento -> autorizacion.puedeVer(actor, requerimiento))
+                .map(this::convertToResponse);
     }
 
     @Override
     public Optional<RequerimientoResponse> buscarRequerimientoPorNumero(String numeroRequerimiento) {
-        return requerimientoRepository.findByNumeroRequerimiento(numeroRequerimiento).map(this::convertToResponse);
+        Usuario actor = usuarioActual.obtener();
+        return requerimientoRepository.findByNumeroRequerimiento(numeroRequerimiento)
+                .filter(requerimiento -> autorizacion.puedeVer(actor, requerimiento))
+                .map(this::convertToResponse);
     }
 
     @Override
     public void eliminarRequerimiento(UUID id) {
-        requerimientoRepository.deleteById(id);
+        Requerimiento requerimiento = requerimientoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Requerimiento not found"));
+        // Con historial, aprobación u OT forma parte de la auditoría del flujo.
+        if (historialRequerimientoRepository.existsByPadre(id)
+                || !requerimiento.getAprobaciones().isEmpty()
+                || ordenRepository.existsByRequerimiento(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede eliminar un Requerimiento con historial, aprobación u Orden asociada.");
+        }
+        requerimientoRepository.delete(requerimiento);
     }
 
     @Override
     public ResumenEstadosResponse obtenerResumenPorEstado() {
         Map<String, Long> conteosPorEstado = new HashMap<>();
-        for (Object[] fila : requerimientoRepository.countByEstado()) {
-            conteosPorEstado.put((String) fila[0], (Long) fila[1]);
+        long total;
+        if (autorizacion.veTodosLosRequerimientos()) {
+            for (Object[] fila : requerimientoRepository.countByEstado()) {
+                conteosPorEstado.put((String) fila[0], (Long) fila[1]);
+            }
+            total = requerimientoRepository.count();
+        } else {
+            List<Requerimiento> visibles = requerimientosVisibles();
+            visibles.forEach(r -> conteosPorEstado.merge(r.getEstado().getNombre(), 1L, Long::sum));
+            total = visibles.size();
         }
 
         List<EstadoCantidadResponse> porEstado = estadoRepository.findAll().stream()
@@ -196,7 +230,7 @@ public class RequerimientoServiceImpl implements RequerimientoService {
                 .collect(Collectors.toList());
 
         ResumenEstadosResponse response = new ResumenEstadosResponse();
-        response.setTotal(requerimientoRepository.count());
+        response.setTotal(total);
         response.setPorEstado(porEstado);
         return response;
     }
@@ -205,8 +239,7 @@ public class RequerimientoServiceImpl implements RequerimientoService {
     public OrdenResponse generarOrdenDesdeRequerimiento(UUID idRequerimiento, GenerarOrdenRequest request) {
         Requerimiento requerimiento = requerimientoRepository.findById(idRequerimiento)
                 .orElseThrow(() -> new ResourceNotFoundException("Requerimiento not found"));
-
-        if (!"Aprobado".equalsIgnoreCase(requerimiento.getEstado().getNombre())) {
+        if (!EstadoResolver.es(requerimiento.getEstado(), EstadosNegocio.APROBADO)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Solo se puede generar una Orden desde un Requerimiento en estado 'Aprobado' (actual: "
                             + requerimiento.getEstado().getNombre() + ").");
@@ -215,77 +248,35 @@ public class RequerimientoServiceImpl implements RequerimientoService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Ya existe una Orden generada para este Requerimiento.");
         }
-
-        Estado estadoInicialOrden = estadoRepository.findByNombre("Pendiente")
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Estado 'Pendiente' no está configurado en el catálogo."));
         Usuario actor = usuarioAutenticado();
-        Usuario ejecutor = resolverEjecutorOperaciones(request.getId_usuario_ejecutor());
+        // Paso 9: el Administrador elige la especialidad (entre las 5, PRD
+        // D16) y la OT entra a su cola sin ejecutor.
+        Especialidad especialidad = especialidadRepository.findById(request.getId_especialidad())
+                .orElseThrow(() -> new ResourceNotFoundException("Especialidad not found"));
+        requerimiento.setEspecialidad(especialidad);
+        Orden orden = generadorOrden.generarEnCola(especialidad, null, requerimiento, actor, request.getComentario());
 
-        Orden orden = new Orden();
-        // Orden.usuario es el ejecutor de Operaciones responsable, no quien
-        // genera la OT (ver historial de creación más abajo para conservar
-        // esa trazabilidad).
-        orden.setUsuario(ejecutor);
-        orden.setEstado(estadoInicialOrden);
-        orden.setEspecialidad(requerimiento.getEspecialidad());
-        orden.setSolicitud(null);
-        orden.setRequerimiento(requerimiento);
-        orden.setUrl_adjunto(request.getUrl_adjunto());
-        Long correlativo = ordenRepository.count() + 1;
-        orden.setNumeroOrden("OT-" + correlativo);
-        orden.setFecha_registro(Instant.now());
-        Orden ordenGuardada = ordenRepository.save(orden);
-
-        HistorialOrden historialCreacion = new HistorialOrden();
-        historialCreacion.setOrden(ordenGuardada);
-        historialCreacion.setUsuario(actor);
-        historialCreacion.setEstado_anterior(estadoInicialOrden);
-        historialCreacion.setEstado_nuevo(estadoInicialOrden);
-        historialCreacion.setFecha(Instant.now());
-        historialCreacion.setComentario("Orden creada desde el Requerimiento " + requerimiento.getNumeroRequerimiento()
-                + " y asignada a " + ejecutor.getNombres() + " " + ejecutor.getApellidos() + ".");
-        historialOrdenRepository.save(historialCreacion);
-
-        // Generar la OT avanza al Requerimiento de "Aprobado" a "En progreso";
-        // solo llega a "Finalizado" cuando se cierra la Orden asociada (ver
-        // OrdenServiceImpl.cerrarOrden -> finalizarRequerimientoAsociado).
-        Estado estadoAnterior = requerimiento.getEstado();
-        Estado estadoEnProgreso = estadoRepository.findByNombre("En progreso")
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Estado 'En progreso' no está configurado en el catálogo."));
-        requerimiento.setEstado(estadoEnProgreso);
+        Estado anterior = requerimiento.getEstado();
+        Estado enProgreso = estados.porNombre(EstadosNegocio.EN_PROGRESO);
+        requerimiento.setEstado(enProgreso);
         requerimientoRepository.save(requerimiento);
-
-        HistorialRequerimiento historial = new HistorialRequerimiento();
-        historial.setRequerimiento(requerimiento);
-        historial.setUsuario(actor);
-        historial.setEstado_anterior(estadoAnterior);
-        historial.setEstado_nuevo(estadoEnProgreso);
-        historial.setFecha(Instant.now());
-        historial.setComentario(request.getComentario() != null
+        registro.requerimiento(requerimiento, actor, anterior, enProgreso, request.getComentario() != null
                 ? request.getComentario()
-                : "Orden de trabajo " + ordenGuardada.getNumeroOrden() + " generada desde el Requerimiento aprobado; Requerimiento pasa a En progreso.");
-        historialRequerimientoRepository.save(historial);
+                : "Orden de trabajo " + orden.getNumeroOrden() + " generada en la cola de " + especialidad.getNombre()
+                        + "; Requerimiento pasa a En progreso.");
 
-        // Si este Requerimiento se originó de una Solicitud fuera de contrato
-        // (Requerimiento.solicitud, relación real — ver
-        // SolicitudServiceImpl.generarRequerimientoDesdeSolicitud), generar la
-        // OT ya significa que el trabajo pasó a ejecución: la Solicitud de
-        // origen debe sincronizarse de "En revisión" a "En progreso" en la
-        // misma transacción (la clase es @Transactional; si algo de lo
-        // anterior falla, esto tampoco se aplica).
+        // La Solicitud de origen (fuera de contrato) también pasa a "En progreso".
         if (requerimiento.getSolicitud() != null) {
-            sincronizarSolicitudOrigenConOrden(requerimiento.getSolicitud(), ordenGuardada, actor);
+            sincronizarSolicitudOrigenConOrden(requerimiento.getSolicitud(), orden, actor);
         }
-
-        return convertirOrdenAResponse(ordenGuardada);
+        return ordenMapper.toResponse(orden);
     }
 
     @Override
     public RequerimientoResponse subirAdjunto(UUID id, MultipartFile file) {
         Requerimiento requerimiento = requerimientoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Requerimiento not found"));
+        autorizacion.exigirVisible(usuarioActual.obtener(), requerimiento);
         String referenciaAnterior = requerimiento.getUrl_adjunto();
         String nuevaReferencia = fileStorageService.store(file, TipoRecursoArchivo.REQUERIMIENTOS, id);
         requerimiento.setUrl_adjunto(nuevaReferencia);
@@ -300,6 +291,7 @@ public class RequerimientoServiceImpl implements RequerimientoService {
     public String obtenerReferenciaAdjunto(UUID id) {
         Requerimiento requerimiento = requerimientoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Requerimiento not found"));
+        autorizacion.exigirVisible(usuarioActual.obtener(), requerimiento);
         if (requerimiento.getUrl_adjunto() == null) {
             throw new ResourceNotFoundException("El Requerimiento no tiene adjunto.");
         }
@@ -310,6 +302,7 @@ public class RequerimientoServiceImpl implements RequerimientoService {
     public RequerimientoResponse eliminarAdjunto(UUID id) {
         Requerimiento requerimiento = requerimientoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Requerimiento not found"));
+        autorizacion.exigirVisible(usuarioActual.obtener(), requerimiento);
         if (requerimiento.getUrl_adjunto() != null) {
             fileStorageService.delete(requerimiento.getUrl_adjunto());
             requerimiento.setUrl_adjunto(null);
@@ -346,19 +339,6 @@ public class RequerimientoServiceImpl implements RequerimientoService {
         historialSolicitudRepository.save(historialSolicitud);
     }
 
-    /** Valida que el usuario elegido como ejecutor exista y tenga rol
-     * Operaciones (CLAUDE.md: no permitir asignar una OT a alguien que no sea
-     * Operaciones). */
-    private Usuario resolverEjecutorOperaciones(UUID idUsuarioEjecutor) {
-        Usuario ejecutor = usuarioRepository.findById(idUsuarioEjecutor)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario ejecutor no encontrado"));
-        if (!"Operaciones".equalsIgnoreCase(ejecutor.getRol().getNombre())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "El ejecutor asignado debe tener rol Operaciones.");
-        }
-        return ejecutor;
-    }
-
     private void validarTransicion(Estado actual, Estado nuevo) {
         if (actual.getId_estado().equals(nuevo.getId_estado())) {
             return;
@@ -372,9 +352,13 @@ public class RequerimientoServiceImpl implements RequerimientoService {
     }
 
     private Usuario usuarioAutenticado() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario autenticado no encontrado"));
+        return usuarioActual.obtener();
+    }
+
+    private List<Requerimiento> requerimientosVisibles() {
+        return autorizacion.veTodosLosRequerimientos()
+                ? requerimientoRepository.findAll()
+                : requerimientoRepository.findVisiblesPara(usuarioActual.obtener().getId_usuario());
     }
 
     private RequerimientoResponse convertToResponse(Requerimiento requerimiento) {
@@ -390,22 +374,6 @@ public class RequerimientoServiceImpl implements RequerimientoService {
         response.setUrl_adjunto(requerimiento.getUrl_adjunto() != null
                 ? "/api/archivos/requerimientos/" + requerimiento.getId_requerimiento() : null);
         response.setFecha_limite_despacho(slaCalculator.deadlineRequerimiento(requerimiento.getFecha_registro()));
-        return response;
-    }
-
-    private OrdenResponse convertirOrdenAResponse(Orden orden) {
-        OrdenResponse response = new OrdenResponse();
-        response.setId_orden(orden.getId_orden());
-        response.setId_usuario(orden.getUsuario().getId_usuario());
-        response.setId_especialidad(orden.getEspecialidad().getId_especialidad());
-        response.setId_estado(orden.getEstado().getId_estado());
-        response.setId_requerimiento(orden.getRequerimiento() != null ? orden.getRequerimiento().getId_requerimiento() : null);
-        response.setId_solicitud(orden.getSolicitud() != null ? orden.getSolicitud().getId_solicitud() : null);
-        response.setNumeroOrden(orden.getNumeroOrden());
-        response.setFecha_registro(orden.getFecha_registro());
-        response.setFecha_cierre(orden.getFecha_cierre());
-        response.setUrl_adjunto(orden.getUrl_adjunto() != null
-                ? "/api/archivos/ordenes/" + orden.getId_orden() : null);
         return response;
     }
 }

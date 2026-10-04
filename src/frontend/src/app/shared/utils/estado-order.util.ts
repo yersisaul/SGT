@@ -12,9 +12,11 @@
 export function estadoOrderRank(nombre: string): number {
   const normalizado = nombre.toLowerCase();
   if (normalizado.includes('pendiente')) return 0;
-  if (normalizado.includes('revisi')) return 1;
-  if (normalizado.includes('aprob') || normalizado.includes('rechaz')) return 2;
+  if (normalizado.includes('revisi') || normalizado.includes('devuelt')) return 1;
+  if (normalizado.includes('aprob') || normalizado.includes('asignad')) return 2;
   if (normalizado.includes('progreso')) return 3;
   if (normalizado.includes('final')) return 4;
+  // Terminal negativo: al final, después de "Finalizado".
+  if (normalizado.includes('rechaz')) return 5;
   return 99;
 }

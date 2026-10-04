@@ -1,5 +1,5 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   LucideActivity,
@@ -15,8 +15,9 @@ import {
 } from '@lucide/angular';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { NotificacionStreamService } from '../../../core/services/notificacion-stream.service';
 import { EstadoCantidad } from '../../../core/models/dashboard.model';
-import { OrdenResponse } from '../../../core/models/orden.model';
+import { OrdenEscaladaResponse, OrdenResponse } from '../../../core/models/orden.model';
 import { RequerimientoResponse } from '../../../core/models/requerimiento.model';
 import { SolicitudResponse } from '../../../core/models/solicitud.model';
 import { CatalogoService } from '../../../core/services/catalogo.service';
@@ -29,6 +30,7 @@ import { StatusSummary } from '../../../shared/components/status-summary/status-
 import { estadoBadgeVariant } from '../../../shared/utils/estado-badge.util';
 import { prioridadBadgeVariant } from '../../../shared/utils/prioridad-badge.util';
 import { calcularSla } from '../../../shared/utils/sla.util';
+import { KpiPanel } from './components/kpi-panel/kpi-panel';
 
 type AdminIcon = 'usuarios' | 'roles' | 'permisos' | 'activos' | 'especialidades' | 'estados';
 
@@ -91,6 +93,7 @@ function contarPorEstado(nombres: string[]): EstadoCantidad[] {
     Card,
     Badge,
     StatusSummary,
+    KpiPanel,
     LucideUsers,
     LucideShieldCheck,
     LucideKeyRound,
@@ -111,12 +114,22 @@ export class Dashboard {
   private readonly requerimientoService = inject(RequerimientoService);
   private readonly ordenService = inject(OrdenService);
   private readonly catalogoService = inject(CatalogoService);
+  private readonly stream = inject(NotificacionStreamService);
 
   readonly user = this.authService.user;
 
   protected readonly canViewSolicitudes = this.authService.hasPermission('solicitud.read');
   protected readonly canViewRequerimientos = this.authService.hasPermission('requerimiento.read');
   protected readonly canViewOrdenes = this.authService.hasPermission('orden.read');
+  /** Perfil ejecutor: ve su cola y sus OT asignadas (PRD FR-034). */
+  protected readonly esEjecutor = this.authService.hasPermission('orden.tomar');
+  protected readonly canViewKpis = this.authService.hasPermission('kpi.read');
+  /** OT en mi cola + asignadas sin confirmar (actualizado por SSE). */
+  protected readonly misPendientes = this.stream.pendientes;
+  /** Responsables y Administrador ven las OT que superaron el tiempo de espera en cola. */
+  protected readonly canVerEscaladas =
+    this.authService.hasPermission('orden.asignar') || this.authService.hasPermission('orden.read_all');
+  protected readonly escaladas = signal<OrdenEscaladaResponse[]>([]);
 
   protected readonly adminAtajos = computed(() =>
     ADMIN_ATAJOS.filter((atajo) => this.authService.hasPermission(atajo.permission)),
@@ -210,7 +223,8 @@ export class Dashboard {
       this.solicitudesPorClasificar() > 0 ||
       this.ordenesPorIniciar() > 0 ||
       this.pendientesFueraDeSla() > 0 ||
-      this.pendientesProximosAVencer() > 0,
+      this.pendientesProximosAVencer() > 0 ||
+      this.escaladas().length > 0,
   );
 
   // --- Distribución y actividad ---
@@ -286,6 +300,26 @@ export class Dashboard {
     if (this.canViewOrdenes) {
       this.loadOrdenes();
     }
+    if (this.canVerEscaladas) {
+      this.loadEscaladas();
+      // Un aviso en tiempo real (p. ej. orden.escalada o una OT tomada) refresca la lista.
+      effect(() => {
+        if (this.stream.ultimoEvento()) {
+          this.loadEscaladas();
+        }
+      });
+    }
+  }
+
+  protected formatoEspera(minutos: number): string {
+    return minutos < 60 ? `${minutos} min` : `${Math.floor(minutos / 60)} h ${minutos % 60} min`;
+  }
+
+  private loadEscaladas(): void {
+    this.ordenService.escaladas().subscribe({
+      next: (lista) => this.escaladas.set(lista),
+      error: () => this.escaladas.set([]),
+    });
   }
 
   protected loadSolicitudes(): void {

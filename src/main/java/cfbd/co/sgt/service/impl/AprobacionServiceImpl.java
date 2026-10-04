@@ -27,7 +27,14 @@ import cfbd.co.sgt.repository.HistorialRequerimientoRepository;
 import cfbd.co.sgt.repository.RequerimientoRepository;
 import cfbd.co.sgt.repository.UsuarioRepository;
 import cfbd.co.sgt.service.AprobacionService;
+import cfbd.co.sgt.dto.request.GenerarOrdenRequest;
+import cfbd.co.sgt.model.Solicitud;
+import cfbd.co.sgt.repository.SolicitudRepository;
+import cfbd.co.sgt.service.EstadoResolver;
+import cfbd.co.sgt.service.EstadosNegocio;
 import cfbd.co.sgt.service.FileStorageService;
+import cfbd.co.sgt.service.RegistroHistorialService;
+import cfbd.co.sgt.service.RequerimientoService;
 import cfbd.co.sgt.service.TipoRecursoArchivo;
 import jakarta.transaction.Transactional;
 
@@ -52,6 +59,18 @@ public class AprobacionServiceImpl implements AprobacionService {
 
     @Autowired
     private FileStorageService fileStorageService;
+
+    @Autowired
+    private SolicitudRepository solicitudRepository;
+
+    @Autowired
+    private RequerimientoService requerimientoService;
+
+    @Autowired
+    private RegistroHistorialService registro;
+
+    @Autowired
+    private EstadoResolver estados;
 
     /**
      * Aprobar/rechazar un Requerimiento es una única operación de negocio
@@ -105,6 +124,27 @@ public class AprobacionServiceImpl implements AprobacionService {
         historial.setFecha(Instant.now());
         historial.setComentario(aprobacionDTO.getComentario());
         historialRequerimientoRepository.save(historial);
+
+        Solicitud origen = requerimiento.getSolicitud();
+        if (!aprobado && origen != null) {
+            // Paso 8 "NO → FIN": la Solicitud del cliente se cierra como
+            // "Rechazado" con el motivo visible en su seguimiento (PRD D6).
+            Estado anteriorSolicitud = origen.getEstado();
+            Estado rechazado = estados.porNombre(EstadosNegocio.RECHAZADO);
+            origen.setEstado(rechazado);
+            solicitudRepository.save(origen);
+            registro.solicitud(origen, actor, anteriorSolicitud, rechazado,
+                    "Requerimiento " + requerimiento.getNumeroRequerimiento() + " rechazado"
+                            + (aprobacionDTO.getComentario() != null && !aprobacionDTO.getComentario().isBlank()
+                                    ? ": " + aprobacionDTO.getComentario() : "."));
+        }
+        if (aprobado && aprobacionDTO.getId_especialidad_orden() != null) {
+            // Paso 9 con el modal confirmado (PRD D7): la OT se genera en la
+            // misma transacción; si algo falla, tampoco queda la aprobación.
+            GenerarOrdenRequest generar = new GenerarOrdenRequest();
+            generar.setId_especialidad(aprobacionDTO.getId_especialidad_orden());
+            requerimientoService.generarOrdenDesdeRequerimiento(requerimiento.getId_requerimiento(), generar);
+        }
 
         return convertToResponse(aprobacionGuardada);
     }

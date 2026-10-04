@@ -15,6 +15,7 @@ import {
 } from '@lucide/angular';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { NotificacionStreamService } from '../../../core/services/notificacion-stream.service';
 
 type NavIcon =
   | 'dashboard'
@@ -113,11 +114,21 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
 })
 export class Sidebar {
   private readonly authService = inject(AuthService);
+  private readonly stream = inject(NotificacionStreamService);
+
+  /** OT en mi cola + asignadas sin confirmar (se actualiza por SSE, FR-028). */
+  readonly pendientesOrdenes = this.stream.pendientes;
 
   readonly open = input(false);
   readonly navigate = output<void>();
 
-  private readonly esOperaciones = computed(() => this.authService.user()?.rol === 'Operaciones');
+  // Perfil ejecutor (por permisos, no por nombre de rol): ejecuta OT y no
+  // despacha ni gestiona el universo de Solicitudes/Requerimientos.
+  private readonly esOperaciones = computed(
+    () =>
+      this.authService.hasPermission('orden.tomar') &&
+      !this.authService.hasPermission('solicitud.read_all'),
+  );
 
   readonly navItems = computed(() =>
     NAV_ITEMS.filter((item) => {

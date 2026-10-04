@@ -2,7 +2,6 @@ package cfbd.co.sgt.service;
 
 import cfbd.co.sgt.dto.request.CerrarOrdenRequest;
 import cfbd.co.sgt.dto.request.OrdenRequest;
-import cfbd.co.sgt.dto.request.ReasignarOrdenRequest;
 import cfbd.co.sgt.dto.response.OrdenResponse;
 import java.util.List;
 import java.util.Optional;
@@ -17,7 +16,6 @@ public interface OrdenService {
     Optional<OrdenResponse> buscarOrdenPorNumero(String numeroOrden);
     void eliminarOrden(UUID id);
     OrdenResponse cerrarOrden(UUID id, CerrarOrdenRequest request);
-    OrdenResponse reasignarOrden(UUID id, ReasignarOrdenRequest request);
 
     OrdenResponse subirAdjunto(UUID id, MultipartFile file);
     String obtenerReferenciaAdjunto(UUID id);

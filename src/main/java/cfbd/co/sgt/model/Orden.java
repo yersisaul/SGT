@@ -26,9 +26,10 @@ public class Orden {
     @GeneratedValue (strategy = GenerationType.UUID)
     private UUID id_orden;
 
-    // Relación con la entidad Usuario (una orden pertenece a un usuario)
+    // Ejecutor de la OT. null mientras está en la cola de su especialidad o
+    // "Devuelta" (PRD D13/D15): la OT se asigna a una especialidad, no a una persona.
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_usuario", nullable = false)
+    @JoinColumn(name = "id_usuario", nullable = true)
     private Usuario usuario;
 
     // Relación con la entidad Estado (una orden tiene un estado)

@@ -11,6 +11,8 @@ public class OrdenResponse {
     public UUID id_orden;
     /** Ejecutor de Operaciones responsable de la Orden (Orden.usuario). */
     private UUID id_usuario;
+    /** Nombre del ejecutor (null mientras la OT está en cola). */
+    private String nombre_ejecutor;
     private UUID id_estado;
     private UUID id_especialidad;
     private UUID id_solicitud;

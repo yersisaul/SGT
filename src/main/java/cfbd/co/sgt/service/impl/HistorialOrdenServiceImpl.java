@@ -7,7 +7,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import cfbd.co.sgt.dto.request.HistorialOrdenRequest;
@@ -19,6 +18,9 @@ import cfbd.co.sgt.repository.EstadoRepository;
 import cfbd.co.sgt.repository.HistorialOrdenRepository;
 import cfbd.co.sgt.repository.OrdenRepository;
 import cfbd.co.sgt.repository.UsuarioRepository;
+import cfbd.co.sgt.model.Orden;
+import cfbd.co.sgt.security.UsuarioActualProvider;
+import cfbd.co.sgt.service.AutorizacionRecursoService;
 import cfbd.co.sgt.service.HistorialOrdenService;
 import jakarta.transaction.Transactional;
 
@@ -38,6 +40,12 @@ public class HistorialOrdenServiceImpl implements HistorialOrdenService {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    @Autowired
+    private UsuarioActualProvider usuarioActual;
+
+    @Autowired
+    private AutorizacionRecursoService autorizacion;
+
     @Override
     public HistorialOrdenResponse crearHistorial(HistorialOrdenRequest historialDTO) {
         HistorialOrden historial = new HistorialOrden();
@@ -56,21 +64,39 @@ public class HistorialOrdenServiceImpl implements HistorialOrdenService {
     }
 
     @Override
-    public List<HistorialOrdenResponse> listarHistoriales() {
-        return historialOrdenRepository.findAll().stream()
+    public List<HistorialOrdenResponse> listarHistoriales(UUID idPadre) {
+        // Visibilidad heredada del registro padre (CLAUDE.md 6.5): antes se
+        // devolvía todo el historial a cualquiera con historial_orden.read.
+        Usuario actor = usuarioActual.obtener();
+        List<HistorialOrden> historiales;
+        if (idPadre != null) {
+            Orden padre = ordenRepository.findById(idPadre)
+                    .orElseThrow(() -> new ResourceNotFoundException("Orden not found"));
+            autorizacion.exigirVisible(actor, padre);
+            historiales = historialOrdenRepository.findByPadre(idPadre);
+        } else if (autorizacion.veTodasLasOrdenes()) {
+            historiales = historialOrdenRepository.findAll();
+        } else {
+            List<UUID> visibles = ordenRepository.findVisiblesPara(actor.getId_usuario()).stream()
+                    .map(Orden::getId_orden)
+                    .toList();
+            historiales = visibles.isEmpty() ? List.of() : historialOrdenRepository.findByPadres(visibles);
+        }
+        return historiales.stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
     public Optional<HistorialOrdenResponse> buscarHistorialPorId(UUID id) {
-        return historialOrdenRepository.findById(id).map(this::convertToResponse);
+        Usuario actor = usuarioActual.obtener();
+        return historialOrdenRepository.findById(id)
+                .filter(historial -> autorizacion.puedeVer(actor, historial.getOrden()))
+                .map(this::convertToResponse);
     }
 
     private Usuario usuarioAutenticado() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario autenticado no encontrado"));
+        return usuarioActual.obtener();
     }
 
     private HistorialOrdenResponse convertToResponse(HistorialOrden historial) {
@@ -78,6 +104,8 @@ public class HistorialOrdenServiceImpl implements HistorialOrdenService {
         response.setId_historial_orden(historial.getId_historial_orden());
         response.setId_orden(historial.getOrden().getId_orden());
         response.setId_usuario(historial.getUsuario().getId_usuario());
+        response.setNombre_usuario((historial.getUsuario().getNombres() + " "
+                + historial.getUsuario().getApellidos()).trim());
         response.setId_estado_anterior(historial.getEstado_anterior().getId_estado());
         response.setId_estado_nuevo(historial.getEstado_nuevo().getId_estado());
         response.setFecha(historial.getFecha());

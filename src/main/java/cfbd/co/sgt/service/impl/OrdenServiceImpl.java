@@ -2,15 +2,17 @@ package cfbd.co.sgt.service.impl;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import jakarta.transaction.Transactional;
+import cfbd.co.sgt.mapper.OrdenMapper;
+import cfbd.co.sgt.security.UsuarioActualProvider;
+import cfbd.co.sgt.service.AutorizacionRecursoService;
 import cfbd.co.sgt.service.FileStorageService;
+import cfbd.co.sgt.service.NumeracionService;
 import cfbd.co.sgt.service.OrdenService;
 import cfbd.co.sgt.service.TipoRecursoArchivo;
 import cfbd.co.sgt.repository.OrdenRepository;
@@ -31,7 +33,6 @@ import cfbd.co.sgt.model.Solicitud;
 import cfbd.co.sgt.model.Usuario;
 import cfbd.co.sgt.dto.request.CerrarOrdenRequest;
 import cfbd.co.sgt.dto.request.OrdenRequest;
-import cfbd.co.sgt.dto.request.ReasignarOrdenRequest;
 import cfbd.co.sgt.dto.response.OrdenResponse;
 import cfbd.co.sgt.exception.ResourceNotFoundException;
 import cfbd.co.sgt.repository.HistorialSolicitudRepository;
@@ -49,7 +50,9 @@ public class OrdenServiceImpl implements OrdenService {
     // una operación de negocio específica (ver cerrarOrden), no un cambio de
     // campo más (CLAUDE.md 5.3 — el PUT genérico no debe permitir saltarse
     // el flujo de cierre).
-    private static final Set<String> ESTADOS_EJECUCION = Set.of("pendiente", "en progreso");
+    // El PUT genérico ya no cambia el estado de la OT: la cola (tomar,
+    // asignar, verificar, reasignar) y el cierre son operaciones de negocio
+    // dedicadas (PRD E3, CLAUDE.md 6.3). Se conserva solo el no-op.
 
     @Autowired
     private OrdenRepository ordenRepository;
@@ -80,6 +83,14 @@ public class OrdenServiceImpl implements OrdenService {
 
     @Autowired
     private FileStorageService fileStorageService;
+    @Autowired
+    private AutorizacionRecursoService autorizacion;
+    @Autowired
+    private NumeracionService numeracion;
+    @Autowired
+    private UsuarioActualProvider usuarioActual;
+    @Autowired
+    private OrdenMapper ordenMapper;
 
     @Override
     public OrdenResponse crearOrden(OrdenRequest ordenDTO) {
@@ -89,16 +100,21 @@ public class OrdenServiceImpl implements OrdenService {
         // creación real ocurre vía generarOrdenDesdeSolicitud/Requerimiento;
         // este método queda disponible por si se habilita en el futuro.
         orden.setUsuario(usuarioAutenticado());
-        orden.setEstado(estadoRepository.findById(ordenDTO.getId_estado()).orElse(null));
-        orden.setEspecialidad(especialidadRepository.findById(ordenDTO.getId_especialidad()).orElse(null));
+        orden.setEstado(estadoRepository.findById(ordenDTO.getId_estado())
+                .orElseThrow(() -> new ResourceNotFoundException("Estado not found")));
+        orden.setEspecialidad(especialidadRepository.findById(ordenDTO.getId_especialidad())
+                .orElseThrow(() -> new ResourceNotFoundException("Especialidad not found")));
         orden.setSolicitud(ordenDTO.getId_solicitud() != null
-                ? solicitudRepository.findById(ordenDTO.getId_solicitud()).orElse(null) : null);
+                ? solicitudRepository.findById(ordenDTO.getId_solicitud())
+                        .orElseThrow(() -> new ResourceNotFoundException("Solicitud not found"))
+                : null);
         orden.setRequerimiento(ordenDTO.getId_requerimiento() != null
-                ? requerimientoRepository.findById(ordenDTO.getId_requerimiento()).orElse(null) : null);
+                ? requerimientoRepository.findById(ordenDTO.getId_requerimiento())
+                        .orElseThrow(() -> new ResourceNotFoundException("Requerimiento not found"))
+                : null);
         // El adjunto se gestiona exclusivamente vía subirAdjunto/eliminarAdjunto
         // (fileserver propio, CLAUDE.md sección 26/30): no se acepta desde este DTO.
-        Long correlativo = ordenRepository.count() + 1;
-        orden.setNumeroOrden("OT-"+Long.toString(correlativo));
+        orden.setNumeroOrden(numeracion.siguienteNumeroOrden());
         orden.setFecha_registro(Instant.now());
         return convertToResponse(ordenRepository.save(orden));
     }
@@ -113,7 +129,8 @@ public class OrdenServiceImpl implements OrdenService {
         }
 
         Usuario actor = usuarioAutenticado();
-        if (esOperaciones(actor) && !orden.getUsuario().getId_usuario().equals(actor.getId_usuario())) {
+        autorizacion.exigirVisible(actor, orden);
+        if (!esEjecutor(actor, orden) && !autorizacion.veTodasLasOrdenes()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No puede modificar una Orden que no tiene asignada.");
         }
 
@@ -131,10 +148,9 @@ public class OrdenServiceImpl implements OrdenService {
 
     @Override
     public List<OrdenResponse> listarOrdenes() {
-        Usuario actor = usuarioAutenticado();
-        List<Orden> ordenes = esOperaciones(actor)
-                ? ordenRepository.findByUsuario(actor.getId_usuario())
-                : ordenRepository.findAll();
+        List<Orden> ordenes = autorizacion.veTodasLasOrdenes()
+                ? ordenRepository.findAll()
+                : ordenRepository.findVisiblesPara(usuarioAutenticado().getId_usuario());
         return ordenes.stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
@@ -144,7 +160,7 @@ public class OrdenServiceImpl implements OrdenService {
     public Optional<OrdenResponse> buscarOrdenPorId(UUID id) {
         Usuario actor = usuarioAutenticado();
         return ordenRepository.findById(id)
-                .filter(orden -> puedeVer(actor, orden))
+                .filter(orden -> autorizacion.puedeVer(actor, orden))
                 .map(this::convertToResponse);
     }
 
@@ -152,18 +168,25 @@ public class OrdenServiceImpl implements OrdenService {
     public Optional<OrdenResponse> buscarOrdenPorNumero(String numeroOrden) {
         Usuario actor = usuarioAutenticado();
         return ordenRepository.findByNumeroOrden(numeroOrden)
-                .filter(orden -> puedeVer(actor, orden))
+                .filter(orden -> autorizacion.puedeVer(actor, orden))
                 .map(this::convertToResponse);
     }
 
     @Override
     public void eliminarOrden(UUID id) {
-        ordenRepository.deleteById(id);
+        Orden orden = ordenRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Orden not found"));
+        // Toda OT generada por el flujo tiene historial: es auditoría, no se borra.
+        if (historialOrdenRepository.existsByPadre(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede eliminar una Orden con historial.");
+        }
+        ordenRepository.delete(orden);
     }
 
     @Override
     public OrdenResponse cerrarOrden(UUID id, CerrarOrdenRequest request) {
-        Orden orden = ordenRepository.findById(id)
+        Orden orden = ordenRepository.findByIdParaActualizar(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Orden not found"));
 
         if (orden.getFecha_cierre() != null) {
@@ -171,8 +194,14 @@ public class OrdenServiceImpl implements OrdenService {
         }
 
         Usuario actor = usuarioAutenticado();
-        if (esOperaciones(actor) && !orden.getUsuario().getId_usuario().equals(actor.getId_usuario())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No puede cerrar una Orden que no tiene asignada.");
+        autorizacion.exigirVisible(actor, orden);
+        if (!esEjecutor(actor, orden)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo el ejecutor asignado puede cerrar la Orden.");
+        }
+        // Pasos 11-14: solo se cierra lo que el ejecutor confirmó y ejecutó.
+        if (!"En progreso".equalsIgnoreCase(orden.getEstado().getNombre())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Solo se puede cerrar una Orden 'En progreso' (actual: " + orden.getEstado().getNombre() + ").");
         }
 
         Estado estadoFinalizado = estadoRepository.findByNombre("Finalizado")
@@ -209,59 +238,10 @@ public class OrdenServiceImpl implements OrdenService {
     }
 
     @Override
-    public OrdenResponse reasignarOrden(UUID id, ReasignarOrdenRequest request) {
-        Orden orden = ordenRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Orden not found"));
-
-        if (orden.getFecha_cierre() != null) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede reasignar una Orden ya cerrada.");
-        }
-
-        Usuario actor = usuarioAutenticado();
-        boolean esEjecutorActual = orden.getUsuario().getId_usuario().equals(actor.getId_usuario());
-        boolean esAdministrador = "Administrador".equalsIgnoreCase(actor.getRol().getNombre());
-        if (!esEjecutorActual && !esAdministrador) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Solo el ejecutor actual o un Administrador pueden reasignar la Orden.");
-        }
-
-        Usuario nuevoEjecutor = usuarioRepository.findById(request.getId_usuario_nuevo())
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario ejecutor no encontrado"));
-        if (!"Operaciones".equalsIgnoreCase(nuevoEjecutor.getRol().getNombre())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "El nuevo ejecutor debe tener rol Operaciones.");
-        }
-
-        Usuario ejecutorAnterior = orden.getUsuario();
-        if (ejecutorAnterior.getId_usuario().equals(nuevoEjecutor.getId_usuario())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "La Orden ya está asignada a ese usuario.");
-        }
-
-        orden.setUsuario(nuevoEjecutor);
-        Orden ordenReasignada = ordenRepository.save(orden);
-
-        // HistorialOrden no tiene campos usuario_anterior/usuario_nuevo; se
-        // documenta la reasignación como una transición de estado "no-op"
-        // (mismo patrón ya usado en RequerimientoServiceImpl al generar OT
-        // desde un Requerimiento aprobado), dejando el detalle en comentario.
-        HistorialOrden historial = new HistorialOrden();
-        historial.setOrden(ordenReasignada);
-        historial.setUsuario(actor);
-        historial.setEstado_anterior(ordenReasignada.getEstado());
-        historial.setEstado_nuevo(ordenReasignada.getEstado());
-        historial.setFecha(Instant.now());
-        historial.setComentario((request.getComentario() != null ? request.getComentario() + " — " : "")
-                + "Reasignación: " + ejecutorAnterior.getNombres() + " " + ejecutorAnterior.getApellidos()
-                + " → " + nuevoEjecutor.getNombres() + " " + nuevoEjecutor.getApellidos() + ".");
-        historialOrdenRepository.save(historial);
-
-        return convertToResponse(ordenReasignada);
-    }
-
-    @Override
     public OrdenResponse subirAdjunto(UUID id, MultipartFile file) {
         Orden orden = ordenRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Orden not found"));
-        if (!puedeVer(usuarioAutenticado(), orden)) {
+        if (!autorizacion.puedeVer(usuarioAutenticado(), orden)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tiene acceso a esta Orden.");
         }
         String referenciaAnterior = orden.getUrl_adjunto();
@@ -278,7 +258,7 @@ public class OrdenServiceImpl implements OrdenService {
     public String obtenerReferenciaAdjunto(UUID id) {
         Orden orden = ordenRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Orden not found"));
-        if (!puedeVer(usuarioAutenticado(), orden)) {
+        if (!autorizacion.puedeVer(usuarioAutenticado(), orden)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tiene acceso a esta Orden.");
         }
         if (orden.getUrl_adjunto() == null) {
@@ -291,7 +271,7 @@ public class OrdenServiceImpl implements OrdenService {
     public OrdenResponse eliminarAdjunto(UUID id) {
         Orden orden = ordenRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Orden not found"));
-        if (!puedeVer(usuarioAutenticado(), orden)) {
+        if (!autorizacion.puedeVer(usuarioAutenticado(), orden)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tiene acceso a esta Orden.");
         }
         if (orden.getUrl_adjunto() != null) {
@@ -363,46 +343,24 @@ public class OrdenServiceImpl implements OrdenService {
         historialSolicitudRepository.save(historialSolicitud);
     }
 
-    private boolean esOperaciones(Usuario usuario) {
-        return "Operaciones".equalsIgnoreCase(usuario.getRol().getNombre());
-    }
-
-    private boolean puedeVer(Usuario actor, Orden orden) {
-        return !esOperaciones(actor) || orden.getUsuario().getId_usuario().equals(actor.getId_usuario());
+    private boolean esEjecutor(Usuario actor, Orden orden) {
+        return orden.getUsuario() != null && orden.getUsuario().getId_usuario().equals(actor.getId_usuario());
     }
 
     private void validarTransicion(Estado actual, Estado nuevo) {
         if (actual.getId_estado().equals(nuevo.getId_estado())) {
             return;
         }
-        String actualNombre = actual.getNombre().toLowerCase();
-        String nuevoNombre = nuevo.getNombre().toLowerCase();
-        if (!ESTADOS_EJECUCION.contains(actualNombre) || !ESTADOS_EJECUCION.contains(nuevoNombre)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Transición de estado no permitida para Orden: " + actual.getNombre() + " -> " + nuevo.getNombre()
-                            + ". El cierre debe hacerse mediante la operación de cierre dedicada.");
-        }
+        throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Transición de estado no permitida para Orden: " + actual.getNombre() + " -> " + nuevo.getNombre()
+                        + ". Use las operaciones tomar/asignar/verificar/reasignar/cerrar.");
     }
 
     private Usuario usuarioAutenticado() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario autenticado no encontrado"));
+        return usuarioActual.obtener();
     }
 
-    private OrdenResponse convertToResponse(Orden orden){
-        OrdenResponse response = new OrdenResponse();
-        response.setId_orden(orden.getId_orden());
-        response.setId_usuario(orden.getUsuario().getId_usuario());
-        response.setId_especialidad(orden.getEspecialidad().getId_especialidad());
-        response.setId_estado(orden.getEstado().getId_estado());
-        response.setId_requerimiento(orden.getRequerimiento() != null ? orden.getRequerimiento().getId_requerimiento() : null);
-        response.setId_solicitud(orden.getSolicitud() != null ? orden.getSolicitud().getId_solicitud() : null);
-        response.setNumeroOrden(orden.getNumeroOrden());
-        response.setFecha_registro(orden.getFecha_registro());
-        response.setFecha_cierre(orden.getFecha_cierre());
-        response.setUrl_adjunto(orden.getUrl_adjunto() != null
-                ? "/api/archivos/ordenes/" + orden.getId_orden() : null);
-        return response;
+    private OrdenResponse convertToResponse(Orden orden) {
+        return ordenMapper.toResponse(orden);
     }
 }

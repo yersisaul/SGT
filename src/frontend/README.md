@@ -57,3 +57,8 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+
+## Observaciones
+- Al despachar una ST o RQ debe seleccionar la especiaalidad (No mostrar nombre)
+- En especialidades  se debe definir correctamente: Soporte disgregado en: Opcion 1 Configuración de analíticas / Conf dispo / Mntto de código. Opcion 2: Soporte y mantenimiento de código / Soporte de infraestructura y configuración de analíticas
+- Feedback si una solicitud no está en el contrato, se debe rechazar como 

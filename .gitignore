@@ -34,3 +34,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Variables de entorno locales (secretos) ###
+.env
+
+### Temporales de Claude ###
+/.claude-tmp/

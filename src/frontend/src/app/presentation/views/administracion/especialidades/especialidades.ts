@@ -1,9 +1,12 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { LucideCircleAlert, LucidePencil, LucidePlus, LucideSearch, LucideTrash } from '@lucide/angular';
+import { LucideCircleAlert, LucidePencil, LucidePlus, LucideSearch, LucideTrash, LucideUsers } from '@lucide/angular';
+import { forkJoin } from 'rxjs';
 
 import { AuthService } from '../../../../core/auth/auth.service';
+import { UsuarioCatalogo } from '../../../../core/models/catalogo.model';
 import { EspecialidadRequest, EspecialidadResponse } from '../../../../core/models/especialidad.model';
+import { CatalogoService } from '../../../../core/services/catalogo.service';
 import { EspecialidadService } from '../../../../core/services/especialidad.service';
 import { Button } from '../../../../shared/components/button/button';
 import { Dialog } from '../../../../shared/components/dialog/dialog';
@@ -16,7 +19,19 @@ type DialogMode = 'create' | 'edit' | null;
 
 @Component({
   selector: 'app-especialidades',
-  imports: [FormsModule, Button, Dialog, Spinner, Formulario, LucidePlus, LucideSearch, LucidePencil, LucideTrash, LucideCircleAlert],
+  imports: [
+    FormsModule,
+    Button,
+    Dialog,
+    Spinner,
+    Formulario,
+    LucidePlus,
+    LucideSearch,
+    LucidePencil,
+    LucideTrash,
+    LucideCircleAlert,
+    LucideUsers,
+  ],
   templateUrl: './especialidades.html',
   styleUrl: './especialidades.css',
 })
@@ -24,10 +39,12 @@ export class Especialidades {
   private readonly authService = inject(AuthService);
   private readonly especialidadService = inject(EspecialidadService);
   private readonly notifications = inject(NotificationService);
+  private readonly catalogoService = inject(CatalogoService);
 
   protected readonly canCreate = this.authService.hasPermission('especialidad.create');
   protected readonly canUpdate = this.authService.hasPermission('especialidad.update');
   protected readonly canDelete = this.authService.hasPermission('especialidad.delete');
+  protected readonly canGestionarEquipo = this.authService.hasPermission('especialidad.gestionar_equipo');
 
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
@@ -51,8 +68,85 @@ export class Especialidades {
   protected readonly deleteSubmitting = signal(false);
   protected readonly deleteError = signal<string | null>(null);
 
+  // ---- Equipo de la especialidad (PRD FR-048): miembros y responsables ----
+  protected readonly equipoTarget = signal<EspecialidadResponse | null>(null);
+  protected readonly equipoCandidatos = signal<UsuarioCatalogo[]>([]);
+  /** id_usuario → es_responsable; si no está en el mapa, no es miembro. */
+  protected readonly equipoSeleccion = signal<Map<string, boolean>>(new Map());
+  protected readonly equipoLoading = signal(false);
+  protected readonly equipoSubmitting = signal(false);
+  protected readonly equipoError = signal<string | null>(null);
+
   constructor() {
     this.loadAll();
+  }
+
+  protected openEquipo(especialidad: EspecialidadResponse): void {
+    this.equipoTarget.set(especialidad);
+    this.equipoError.set(null);
+    this.equipoLoading.set(true);
+    forkJoin({
+      candidatos: this.catalogoService.getUsuariosEjecutores(),
+      miembros: this.especialidadService.miembros(especialidad.id_especialidad),
+    }).subscribe({
+      next: ({ candidatos, miembros }) => {
+        this.equipoCandidatos.set(candidatos);
+        this.equipoSeleccion.set(new Map(miembros.map((m) => [m.id_usuario, m.es_responsable])));
+        this.equipoLoading.set(false);
+      },
+      error: (error: unknown) => {
+        this.equipoError.set(extractApiErrorMessage(error));
+        this.equipoLoading.set(false);
+      },
+    });
+  }
+
+  protected closeEquipo(): void {
+    if (this.equipoSubmitting()) return;
+    this.equipoTarget.set(null);
+  }
+
+  protected esMiembro(idUsuario: string): boolean {
+    return this.equipoSeleccion().has(idUsuario);
+  }
+
+  protected esResponsable(idUsuario: string): boolean {
+    return this.equipoSeleccion().get(idUsuario) === true;
+  }
+
+  protected toggleMiembro(idUsuario: string, miembro: boolean): void {
+    this.equipoSeleccion.update((actual) => {
+      const copia = new Map(actual);
+      if (miembro) {
+        copia.set(idUsuario, copia.get(idUsuario) ?? false);
+      } else {
+        copia.delete(idUsuario);
+      }
+      return copia;
+    });
+  }
+
+  protected toggleResponsable(idUsuario: string, responsable: boolean): void {
+    this.equipoSeleccion.update((actual) => new Map(actual).set(idUsuario, responsable));
+  }
+
+  protected guardarEquipo(): void {
+    const target = this.equipoTarget();
+    if (!target) return;
+    this.equipoSubmitting.set(true);
+    this.equipoError.set(null);
+    const miembros = [...this.equipoSeleccion()].map(([id_usuario, es_responsable]) => ({ id_usuario, es_responsable }));
+    this.especialidadService.guardarMiembros(target.id_especialidad, { miembros }).subscribe({
+      next: () => {
+        this.equipoSubmitting.set(false);
+        this.equipoTarget.set(null);
+        this.notifications.success(`Equipo de ${target.nombre} actualizado.`);
+      },
+      error: (error: unknown) => {
+        this.equipoSubmitting.set(false);
+        this.equipoError.set(extractApiErrorMessage(error));
+      },
+    });
   }
 
   protected reload(): void {

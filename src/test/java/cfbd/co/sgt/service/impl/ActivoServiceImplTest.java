@@ -37,6 +37,9 @@ import cfbd.co.sgt.service.TipoRecursoArchivo;
 class ActivoServiceImplTest {
 
     @Mock
+    private cfbd.co.sgt.repository.ActivoEspecialidadRepository activoEspecialidadRepository;
+
+    @Mock
     private ActivoRepository activoRepository;
 
     @Mock
@@ -52,6 +55,7 @@ class ActivoServiceImplTest {
         service = new ActivoServiceImpl();
         ReflectionTestUtils.setField(service, "activoRepository", activoRepository);
         ReflectionTestUtils.setField(service, "fileStorageService", fileStorageService);
+        ReflectionTestUtils.setField(service, "activoEspecialidadRepository", activoEspecialidadRepository);
 
         id = UUID.randomUUID();
         activo = new Activo();

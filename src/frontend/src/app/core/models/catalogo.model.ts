@@ -8,7 +8,10 @@ export interface EstadoCatalogo {
 
 export interface ActivoCatalogo {
   id_activo: string;
+  /** Especialidad principal. */
   id_especialidad: string;
+  /** Todas las especialidades en las que el activo puede tener Solicitudes. */
+  ids_especialidad: string[];
   codigo: string;
   nombre: string;
   descripcion: string | null;

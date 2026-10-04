@@ -3,7 +3,13 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../config/api-config';
-import { EspecialidadRequest, EspecialidadResponse } from '../models/especialidad.model';
+import {
+  EquipoEspecialidadRequest,
+  EspecialidadRequest,
+  EspecialidadResponse,
+  MiEspecialidadResponse,
+  MiembroEspecialidadResponse,
+} from '../models/especialidad.model';
 
 /** CRUD real de Especialidad (EspecialidadController), para Administración.
  * Distinto de CatalogoService.getEspecialidades(), que es de solo lectura. */
@@ -26,5 +32,18 @@ export class EspecialidadService {
 
   eliminar(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiBaseUrl}/especialidades/${id}`);
+  }
+
+  /** Especialidades del usuario autenticado y si es responsable. */
+  mias(): Observable<MiEspecialidadResponse[]> {
+    return this.http.get<MiEspecialidadResponse[]>(`${this.apiBaseUrl}/especialidades/mias`);
+  }
+
+  miembros(id: string): Observable<MiembroEspecialidadResponse[]> {
+    return this.http.get<MiembroEspecialidadResponse[]>(`${this.apiBaseUrl}/especialidades/${id}/miembros`);
+  }
+
+  guardarMiembros(id: string, request: EquipoEspecialidadRequest): Observable<MiembroEspecialidadResponse[]> {
+    return this.http.put<MiembroEspecialidadResponse[]>(`${this.apiBaseUrl}/especialidades/${id}/miembros`, request);
   }
 }

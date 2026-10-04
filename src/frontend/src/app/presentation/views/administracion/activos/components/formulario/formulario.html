@@ -15,16 +15,35 @@
   </div>
 
   <app-select
-    label="Especialidad"
-    placeholder="Selecciona una especialidad"
+    label="Especialidad principal"
+    placeholder="Selecciona la especialidad principal"
     [options]="especialidadOptions"
     formControlName="id_especialidad"
     [errorMessage]="
       form.controls.id_especialidad.touched && form.controls.id_especialidad.invalid
-        ? 'Selecciona la especialidad responsable'
+        ? 'Selecciona la especialidad principal'
         : null
     "
   />
+
+  <fieldset class="activo-especialidades">
+    <legend class="activo-especialidades-titulo">Otras especialidades del activo</legend>
+    <p class="activo-especialidades-ayuda">
+      Las Solicitudes nacen con la principal; el Despachador puede despacharlas a cualquiera de estas.
+    </p>
+    @for (especialidad of especialidades(); track especialidad.id_especialidad) {
+      @if (especialidad.id_especialidad !== form.controls.id_especialidad.value) {
+        <label class="activo-especialidad-check">
+          <input
+            type="checkbox"
+            [checked]="esAdicional(especialidad.id_especialidad)"
+            (change)="toggleAdicional(especialidad.id_especialidad, $any($event.target).checked)"
+          />
+          {{ especialidad.nombre }}
+        </label>
+      }
+    }
+  </fieldset>
 
   <app-input label="Ubicación" formControlName="ubicacion" placeholder="Ej. Sede principal, piso 3" />
 

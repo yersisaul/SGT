@@ -1,1 +1,32 @@
 @import '../../../administracion.css';
+
+.activo-especialidades {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.activo-especialidades-titulo {
+  padding: 0 var(--space-1);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+
+.activo-especialidades-ayuda {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-muted-foreground);
+}
+
+.activo-especialidad-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+  cursor: pointer;
+}

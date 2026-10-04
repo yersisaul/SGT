@@ -18,12 +18,21 @@ public class SlaCalculator {
     private final long mediaHoras;
     private final long altaHoras;
     private final long requerimientoHoras;
+    private final long atencionAltaHoras;
+    private final long atencionMediaHoras;
+    private final long atencionBajaHoras;
 
     public SlaCalculator(
             @Value("${app.sla.despacho.baja-horas:4}") long bajaHoras,
             @Value("${app.sla.despacho.media-horas:2}") long mediaHoras,
             @Value("${app.sla.despacho.alta-horas:1}") long altaHoras,
-            @Value("${app.sla.despacho.requerimiento-horas:2}") long requerimientoHoras) {
+            @Value("${app.sla.despacho.requerimiento-horas:2}") long requerimientoHoras,
+            @Value("${app.sla.atencion.alta-horas:8}") long atencionAltaHoras,
+            @Value("${app.sla.atencion.media-horas:24}") long atencionMediaHoras,
+            @Value("${app.sla.atencion.baja-horas:72}") long atencionBajaHoras) {
+        this.atencionAltaHoras = atencionAltaHoras;
+        this.atencionMediaHoras = atencionMediaHoras;
+        this.atencionBajaHoras = atencionBajaHoras;
         this.bajaHoras = bajaHoras;
         this.mediaHoras = mediaHoras;
         this.altaHoras = altaHoras;
@@ -41,6 +50,16 @@ public class SlaCalculator {
      * por prioridad (Requerimiento no tiene ese campo). */
     public Instant deadlineRequerimiento(Instant fechaRegistro) {
         return fechaRegistro.plus(requerimientoHoras, ChronoUnit.HOURS);
+    }
+
+    /** Deadline de atención (registro de la Solicitud → cierre de su OT), por prioridad (decisión 2026-10-04). */
+    public Instant deadlineAtencion(Instant fechaRegistro, String prioridad) {
+        long horas = prioridad == null ? atencionMediaHoras : switch (prioridad.trim().toLowerCase()) {
+            case "alta" -> atencionAltaHoras;
+            case "baja" -> atencionBajaHoras;
+            default -> atencionMediaHoras;
+        };
+        return fechaRegistro.plus(horas, ChronoUnit.HOURS);
     }
 
     private long horasParaPrioridad(String prioridad) {

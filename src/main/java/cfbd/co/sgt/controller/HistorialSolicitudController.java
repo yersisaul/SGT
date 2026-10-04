@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import cfbd.co.sgt.dto.request.HistorialSolicitudRequest;
@@ -30,8 +31,9 @@ public class HistorialSolicitudController {
 
     @PreAuthorize("hasAuthority('historial_solicitud.read')")
     @GetMapping
-    public List<HistorialSolicitudResponse> getAllHistoriales() {
-        return historialSolicitudService.listarHistoriales();
+    public List<HistorialSolicitudResponse> getAllHistoriales(
+            @RequestParam(name = "id_solicitud", required = false) UUID idPadre) {
+        return historialSolicitudService.listarHistoriales(idPadre);
     }
 
     @PreAuthorize("hasAuthority('historial_solicitud.read')")

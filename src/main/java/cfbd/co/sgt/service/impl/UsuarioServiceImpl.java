@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.multipart.MultipartFile;
 import lombok.RequiredArgsConstructor;
+import cfbd.co.sgt.service.EmailNormalizador;
 import cfbd.co.sgt.service.UsuarioService;
 import cfbd.co.sgt.service.FileStorageService;
 import cfbd.co.sgt.service.TipoRecursoArchivo;
@@ -32,7 +33,8 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     @Transactional    
     public UsuarioResponse crearUsuario(UsuarioRequest usuarioDTO) {
-        if (usuarioRepository.existsByEmail(usuarioDTO.getEmail())) {
+        String email = EmailNormalizador.normalizar(usuarioDTO.getEmail());
+        if (usuarioRepository.existsByEmail(email)) {
             throw new DuplicateResourceException("Email already exists");
         }
         if (usuarioRepository.existsByNombres(usuarioDTO.getNombres())) {
@@ -44,7 +46,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         // La foto se gestiona exclusivamente vía subirImagen/eliminarImagen
         // (fileserver propio, CLAUDE.md sección 26/30): no se acepta desde este DTO.
         Usuario usuario = Usuario.builder()
-                .email(usuarioDTO.getEmail())
+                .email(email)
                 .nombres(usuarioDTO.getNombres())
                 .apellidos(usuarioDTO.getApellidos())
                 .rol(rol)
@@ -59,7 +61,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        usuario.setEmail(usuarioDTO.getEmail());
+        usuario.setEmail(EmailNormalizador.normalizar(usuarioDTO.getEmail()));
         usuario.setNombres(usuarioDTO.getNombres());
         usuario.setApellidos(usuarioDTO.getApellidos());
         usuario.setRol(rolRepository.findById(usuarioDTO.getId_rol())
@@ -83,8 +85,8 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UsuarioResponse> listarUsuariosPorRol(String nombreRol) {
-        return usuarioRepository.findByRolNombre(nombreRol).stream()
+    public List<UsuarioResponse> listarUsuariosConPermiso(String codigoPermiso) {
+        return usuarioRepository.findByPermiso(codigoPermiso).stream()
                 .map(usuarioMapper::toResponse)
                 .toList();
     }

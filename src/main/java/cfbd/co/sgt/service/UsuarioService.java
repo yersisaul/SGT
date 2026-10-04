@@ -10,7 +10,8 @@ public interface UsuarioService {
     UsuarioResponse crearUsuario(UsuarioRequest usuario);
     UsuarioResponse editarUsuario(UsuarioRequest usuario, UUID id);
     List<UsuarioResponse> listarUsuarios();
-    List<UsuarioResponse> listarUsuariosPorRol(String nombreRol);
+    /** Usuarios cuyo rol tiene el permiso indicado (p. ej. orden.tomar = pueden integrar un equipo). */
+    List<UsuarioResponse> listarUsuariosConPermiso(String codigoPermiso);
     UsuarioResponse buscarUsuarioPorId(UUID id);
     UsuarioResponse buscarUsuarioPorEmail(String email);
     void eliminarUsuario(UUID id);

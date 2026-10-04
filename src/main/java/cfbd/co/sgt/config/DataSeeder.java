@@ -15,15 +15,20 @@ import org.springframework.transaction.annotation.Transactional;
 import cfbd.co.sgt.dto.request.UsuarioRequest;
 import cfbd.co.sgt.exception.DuplicateResourceException;
 import cfbd.co.sgt.model.Activo;
+import cfbd.co.sgt.model.ActivoEspecialidad;
 import cfbd.co.sgt.model.Especialidad;
 import cfbd.co.sgt.model.Estado;
 import cfbd.co.sgt.model.Permiso;
 import cfbd.co.sgt.model.Rol;
 import cfbd.co.sgt.model.RolPermiso;
+import cfbd.co.sgt.model.Usuario;
+import cfbd.co.sgt.model.UsuarioEspecialidad;
+import cfbd.co.sgt.repository.ActivoEspecialidadRepository;
 import cfbd.co.sgt.repository.ActivoRepository;
 import cfbd.co.sgt.repository.EspecialidadRepository;
 import cfbd.co.sgt.repository.EstadoRepository;
 import cfbd.co.sgt.repository.RolPermisoRepository;
+import cfbd.co.sgt.repository.UsuarioEspecialidadRepository;
 import cfbd.co.sgt.repository.UsuarioRepository;
 import cfbd.co.sgt.service.PermisoService;
 import cfbd.co.sgt.service.RolService;
@@ -69,7 +74,19 @@ public class DataSeeder implements ApplicationRunner {
             "requerimiento.generar_orden",
             "requerimiento.aprobar",
             "orden.cerrar",
-            "orden.reasignar");
+            "orden.reasignar",
+            // Alcance de lectura (CLAUDE.md 6.5): sin ellos solo se ve lo propio.
+            "solicitud.read_all",
+            "requerimiento.read_all",
+            "orden.read_all",
+            // Cola de OT por especialidad (PRD E3) — autorizados 2026-10-03.
+            "orden.tomar",
+            "orden.asignar",
+            "orden.verificar",
+            "especialidad.gestionar_equipo",
+            // KPIs (PRD E6).
+            "kpi.read",
+            "kpi.export");
 
     private final RolService rolService;
     private final PermisoService permisoService;
@@ -79,6 +96,8 @@ public class DataSeeder implements ApplicationRunner {
     private final ActivoRepository activoRepository;
     private final UsuarioService usuarioService;
     private final UsuarioRepository usuarioRepository;
+    private final UsuarioEspecialidadRepository usuarioEspecialidadRepository;
+    private final ActivoEspecialidadRepository activoEspecialidadRepository;
 
     @Value("${app.seed.default-password:ChangeMe123!}")
     private String defaultPassword;
@@ -91,8 +110,9 @@ public class DataSeeder implements ApplicationRunner {
         seedRolPermisos(roles, permisos);
         Map<String, Especialidad> especialidades = seedEspecialidades();
         seedEstados();
-        seedActivos(especialidades.get("Videovigilancia"));
+        seedActivos(especialidades);
         seedUsuarios(roles);
+        seedEquipos(especialidades);
         log.info("DataSeeder: carga de datos iniciales verificada (permisos={}, roles={}).",
                 permisos.size(), roles.size());
     }
@@ -160,17 +180,21 @@ public class DataSeeder implements ApplicationRunner {
      */
     private void seedRolPermisos(Map<String, Rol> roles, Map<String, Permiso> permisos) {
         Map<String, List<String>> matriz = Map.of(
+                // Cliente ya no tiene usuario.read (AUDITORIA S3): los nombres que
+                // necesita llegan en SolicitudResponse/OrdenResponse.
                 "Cliente", List.of(
                         "solicitud.read", "solicitud.create", "solicitud.update",
-                        "activo.read", "estado.read", "especialidad.read", "usuario.read",
-                        "orden.read", "historial_orden.read"),
+                        "activo.read", "estado.read", "especialidad.read",
+                        "orden.read", "historial_orden.read", "historial_solicitud.read"),
                 "Despachador", List.of(
                         "solicitud.read", "solicitud.update", "solicitud.generar_orden", "solicitud.generar_requerimiento",
                         "requerimiento.read", "requerimiento.create", "requerimiento.update",
                         "activo.read", "estado.read", "especialidad.read", "usuario.read",
                         "orden.read", "historial_orden.read",
                         "derivacion.read", "derivacion.create",
-                        "historial_solicitud.read"),
+                        "historial_solicitud.read",
+                        "solicitud.read_all", "requerimiento.read_all", "orden.read_all",
+                        "kpi.read"),
                 "Administrador", List.of(
                         "usuario.read", "usuario.create", "usuario.update", "usuario.delete",
                         "rol.read", "rol.create", "rol.update", "rol.delete",
@@ -186,11 +210,14 @@ public class DataSeeder implements ApplicationRunner {
                         "orden.read", "orden.update", "orden.delete", "orden.reasignar",
                         "derivacion.read",
                         "aprobacion.read",
-                        "historial_orden.read", "historial_requerimiento.read", "historial_solicitud.read"),
+                        "historial_orden.read", "historial_requerimiento.read", "historial_solicitud.read",
+                        "solicitud.read_all", "requerimiento.read_all", "orden.read_all",
+                        "especialidad.gestionar_equipo", "kpi.read", "kpi.export"),
                 "Operaciones", List.of(
                         "solicitud.read", "solicitud.create", "solicitud.update",
                         "requerimiento.read", "requerimiento.create", "requerimiento.update",
                         "orden.read", "orden.update", "orden.cerrar", "orden.reasignar",
+                        "orden.tomar", "orden.verificar", "orden.asignar", "kpi.read",
                         "activo.read", "estado.read",
                         "especialidad.read",
                         "historial_orden.read", "historial_requerimiento.read", "historial_solicitud.read")
@@ -214,18 +241,19 @@ public class DataSeeder implements ApplicationRunner {
         });
     }
 
-    /** "Videovigilancia" se conserva (los Activos sembrados por seedActivos
-     * la referencian); las 4 siguientes son las especialidades pedidas para
-     * clasificar trabajo interno de desarrollo. */
+    /** Catálogo vigente de especialidades (PRD D4): "Soporte" se divide en
+     * dos. Las OT se autoasignan a la cola de una de estas especialidades. */
     private Map<String, Especialidad> seedEspecialidades() {
         record EspecialidadSeed(String nombre, String descripcion) {
         }
         List<EspecialidadSeed> especialidades = List.of(
-                new EspecialidadSeed("Videovigilancia", "Sistemas y software de videovigilancia y monitoreo"),
                 new EspecialidadSeed("Desarrollo", "Desarrollo de software"),
                 new EspecialidadSeed("Implementación", "Implementación de soluciones"),
                 new EspecialidadSeed("DevOPS", "Infraestructura, CI/CD y operaciones"),
-                new EspecialidadSeed("Soporte", "Soporte técnico y mantenimiento"));
+                new EspecialidadSeed("Soporte y mantenimiento de código",
+                        "Soporte y mantenimiento de código de las soluciones"),
+                new EspecialidadSeed("Soporte de infraestructura y configuración de analíticas",
+                        "Soporte de infraestructura y configuración de analíticas"));
 
         Map<String, Especialidad> resultado = new LinkedHashMap<>();
         for (EspecialidadSeed seed : especialidades) {
@@ -242,7 +270,8 @@ public class DataSeeder implements ApplicationRunner {
     }
 
     private void seedEstados() {
-        for (String nombre : List.of("Pendiente", "En revisión", "En progreso", "Finalizado", "Aprobado", "Rechazado")) {
+        for (String nombre : List.of("Pendiente", "En revisión", "En progreso", "Finalizado", "Aprobado", "Rechazado",
+                "Asignada", "Devuelta")) {
             if (estadoRepository.findByNombre(nombre).isEmpty()) {
                 Estado nuevo = new Estado();
                 nuevo.setNombre(nombre);
@@ -252,23 +281,38 @@ public class DataSeeder implements ApplicationRunner {
         }
     }
 
-    private void seedActivos(Especialidad especialidad) {
-        record ActivoSeed(String nombre, String codigo) {
+    /** Activos y sus especialidades (decisión 2026-10-04): la primera de la
+     * lista es la principal (activo.id_especialidad, con la que nace la
+     * Solicitud); todas quedan en activo_especialidad. Idempotente: un activo
+     * existente sin especialidades adicionales las recibe. */
+    private void seedActivos(Map<String, Especialidad> especialidades) {
+        record ActivoSeed(String nombre, String codigo, List<String> especialidades) {
         }
+        String soporteCodigo = "Soporte y mantenimiento de código";
+        String soporteInfra = "Soporte de infraestructura y configuración de analíticas";
         List<ActivoSeed> activos = List.of(
-                new ActivoSeed("Azor Panel", "AZR-PANEL"),
-                new ActivoSeed("Azor Analytics", "AZR-ANALYTICS"),
-                new ActivoSeed("Network Optix", "NX-VMS"),
-                new ActivoSeed("Servidor 1", "SRV-01"));
+                new ActivoSeed("Azor Panel", "AZR-PANEL", List.of(soporteCodigo, "Desarrollo", "DevOPS")),
+                new ActivoSeed("Azor Analytics", "AZR-ANALYTICS", List.of(soporteCodigo, "Desarrollo", "DevOPS")),
+                new ActivoSeed("Network Optix", "NX-VMS", List.of(soporteInfra, "Implementación")),
+                // Hardware (servidores): solo Soporte de infraestructura.
+                new ActivoSeed("Servidor 1", "SRV-01", List.of(soporteInfra)));
 
         for (ActivoSeed seed : activos) {
-            if (activoRepository.findByNombre(seed.nombre()).isEmpty()) {
+            Activo activo = activoRepository.findByNombre(seed.nombre()).orElseGet(() -> {
                 Activo nuevo = new Activo();
-                nuevo.setEspecialidad(especialidad);
+                nuevo.setEspecialidad(especialidades.get(seed.especialidades().get(0)));
                 nuevo.setCodigo(seed.codigo());
                 nuevo.setNombre(seed.nombre());
-                activoRepository.save(nuevo);
                 log.info("DataSeeder: creando activo '{}'.", seed.nombre());
+                return activoRepository.save(nuevo);
+            });
+            if (activoEspecialidadRepository.findIdsEspecialidad(activo.getId_activo()).isEmpty()) {
+                for (String nombreEspecialidad : seed.especialidades()) {
+                    ActivoEspecialidad relacion = new ActivoEspecialidad();
+                    relacion.setActivo(activo);
+                    relacion.setEspecialidad(especialidades.get(nombreEspecialidad));
+                    activoEspecialidadRepository.save(relacion);
+                }
             }
         }
     }
@@ -286,9 +330,11 @@ public class DataSeeder implements ApplicationRunner {
                 new UsuarioSeed("carlos@cfbd.co", "Carlos", "Barrientos Diliberto", "Administrador"),
                 new UsuarioSeed("pgaspar@cfbd.co", "Pedro", "Gaspar Ortiz", "Operaciones"),
                 new UsuarioSeed("mjimenez@cfbd.co", "Miguel", "Jimenez", "Operaciones"),
-                new UsuarioSeed("aperalta@cfbd.co ", "Alicia", "Peralta", "Operaciones"),
+                new UsuarioSeed("aperalta@cfbd.co", "Alicia", "Peralta", "Operaciones"),
                 new UsuarioSeed("lulloa@cfbd.co", "Lorenzo", "Ulloa Alva", "Operaciones"),
-                new UsuarioSeed("rjuarez@cfbd.co", "Ricardo", "Juares Blaz", "Operaciones"));
+                new UsuarioSeed("rjuarez@cfbd.co", "Ricardo", "Juares Blaz", "Operaciones"),
+                new UsuarioSeed("olopez@cfbd.co", "Oscar", "Lopez", "Operaciones"),
+                new UsuarioSeed("ldesposorio@cfbd.co", "Cristofer", "Geronimo", "Operaciones"));
                 
         for (UsuarioSeed seed : usuarios) {
             if (usuarioRepository.existsByEmail(seed.email())) {
@@ -307,5 +353,59 @@ public class DataSeeder implements ApplicationRunner {
                 log.debug("DataSeeder: usuario '{}' ya existe, se omite.", seed.email());
             }
         }
+    }
+
+    /**
+     * Equipos por especialidad definidos por el dueño del producto (PRD OQ-10,
+     * 2026-10-04). Solo se siembra el equipo de una especialidad que aún no
+     * tiene miembros: los cambios hechos luego desde Administración no se
+     * pisan en cada arranque. Un email sin usuario se omite con WARN.
+     */
+    private void seedEquipos(Map<String, Especialidad> especialidades) {
+        record MiembroSeed(String email, boolean responsable) {
+        }
+        Map<String, List<MiembroSeed>> equipos = new LinkedHashMap<>();
+        equipos.put("Desarrollo", List.of(
+                new MiembroSeed("yortiz@cfbd.co", true),
+                new MiembroSeed("lulloa@cfbd.co", false),
+                new MiembroSeed("aperalta@cfbd.co", false)));
+        equipos.put("Soporte y mantenimiento de código", List.of(
+                new MiembroSeed("yortiz@cfbd.co", true),
+                new MiembroSeed("lulloa@cfbd.co", false),
+                new MiembroSeed("aperalta@cfbd.co", false)));
+        equipos.put("Implementación", List.of(
+                new MiembroSeed("pgaspar@cfbd.co", true),
+                new MiembroSeed("ddiaz@cfbd.co", false),
+                new MiembroSeed("mjimenez@cfbd.co", false)));
+        equipos.put("DevOPS", List.of(
+                new MiembroSeed("pgaspar@cfbd.co", true),
+                new MiembroSeed("ddiaz@cfbd.co", false)));
+        equipos.put("Soporte de infraestructura y configuración de analíticas", List.of(
+                new MiembroSeed("pgaspar@cfbd.co", true),
+                new MiembroSeed("mjimenez@cfbd.co", false),
+                new MiembroSeed("rjuarez@cfbd.co", false),
+                new MiembroSeed("olopez@cfbd.co", false),
+                new MiembroSeed("ldesposorio@cfbd.co", false)));
+
+        equipos.forEach((nombreEspecialidad, miembros) -> {
+            Especialidad especialidad = especialidades.get(nombreEspecialidad);
+            if (especialidad == null
+                    || !usuarioEspecialidadRepository.findByEspecialidad(especialidad.getId_especialidad()).isEmpty()) {
+                return;
+            }
+            for (MiembroSeed miembro : miembros) {
+                Usuario usuario = usuarioRepository.findByEmail(miembro.email()).orElse(null);
+                if (usuario == null) {
+                    log.warn("DataSeeder: '{}' no existe; no se agrega al equipo de '{}'.", miembro.email(), nombreEspecialidad);
+                    continue;
+                }
+                UsuarioEspecialidad pertenencia = new UsuarioEspecialidad();
+                pertenencia.setUsuario(usuario);
+                pertenencia.setEspecialidad(especialidad);
+                pertenencia.setEs_responsable(miembro.responsable());
+                usuarioEspecialidadRepository.save(pertenencia);
+            }
+            log.info("DataSeeder: equipo de '{}' sembrado.", nombreEspecialidad);
+        });
     }
 }

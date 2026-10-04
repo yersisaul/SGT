@@ -48,37 +48,46 @@ public class Usuario {
 
     // Relación con la entidad Aprobacion (un usuario puede tener muchas aprobaciones)
     @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY)
+    @Builder.Default
     private List<Aprobacion> aprobaciones = new ArrayList<>();
 
     // Relación con la entidad Requerimiento (un usuario puede tener muchos requerimientos)
     @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY)
+    @Builder.Default
     private List<Requerimiento> requerimientos = new ArrayList<>();
 
     // Relacion con la entidad Derivacion (un usuario puede ser el origen de muchas derivaciones)
     @OneToMany(mappedBy = "usuario_origen", fetch = FetchType.LAZY)
+    @Builder.Default
     private List<Derivacion> derivaciones_origen = new ArrayList<>();
 
     // Relacion con la entidad Derivacion (un usuario puede ser el destino de muchas derivaciones)
     @OneToMany(mappedBy = "usuario_destino", fetch = FetchType.LAZY)
+    @Builder.Default
     private List<Derivacion> derivaciones_destino = new ArrayList<>();
 
     // Relación con la entidad HistorialOrden (un usuario puede tener muchos historiales de orden)
     @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY)
+    @Builder.Default
     private List<HistorialOrden> historiales_ordenes = new ArrayList<>();
 
     // Relación con la entidad HistorialRequerimiento (un usuario puede tener muchos historiales de requerimiento)
     @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY)
+    @Builder.Default
     private List<HistorialRequerimiento> historiales_requerimientos = new ArrayList<>();
 
     // Relación con la entidad HistorialSolicitud (un usuario puede tener muchos historiales de solicitud)
     @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY)
+    @Builder.Default
     private List<HistorialSolicitud> historiales_solicitudes = new ArrayList<>();
 
     // Relación con la entidad Orden (un usuario puede tener muchas órdenes)
     @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY)
+    @Builder.Default
     private List<Orden> ordenes = new ArrayList<>();
 
     // Relación con la entidad Solicitud (un usuario puede tener muchas solicitudes)
     @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY)
+    @Builder.Default
     private List<Solicitud> solicitudes = new ArrayList<>();
 }

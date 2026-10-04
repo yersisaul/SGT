@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import cfbd.co.sgt.dto.request.HistorialOrdenRequest;
@@ -30,8 +31,9 @@ public class HistorialOrdenController {
 
     @PreAuthorize("hasAuthority('historial_orden.read')")
     @GetMapping
-    public List<HistorialOrdenResponse> getAllHistoriales() {
-        return historialOrdenService.listarHistoriales();
+    public List<HistorialOrdenResponse> getAllHistoriales(
+            @RequestParam(name = "id_orden", required = false) UUID idPadre) {
+        return historialOrdenService.listarHistoriales(idPadre);
     }
 
     @PreAuthorize("hasAuthority('historial_orden.read')")

@@ -394,16 +394,16 @@
 >
   @if (generarOrdenTarget(); as target) {
     <p class="confirm-text">
-      Se generará una Orden de Trabajo a partir del requerimiento <strong>{{ target.numeroRequerimiento }}</strong>.
-      Esta acción no se puede deshacer.
+      Se generará una Orden de Trabajo a partir del requerimiento <strong>{{ target.numeroRequerimiento }}</strong> en
+      la cola de la especialidad elegida. Esta acción no se puede deshacer.
     </p>
 
     <app-select
-      label="Ejecutor responsable"
-      placeholder="Selecciona un usuario de Operaciones"
-      [options]="ejecutorOptions()"
-      [ngModel]="generarOrdenEjecutor()"
-      (ngModelChange)="generarOrdenEjecutor.set($event)"
+      label="Especialidad"
+      placeholder="Selecciona la especialidad"
+      [options]="especialidadOptions()"
+      [ngModel]="generarOrdenEspecialidad()"
+      (ngModelChange)="generarOrdenEspecialidad.set($event)"
     />
 
     @if (generarOrdenError()) {
@@ -415,7 +415,7 @@
       </app-button>
       <app-button
         variant="primary"
-        [disabled]="!generarOrdenEjecutor()"
+        [disabled]="!generarOrdenEspecialidad()"
         [loading]="generarOrdenSubmitting()"
         (click)="confirmGenerarOrdenAction()"
       >
@@ -433,16 +433,17 @@
 >
   @if (postAprobacionTarget(); as target) {
     <p class="confirm-text">
-      El requerimiento <strong>{{ target.numeroRequerimiento }}</strong> quedó <strong>Aprobado</strong>.
-      ¿Deseas generar la Orden de Trabajo ahora?
+      El requerimiento <strong>{{ target.numeroRequerimiento }}</strong> quedó <strong>Aprobado</strong>. Elige la
+      especialidad para generar la Orden de Trabajo ahora. Si eliges "Generar después", el requerimiento queda
+      Aprobado y la orden se puede generar más tarde desde su ficha.
     </p>
 
     <app-select
-      label="Ejecutor responsable"
-      placeholder="Selecciona un usuario de Operaciones"
-      [options]="ejecutorOptions()"
-      [ngModel]="generarOrdenEjecutor()"
-      (ngModelChange)="generarOrdenEjecutor.set($event)"
+      label="Especialidad"
+      placeholder="Selecciona la especialidad"
+      [options]="especialidadOptions()"
+      [ngModel]="generarOrdenEspecialidad()"
+      (ngModelChange)="generarOrdenEspecialidad.set($event)"
     />
 
     @if (postAprobacionError()) {
@@ -454,7 +455,7 @@
       </app-button>
       <app-button
         variant="primary"
-        [disabled]="!generarOrdenEjecutor()"
+        [disabled]="!generarOrdenEspecialidad()"
         [loading]="postAprobacionSubmitting()"
         (click)="confirmGenerarOrdenAhora()"
       >

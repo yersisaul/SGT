@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public interface HistorialOrdenService {
     HistorialOrdenResponse crearHistorial(HistorialOrdenRequest historial);
-    List<HistorialOrdenResponse> listarHistoriales();
+    /** idPadre opcional: si llega, solo el historial de ese registro (validando su visibilidad). */
+    List<HistorialOrdenResponse> listarHistoriales(UUID idPadre);
     Optional<HistorialOrdenResponse> buscarHistorialPorId(UUID id);
 }

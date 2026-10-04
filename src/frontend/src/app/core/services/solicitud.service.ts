@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../config/api-config';
 import { GenerarOrdenRequest, OrdenResponse } from '../models/orden.model';
@@ -64,12 +64,9 @@ export class SolicitudService {
     return this.http.post(`${this.apiBaseUrl}/historial-solicitudes`, request);
   }
 
-  /** No existe un endpoint filtrado por Solicitud (HistorialSolicitudController
-   * solo expone listar-todo); se trae todo y se filtra en cliente por
-   * id_solicitud. Requiere historial_solicitud.read. */
+  /** Historial de una Solicitud (filtrado en el backend por id_solicitud,
+   * validando su visibilidad). Requiere historial_solicitud.read. */
   listarHistorial(idSolicitud: string): Observable<HistorialSolicitudResponse[]> {
-    return this.http
-      .get<HistorialSolicitudResponse[]>(`${this.apiBaseUrl}/historial-solicitudes`)
-      .pipe(map((registros) => registros.filter((r) => r.id_solicitud === idSolicitud)));
+    return this.http.get<HistorialSolicitudResponse[]>(`${this.apiBaseUrl}/historial-solicitudes`, { params: { id_solicitud: idSolicitud } });
   }
 }

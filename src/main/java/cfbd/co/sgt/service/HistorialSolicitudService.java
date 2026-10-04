@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public interface HistorialSolicitudService {
     HistorialSolicitudResponse crearHistorial(HistorialSolicitudRequest historial);
-    List<HistorialSolicitudResponse> listarHistoriales();
+    /** idPadre opcional: si llega, solo el historial de ese registro (validando su visibilidad). */
+    List<HistorialSolicitudResponse> listarHistoriales(UUID idPadre);
     Optional<HistorialSolicitudResponse> buscarHistorialPorId(UUID id);
 }

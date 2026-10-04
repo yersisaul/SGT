@@ -1,0 +1,129 @@
+@if (!sinAlcance()) {
+  <section class="kpi-panel" aria-labelledby="kpi-panel-heading">
+    <div class="kpi-panel-header">
+      <h2 id="kpi-panel-heading" class="section-title">Indicadores del flujo</h2>
+
+      <div class="kpi-filtros">
+        <div class="kpi-presets" role="group" aria-label="Rango de fechas">
+          @for (opcion of [['7', '7 días'], ['30', '30 días'], ['90', '90 días'], ['personalizado', 'Personalizado']]; track opcion[0]) {
+            <button
+              type="button"
+              class="kpi-preset"
+              [class.kpi-preset-activo]="preset() === opcion[0]"
+              [attr.aria-pressed]="preset() === opcion[0]"
+              (click)="elegirPreset($any(opcion[0]))"
+            >
+              {{ opcion[1] }}
+            </button>
+          }
+        </div>
+        @if (preset() === 'personalizado') {
+          <div class="kpi-rango">
+            <label class="kpi-fecha">
+              Desde
+              <input type="date" [ngModel]="desde()" (ngModelChange)="desde.set($event)" />
+            </label>
+            <label class="kpi-fecha">
+              Hasta
+              <input type="date" [ngModel]="hasta()" (ngModelChange)="hasta.set($event)" />
+            </label>
+            <app-button variant="secondary" [disabled]="!rangoValido()" (click)="aplicarPersonalizado()">Aplicar</app-button>
+          </div>
+          @if (!rangoValido()) {
+            <p class="kpi-aviso" role="alert">La fecha "desde" no puede ser posterior a "hasta".</p>
+          }
+        }
+      </div>
+    </div>
+
+    @if (loading()) {
+      <app-spinner label="Cargando indicadores" />
+    } @else if (error()) {
+      <p class="kpi-aviso" role="alert">{{ error() }}</p>
+    } @else {
+      <div class="kpi-familias">
+        @for (kpi of kpis(); track kpi.familia) {
+          <app-card class="kpi-familia">
+            <header class="kpi-familia-header">
+              <div>
+                <h3 class="kpi-familia-titulo">{{ kpi.titulo }}</h3>
+                <p class="kpi-familia-alcance">
+                  {{ kpi.alcance.join(', ') }} ·
+                  @if (kpi.instantaneo) {
+                    situación actual
+                  } @else {
+                    {{ desde() }} a {{ hasta() }}
+                  }
+                </p>
+              </div>
+              @if (canExport) {
+                <app-button
+                  variant="secondary"
+                  [loading]="exportando() === kpi.familia"
+                  (click)="exportar(kpi.familia)"
+                  [attr.aria-label]="'Exportar ' + kpi.titulo + ' a CSV'"
+                >
+                  <svg lucideDownload [size]="14" aria-hidden="true"></svg>
+                  CSV
+                </app-button>
+              }
+            </header>
+
+            <dl class="kpi-indicadores">
+              @for (indicador of kpi.indicadores; track indicador.clave) {
+                <div class="kpi-indicador">
+                  <dt class="kpi-indicador-etiqueta">{{ indicador.etiqueta }}</dt>
+                  <dd class="kpi-indicador-valor" [class.kpi-sin-dato]="indicador.valor === null">
+                    @if (indicador.valor === null) {
+                      —
+                    } @else {
+                      {{ indicador.valor | number: '1.0-1' }}<span class="kpi-unidad">{{ indicador.unidad }}</span>
+                    }
+                  </dd>
+                  @if (indicador.meta !== null) {
+                    <dd class="kpi-meta">
+                      <span>{{ textoMeta(indicador) }}</span>
+                      @if (indicador.estado) {
+                        <app-badge [variant]="varianteEstado(indicador.estado)">{{ etiquetaEstado(indicador.estado) }}</app-badge>
+                      }
+                    </dd>
+                  }
+                </div>
+              }
+            </dl>
+
+            @if (kpi.filas.length > 0) {
+              <div class="kpi-tabla-wrapper">
+                <table class="kpi-tabla">
+                  <caption class="sr-only">Detalle de {{ kpi.titulo }}</caption>
+                  <thead>
+                    <tr>
+                      @for (columna of kpi.columnas; track columna.clave; let primera = $first) {
+                        <th scope="col" [class.kpi-num]="!primera">{{ columna.etiqueta }}</th>
+                      }
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (fila of kpi.filas; track $index) {
+                      <tr>
+                        @for (columna of kpi.columnas; track columna.clave; let primera = $first) {
+                          @if (primera) {
+                            <th scope="row">{{ formato(fila[columna.clave], columna.unidad) }}</th>
+                          } @else {
+                            <td class="kpi-num">{{ formato(fila[columna.clave], columna.unidad) }}</td>
+                          }
+                        }
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else {
+              <p class="kpi-vacio">Sin datos en este rango.</p>
+            }
+          </app-card>
+        }
+      </div>
+    }
+  </section>
+}

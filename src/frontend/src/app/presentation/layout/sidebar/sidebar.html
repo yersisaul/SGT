@@ -23,6 +23,11 @@
           <svg lucideWrench [size]="18" class="nav-icon" aria-hidden="true"></svg>
         }
         {{ item.label }}
+        @if (item.icon === 'ordenes' && pendientesOrdenes() > 0) {
+          <span class="nav-badge" [attr.aria-label]="pendientesOrdenes() + ' órdenes pendientes de acción'">
+            {{ pendientesOrdenes() }}
+          </span>
+        }
       </a>
     }
 

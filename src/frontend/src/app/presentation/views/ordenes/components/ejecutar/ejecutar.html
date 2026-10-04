@@ -1,12 +1,4 @@
-<form [formGroup]="form" (ngSubmit)="submit()" class="ejecutar-form" novalidate>
-  <app-select
-    label="Estado"
-    placeholder="Selecciona un estado"
-    [options]="estadoOptions"
-    formControlName="id_estado"
-    [errorMessage]="form.controls.id_estado.touched && form.controls.id_estado.invalid ? 'Selecciona un estado' : null"
-  />
-
+<form (ngSubmit)="submit()" class="ejecutar-form" novalidate>
   <app-file-upload
     label="Informe técnico / entregable"
     tipo="adjunto"
@@ -17,6 +9,6 @@
   />
 
   <div class="ejecutar-form-actions">
-    <app-button type="submit" variant="primary" [loading]="submitting()">Actualizar progreso</app-button>
+    <app-button type="submit" variant="secondary" [loading]="submitting()">Guardar informe</app-button>
   </div>
 </form>

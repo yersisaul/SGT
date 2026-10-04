@@ -17,9 +17,16 @@ import org.springframework.web.bind.annotation.RestController;
 
 import cfbd.co.sgt.dto.request.CerrarOrdenRequest;
 import cfbd.co.sgt.dto.request.OrdenRequest;
+import cfbd.co.sgt.dto.request.AsignarOrdenRequest;
 import cfbd.co.sgt.dto.request.ReasignarOrdenRequest;
+import cfbd.co.sgt.dto.request.VerificarOrdenRequest;
+import cfbd.co.sgt.dto.response.AsignacionOrdenResponse;
+import cfbd.co.sgt.dto.response.CargaMiembroResponse;
+import cfbd.co.sgt.dto.response.OrdenEscaladaResponse;
+import cfbd.co.sgt.service.escalado.EscaladoColaService;
 import cfbd.co.sgt.dto.response.OrdenResponse;
 import cfbd.co.sgt.exception.ResourceNotFoundException;
+import cfbd.co.sgt.service.ColaOrdenService;
 import cfbd.co.sgt.service.OrdenService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +37,8 @@ import lombok.RequiredArgsConstructor;
 public class OrdenController {
 
     private final OrdenService ordenService;
+    private final ColaOrdenService colaOrdenService;
+    private final EscaladoColaService escaladoColaService;
 
     @PreAuthorize("hasAuthority('orden.read')")
     @GetMapping
@@ -73,12 +82,58 @@ public class OrdenController {
         return ResponseEntity.status(HttpStatus.OK).body(ordenService.cerrarOrden(id, request));
     }
 
-    // Reasignar el ejecutor de una Orden: la puede pedir el ejecutor actual o
-    // un Administrador (validado en el Service, no solo aquí).
+    // ---- Cola de OT por especialidad (CLAUDE.md §1 pasos 10-12) ----
+    // El permiso habilita la operación; la regla por recurso (miembro,
+    // responsable, ejecutor) la valida ColaOrdenService.
+
+    @PreAuthorize("hasAuthority('orden.read')")
+    @GetMapping("/cola")
+    public List<OrdenResponse> getCola() {
+        return colaOrdenService.listarCola();
+    }
+
+    @PreAuthorize("hasAnyAuthority('orden.asignar','orden.read_all')")
+    @GetMapping("/equipo/{idEspecialidad}")
+    public List<CargaMiembroResponse> getCargaEquipo(@PathVariable UUID idEspecialidad) {
+        return colaOrdenService.listarCargaEquipo(idEspecialidad);
+    }
+
+    // OT que superaron el umbral de espera en cola (escalado por prioridad).
+    @PreAuthorize("hasAnyAuthority('orden.asignar','orden.read_all')")
+    @GetMapping("/escaladas")
+    public List<OrdenEscaladaResponse> getEscaladas() {
+        return escaladoColaService.listarVisibles();
+    }
+
+    @PreAuthorize("hasAuthority('orden.read')")
+    @GetMapping("/{id}/asignaciones")
+    public List<AsignacionOrdenResponse> getAsignaciones(@PathVariable UUID id) {
+        return colaOrdenService.listarAsignaciones(id);
+    }
+
+    @PreAuthorize("hasAuthority('orden.tomar')")
+    @PostMapping("/{id}/tomar")
+    public OrdenResponse tomarOrden(@PathVariable UUID id) {
+        return colaOrdenService.tomar(id);
+    }
+
+    @PreAuthorize("hasAuthority('orden.asignar')")
+    @PostMapping("/{id}/asignar")
+    public OrdenResponse asignarOrden(@PathVariable UUID id, @Valid @RequestBody AsignarOrdenRequest request) {
+        return colaOrdenService.asignar(id, request);
+    }
+
+    @PreAuthorize("hasAuthority('orden.verificar')")
+    @PostMapping("/{id}/verificar")
+    public OrdenResponse verificarOrden(@PathVariable UUID id, @Valid @RequestBody VerificarOrdenRequest request) {
+        return colaOrdenService.verificar(id, request);
+    }
+
+    // Reasignar a otra especialidad (paso 12): responsable de la especialidad
+    // actual o Administrador (PRD D14), validado en el Service.
     @PreAuthorize("hasAuthority('orden.reasignar')")
     @PostMapping("/{id}/reasignar")
-    public ResponseEntity<OrdenResponse> reasignarOrden(@PathVariable UUID id,
-                                                         @Valid @RequestBody ReasignarOrdenRequest request) {
-        return ResponseEntity.status(HttpStatus.OK).body(ordenService.reasignarOrden(id, request));
+    public OrdenResponse reasignarOrden(@PathVariable UUID id, @Valid @RequestBody ReasignarOrdenRequest request) {
+        return colaOrdenService.reasignar(id, request);
     }
 }

@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../config/api-config';
 import { GenerarOrdenRequest, OrdenResponse } from '../models/orden.model';
@@ -47,12 +47,9 @@ export class RequerimientoService {
     return this.http.post<OrdenResponse>(`${this.apiBaseUrl}/requerimientos/${id}/generar-orden`, request);
   }
 
-  /** No existe endpoint filtrado por Requerimiento; se trae todo
-   * (HistorialRequerimientoController) y se filtra en cliente. Requiere
-   * historial_requerimiento.read. */
+  /** Historial de un Requerimiento (filtrado en el backend por
+   * id_requerimiento). Requiere historial_requerimiento.read. */
   listarHistorial(idRequerimiento: string): Observable<HistorialRequerimientoResponse[]> {
-    return this.http
-      .get<HistorialRequerimientoResponse[]>(`${this.apiBaseUrl}/historial-requerimientos`)
-      .pipe(map((registros) => registros.filter((r) => r.id_requerimiento === idRequerimiento)));
+    return this.http.get<HistorialRequerimientoResponse[]>(`${this.apiBaseUrl}/historial-requerimientos`, { params: { id_requerimiento: idRequerimiento } });
   }
 }
