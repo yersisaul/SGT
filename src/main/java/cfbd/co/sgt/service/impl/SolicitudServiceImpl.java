@@ -210,6 +210,8 @@ public class SolicitudServiceImpl implements SolicitudService {
     public void eliminarSolicitud(UUID id) {
         Solicitud solicitud = solicitudRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Solicitud not found"));
+        // Sin alcance global solo se borra lo que el actor puede ver (CLAUDE §6.5).
+        autorizacion.exigirVisible(usuarioActual.obtener(), solicitud);
         // Una Solicitud con historial, Requerimiento u OT es parte de la
         // auditoría del flujo: no se borra físicamente.
         if (!ESTADO_PENDIENTE.equalsIgnoreCase(solicitud.getEstado().getNombre())

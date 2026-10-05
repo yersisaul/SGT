@@ -64,3 +64,18 @@ export function esEstadoKanbanDeRequerimiento(nombre: string): boolean {
   const objetivo = normalizar(nombre);
   return REQUERIMIENTO_ESTADOS_KANBAN.some((estado) => normalizar(estado) === objetivo);
 }
+
+/** Estados en los que el Requerimiento aún espera la decisión del
+ * Administrador: los mismos que acepta POST /api/aprobaciones
+ * (AprobacionServiceImpl) y que el PUT genérico deja editar. */
+export function esEstadoPendienteDecision(nombre: string): boolean {
+  return esEstadoEditablePorPut(nombre);
+}
+
+/** Estados en los que el Requerimiento ya tiene (o puede tener) una Orden de
+ * Trabajo asociada: Aprobado (pendiente de generarla), En progreso y
+ * Finalizado (generada al pasar a En progreso). */
+export function esEstadoConOrden(nombre: string): boolean {
+  const objetivo = normalizar(nombre);
+  return objetivo === 'aprobado' || objetivo === 'en progreso' || objetivo === 'finalizado';
+}

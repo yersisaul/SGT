@@ -111,7 +111,7 @@ export class Ordenes {
   private readonly especialidades = signal<EspecialidadCatalogo[]>([]);
   private readonly misEspecialidades = signal<MiEspecialidadResponse[]>([]);
 
-  protected readonly viewMode = signal<ViewMode>('tabla');
+  protected readonly viewMode = signal<ViewMode>('kanban');
   protected readonly bandeja = signal<Bandeja>('todas');
 
   protected readonly estadosOrden = computed(() => this.estados().filter((e) => esEstadoValidoDeOrden(e.nombre)));

@@ -35,15 +35,6 @@ interface NavItem {
   icon: NavIcon;
   /** Permiso requerido para ver el ítem. Sin permiso definido = visible para cualquier usuario autenticado. */
   permission?: string;
-  /**
-   * Curación de menú (no de autorización): Operaciones técnicamente tiene
-   * solicitud.read y requerimiento.read (necesita leer el contexto de sus
-   * Órdenes), pero no gestiona Solicitudes ni Requerimientos como tarea
-   * propia — su navegación principal prioriza Dashboard + Órdenes
-   * (instrucción explícita de Fase 3). El permiso backend y la ruta
-   * (permissionGuard) siguen intactos; esto solo oculta el enlace del menú.
-   */
-  ocultoParaOperaciones?: boolean;
 }
 
 /**
@@ -58,14 +49,12 @@ const NAV_ITEMS: NavItem[] = [
     route: '/app/solicitudes',
     icon: 'solicitudes',
     permission: 'solicitud.read',
-    ocultoParaOperaciones: true,
   },
   {
     label: 'Requerimientos',
     route: '/app/requerimientos',
     icon: 'requerimientos',
     permission: 'requerimiento.read',
-    ocultoParaOperaciones: true,
   },
   { label: 'Órdenes', route: '/app/ordenes', icon: 'ordenes', permission: 'orden.read' },
 ];
@@ -122,20 +111,8 @@ export class Sidebar {
   readonly open = input(false);
   readonly navigate = output<void>();
 
-  // Perfil ejecutor (por permisos, no por nombre de rol): ejecuta OT y no
-  // despacha ni gestiona el universo de Solicitudes/Requerimientos.
-  private readonly esOperaciones = computed(
-    () =>
-      this.authService.hasPermission('orden.tomar') &&
-      !this.authService.hasPermission('solicitud.read_all'),
-  );
-
   readonly navItems = computed(() =>
-    NAV_ITEMS.filter((item) => {
-      const tienePermiso = !item.permission || this.authService.hasPermission(item.permission);
-      const ocultoPorUx = !!item.ocultoParaOperaciones && this.esOperaciones();
-      return tienePermiso && !ocultoPorUx;
-    }),
+    NAV_ITEMS.filter((item) => !item.permission || this.authService.hasPermission(item.permission)),
   );
 
   readonly adminNavItems = computed(() =>

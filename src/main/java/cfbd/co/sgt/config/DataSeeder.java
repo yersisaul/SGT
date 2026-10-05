@@ -213,9 +213,12 @@ public class DataSeeder implements ApplicationRunner {
                         "historial_orden.read", "historial_requerimiento.read", "historial_solicitud.read",
                         "solicitud.read_all", "requerimiento.read_all", "orden.read_all",
                         "especialidad.gestionar_equipo", "kpi.read", "kpi.export"),
+                // CRUD de Solicitud y Requerimiento para todo Operaciones
+                // (observación 2026-10-05); el borrado queda acotado a lo que
+                // el actor puede ver y a registros sin flujo iniciado.
                 "Operaciones", List.of(
-                        "solicitud.read", "solicitud.create", "solicitud.update",
-                        "requerimiento.read", "requerimiento.create", "requerimiento.update",
+                        "solicitud.read", "solicitud.create", "solicitud.update", "solicitud.delete",
+                        "requerimiento.read", "requerimiento.create", "requerimiento.update", "requerimiento.delete",
                         "orden.read", "orden.update", "orden.cerrar", "orden.reasignar",
                         "orden.tomar", "orden.verificar", "orden.asignar", "kpi.read",
                         "activo.read", "estado.read",

@@ -87,14 +87,19 @@
   [open]="dialogMode() === 'create'"
   (closed)="closeDialog()"
 >
-  <app-solicitud-formulario
-    mode="create"
-    [activos]="activosCatalogo()"
-    [estados]="estadosCatalogo()"
-    [submitting]="formSubmitting()"
-    (submitForm)="handleFormSubmit($event)"
-    (cancel)="closeDialog()"
-  />
+  <!-- El @if recrea el formulario en cada apertura: el contenido proyectado
+       en app-dialog se instancia una sola vez aunque el diálogo esté cerrado,
+       y sin esto conservaba los datos y el adjunto de la solicitud anterior. -->
+  @if (dialogMode() === 'create') {
+    <app-solicitud-formulario
+      mode="create"
+      [activos]="activosCatalogo()"
+      [estados]="estadosCatalogo()"
+      [submitting]="formSubmitting()"
+      (submitForm)="handleFormSubmit($event)"
+      (cancel)="closeDialog()"
+    />
+  }
 </app-dialog>
 
 <app-dialog

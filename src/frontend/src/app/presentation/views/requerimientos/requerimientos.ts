@@ -43,8 +43,10 @@ import { Kanban, RequerimientoMovido } from './components/kanban/kanban';
 import { Tabla } from './components/tabla/tabla';
 import {
   esEstadoAprobado,
+  esEstadoConOrden,
   esEstadoDecidido,
   esEstadoEditablePorPut,
+  esEstadoPendienteDecision,
   esEstadoKanbanDeRequerimiento,
   esEstadoValidoDeRequerimiento,
 } from './requerimiento-estados.config';
@@ -218,7 +220,7 @@ export class Requerimientos {
   // Para Administrador: cuántos requerimientos esperan su decisión — se
   // destaca arriba de la bandeja para que sean fáciles de identificar.
   protected readonly pendientesDecision = computed(
-    () => this.views().filter((v) => !esEstadoDecidido(v.estadoNombre)).length,
+    () => this.views().filter((v) => esEstadoPendienteDecision(v.estadoNombre)).length,
   );
 
   protected readonly dialogView = computed<RequerimientoView | null>(() => {
@@ -235,6 +237,18 @@ export class Requerimientos {
   protected readonly dialogEstaAprobado = computed(() => {
     const view = this.dialogView();
     return !!view && esEstadoAprobado(view.estadoNombre);
+  });
+
+  // Aprobar/Rechazar y editar solo aplican mientras espera decisión (Pendiente
+  // o En revisión); en En progreso/Finalizado ya fue aprobado y tiene OT.
+  protected readonly dialogPendienteDecision = computed(() => {
+    const view = this.dialogView();
+    return !!view && esEstadoPendienteDecision(view.estadoNombre);
+  });
+
+  protected readonly dialogTieneOrden = computed(() => {
+    const view = this.dialogView();
+    return !!view && esEstadoConOrden(view.estadoNombre);
   });
 
   constructor() {
@@ -261,7 +275,7 @@ export class Requerimientos {
     this.dialogTarget.set(view.raw);
     this.loadHistorial(view.raw.id_requerimiento);
     this.loadAprobaciones(view.raw.id_requerimiento);
-    if (esEstadoAprobado(view.estadoNombre)) {
+    if (esEstadoConOrden(view.estadoNombre)) {
       this.loadOrdenAsociada(view.raw.id_requerimiento);
     } else {
       this.ordenAsociada.set(null);

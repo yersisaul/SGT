@@ -21,6 +21,7 @@ import { OrdenEscaladaResponse, OrdenResponse } from '../../../core/models/orden
 import { RequerimientoResponse } from '../../../core/models/requerimiento.model';
 import { SolicitudResponse } from '../../../core/models/solicitud.model';
 import { CatalogoService } from '../../../core/services/catalogo.service';
+import { EspecialidadService } from '../../../core/services/especialidad.service';
 import { OrdenService } from '../../../core/services/orden.service';
 import { RequerimientoService } from '../../../core/services/requerimiento.service';
 import { SolicitudService } from '../../../core/services/solicitud.service';
@@ -114,6 +115,7 @@ export class Dashboard {
   private readonly requerimientoService = inject(RequerimientoService);
   private readonly ordenService = inject(OrdenService);
   private readonly catalogoService = inject(CatalogoService);
+  private readonly especialidadService = inject(EspecialidadService);
   private readonly stream = inject(NotificacionStreamService);
 
   readonly user = this.authService.user;
@@ -124,6 +126,12 @@ export class Dashboard {
   /** Perfil ejecutor: ve su cola y sus OT asignadas (PRD FR-034). */
   protected readonly esEjecutor = this.authService.hasPermission('orden.tomar');
   protected readonly canViewKpis = this.authService.hasPermission('kpi.read');
+  /** /api/kpis responde 403 a quien no tiene orden.read_all ni es responsable
+   * de alguna especialidad (FR-037): a un miembro sin responsabilidad no se le
+   * muestra el panel, en vez de disparar peticiones que el backend rechaza. */
+  private readonly kpisGlobales = this.authService.hasPermission('orden.read_all');
+  private readonly esResponsable = signal(false);
+  protected readonly mostrarKpis = computed(() => this.canViewKpis && (this.kpisGlobales || this.esResponsable()));
   /** OT en mi cola + asignadas sin confirmar (actualizado por SSE). */
   protected readonly misPendientes = this.stream.pendientes;
   /** Responsables y Administrador ven las OT que superaron el tiempo de espera en cola. */
@@ -290,6 +298,13 @@ export class Dashboard {
     this.catalogoService.getEstados().subscribe((estados) => {
       this.nombrePorIdEstado.set(new Map(estados.map((e) => [e.id_estado, e.nombre])));
     });
+
+    if (this.canViewKpis && !this.kpisGlobales && this.authService.hasPermission('especialidad.read')) {
+      this.especialidadService.mias().subscribe({
+        next: (mias) => this.esResponsable.set(mias.some((e) => e.es_responsable)),
+        error: () => this.esResponsable.set(false),
+      });
+    }
 
     if (this.canViewSolicitudes) {
       this.loadSolicitudes();

@@ -193,6 +193,8 @@ public class RequerimientoServiceImpl implements RequerimientoService {
     public void eliminarRequerimiento(UUID id) {
         Requerimiento requerimiento = requerimientoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Requerimiento not found"));
+        // Sin alcance global solo se borra lo que el actor puede ver (CLAUDE §6.5).
+        autorizacion.exigirVisible(usuarioActual.obtener(), requerimiento);
         // Con historial, aprobación u OT forma parte de la auditoría del flujo.
         if (historialRequerimientoRepository.existsByPadre(id)
                 || !requerimiento.getAprobaciones().isEmpty()
