@@ -14,10 +14,12 @@ import { Especialidades } from './presentation/views/administracion/especialidad
 import { Estados } from './presentation/views/administracion/estados/estados';
 import { authGuard } from './core/guards/auth.guard';
 import { permissionGuard } from './core/guards/permission.guard';
+import { AdminProductos } from './presentation/views/admin-productos/admin-productos';
 
 export const routes: Routes = [
   { path: '', component: Home },
   { path: 'login', component: Login },
+  { path: 'admin-productos', component: AdminProductos },
   {
     path: 'app',
     component: AppShell,
@@ -87,4 +89,5 @@ export const routes: Routes = [
     ],
   },
   { path: '**', redirectTo: '' },
+
 ];

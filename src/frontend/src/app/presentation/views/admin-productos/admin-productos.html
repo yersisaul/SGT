@@ -1,0 +1,157 @@
+<div class="layout">
+  <!-- Barra lateral -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="logo">CFBD</span>
+      <div>
+        <strong>SGT</strong>
+        <small>Gestión de tickets</small>
+      </div>
+    </div>
+
+    <p class="nav-title">GENERAL</p>
+    <a class="nav-item" routerLink="/app/dashboard">📊 Dashboard</a>
+
+    <p class="nav-title">ADMINISTRACIÓN</p>
+    <a class="nav-item active">📦 Productos</a>
+  </aside>
+
+  <!-- Contenido -->
+  <div class="main">
+    <header class="topbar">
+      <div class="user">
+        <span class="avatar">VA</span>
+        <div>
+          <strong>Victor</strong>
+          <small>Administrador</small>
+        </div>
+      </div>
+    </header>
+
+    <section class="content">
+      <div class="head">
+        <div>
+          <h1>Administración de productos</h1>
+          <p class="subtitle">Crea, edita y elimina los productos del catálogo</p>
+        </div>
+        <span class="chip">Administrador</span>
+      </div>
+
+      <!-- Tarjetas resumen -->
+      <div class="stats">
+        <div class="card stat">
+          <span>Total de productos</span>
+          <strong>{{ productos.length }}</strong>
+        </div>
+        <div class="card stat">
+          <span>Categorías</span>
+          <strong>{{ categorias.length }}</strong>
+        </div>
+        <div class="card stat">
+          <span>Valor del catálogo</span>
+          <strong>{{ valorTotal | currency: 'USD' : 'symbol' : '1.0-0' }}</strong>
+        </div>
+      </div>
+
+      <!-- Herramientas -->
+      <div class="card toolbar">
+        <input
+          class="input"
+          [(ngModel)]="busqueda"
+          placeholder="🔍  Buscar por nombre o categoría..."
+        />
+        <select class="input select" [(ngModel)]="categoriaFiltro">
+          <option value="">Todas las categorías</option>
+          @for (c of categorias; track c) {
+            <option [value]="c">{{ c }}</option>
+          }
+        </select>
+        <button class="btn ghost" (click)="limpiarFiltros()">Limpiar</button>
+        <button class="btn primary" (click)="nuevo()">+ Nuevo producto</button>
+      </div>
+
+      <!-- Tabla -->
+      <div class="card table-card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Imagen</th>
+                <th>Producto</th>
+                <th>Categoría</th>
+                <th>Precio</th>
+                <th class="right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of filtrados; track p.id) {
+                <tr>
+                  <td><img [src]="p.imagen" [alt]="p.nombre" /></td>
+                  <td>
+                    <strong>{{ p.nombre }}</strong>
+                    <small>{{ p.descripcion }}</small>
+                  </td>
+                  <td><span class="badge">{{ p.categoria }}</span></td>
+                  <td class="price">{{ p.precio | currency: 'USD' : 'symbol' : '1.0-2' }}</td>
+                  <td class="right">
+                    <button class="btn small" (click)="editar(p)">✏️ Editar</button>
+                    <button class="btn small danger" (click)="eliminar(p.id!)">🗑️ Eliminar</button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="empty">No se encontraron productos</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="table-foot">Mostrando {{ filtrados.length }} de {{ productos.length }} productos</div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Modal crear / editar -->
+@if (mostrarForm) {
+  <div class="overlay" (click)="cerrar()">
+    <form class="modal" (click)="$event.stopPropagation()" (ngSubmit)="guardar()">
+      <h2>{{ editandoId ? 'Editar producto' : 'Nuevo producto' }}</h2>
+
+      <div class="grid">
+        <label>
+          Nombre
+          <input class="input" name="nombre" [(ngModel)]="form.nombre" required />
+        </label>
+        <label>
+          Categoría
+          <input class="input" name="categoria" [(ngModel)]="form.categoria" required />
+        </label>
+        <label>
+          Precio
+          <input class="input" name="precio" type="number" min="0" [(ngModel)]="form.precio" required />
+        </label>
+        <label>
+          Ruta de la imagen
+          <input class="input" name="imagen" [(ngModel)]="form.imagen" />
+        </label>
+        <label class="full">
+          Descripción
+          <input class="input" name="descripcion" [(ngModel)]="form.descripcion" />
+        </label>
+      </div>
+
+      <div class="preview">
+        <img [src]="form.imagen" alt="Vista previa" />
+        <small>Vista previa de la imagen</small>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn ghost" (click)="cerrar()">Cancelar</button>
+        <button type="submit" class="btn primary">
+          {{ editandoId ? 'Actualizar' : 'Crear' }}
+        </button>
+      </div>
+    </form>
+  </div>
+}
