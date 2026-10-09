@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { LucideCircleAlert, LucideInbox, LucideLayoutGrid, LucidePlus, LucideTable } from '@lucide/angular';
+import { LucideCircleAlert, LucideInbox, LucideLayoutGrid, LucidePlus, LucideTable } from '../../../shared/icons/lucide-icons';
 import { forkJoin } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
@@ -121,10 +121,7 @@ export class Solicitudes {
     const target = this.generarOrdenTarget() ?? this.generarRequerimientoTarget();
     const activo = target ? this.activos().find((a) => a.id_activo === target.id_activo) : undefined;
     const delActivo = new Set(activo?.ids_especialidad ?? []);
-    const opcion = (e: EspecialidadCatalogo) => ({
-      value: e.id_especialidad,
-      label: delActivo.has(e.id_especialidad) ? `${e.nombre} · del activo` : e.nombre,
-    });
+    const opcion = (e: EspecialidadCatalogo) => ({ value: e.id_especialidad, label: e.nombre });
     return [
       ...this.especialidades().filter((e) => delActivo.has(e.id_especialidad)).map(opcion),
       ...this.especialidades().filter((e) => !delActivo.has(e.id_especialidad)).map(opcion),

@@ -58,9 +58,9 @@
 }
 
 .btn-danger {
-  background: var(--status-danger-fg);
-  color: #ffffff;
+  background: var(--color-danger-solid);
+  color: var(--color-on-solid);
 }
 .btn-danger:hover:not(:disabled) {
-  background: #991b1b;
+  background: var(--color-danger-solid-hover);
 }

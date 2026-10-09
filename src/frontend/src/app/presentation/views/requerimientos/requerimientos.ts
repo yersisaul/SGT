@@ -11,8 +11,8 @@ import {
   LucidePlus,
   LucideTable,
   LucideWrench,
-} from '@lucide/angular';
-import { forkJoin } from 'rxjs';
+} from '../../../shared/icons/lucide-icons';
+import { forkJoin, of } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { AprobacionResponse } from '../../../core/models/aprobacion.model';
@@ -191,7 +191,7 @@ export class Requerimientos {
         (e) => e.nombre,
         '—',
       ),
-      creadoPorNombre: this.nombreUsuario(raw.id_usuario),
+      creadoPorNombre: raw.nombre_usuario || '—',
     })),
   );
 
@@ -669,7 +669,9 @@ export class Requerimientos {
       requerimientos: this.requerimientoService.listar(),
       estados: this.catalogoService.getEstados(),
       especialidades: this.catalogoService.getEspecialidades(),
-      usuarios: this.catalogoService.getUsuarios(),
+      // Solo para el autor de cada aprobación (quien tiene aprobacion.read
+      // también tiene usuario.read); sin el permiso, un 403 tumbaba la vista.
+      usuarios: this.authService.hasPermission('usuario.read') ? this.catalogoService.getUsuarios() : of([]),
     }).subscribe({
       next: ({ requerimientos, estados, especialidades, usuarios }) => {
         this.requerimientos.set(requerimientos);

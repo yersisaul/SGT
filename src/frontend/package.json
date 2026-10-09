@@ -3,9 +3,14 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
+    "generate:version": "node scripts/generate-version.mjs",
+    "prestart": "npm run generate:version --silent",
     "start": "ng serve",
+    "prebuild": "npm run generate:version --silent",
     "build": "ng build",
+    "prewatch": "npm run generate:version --silent",
     "watch": "ng build --watch --configuration development",
+    "pretest": "npm run generate:version --silent",
     "test": "ng test",
     "serve:ssr:frontend": "node dist/frontend/server/server.mjs"
   },
@@ -21,7 +26,6 @@
     "@angular/platform-server": "^21.2.0",
     "@angular/router": "^21.2.0",
     "@angular/ssr": "^21.2.10",
-    "@lucide/angular": "^1.47.0",
     "express": "^5.1.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"

@@ -1,0 +1,72 @@
+# ──────────────────────────────────────────────────────────────────────────
+# SGT — despliegue en Coolify (Traefik delante, TLS en Traefik).
+# Pegar en Coolify como "Docker Compose". Las variables (DB_*, JWT_SECRET,
+# RATE_LIMIT_*, APP_VERSION...) se definen en la pestaña Environment Variables.
+#
+# Diferencias con docker-compose.yml (ver DESPLIEGUE.md, "Coolify"):
+# - Sin redes propias: Coolify conecta todos los servicios a la red del
+#   recurso, la única por la que Traefik llega al frontend. Con varias redes
+#   Traefik puede elegir una que no alcanza → 504 Gateway Timeout.
+# - Sin "ports": solo se entra por Traefik (https://<dominio>).
+# - Sin etiquetas Traefik en el backend: /api entra por nginx, como en local.
+# - NGINX_TRUSTED_PROXIES: nginx confía en Traefik para la IP real del cliente
+#   (rate limiting por usuario) y el esquema https (sin falsos 403 de CORS).
+# ──────────────────────────────────────────────────────────────────────────
+services:
+  db:
+    # Misma versión mayor con la que se creó el volumen pgdata.
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-sgt}
+      POSTGRES_USER: ${DB_USERNAME:?Define DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: yersy78/sgt-backend:${APP_VERSION:-latest}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-sgt}
+      FILE_STORAGE_PATH: /app/uploads
+      SERVER_FORWARD_HEADERS_STRATEGY: native
+      # El frontend llama a /api en su mismo origen: solo hace falta para
+      # clientes de otros orígenes.
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://sgt.azorweb.dev}
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  frontend:
+    image: yersy78/sgt-frontend:${APP_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      NGINX_CLIENT_MAX_BODY_SIZE: ${NGINX_CLIENT_MAX_BODY_SIZE:-25m}
+      # Redes desde las que llega Traefik. Sin "ports" publicados solo los
+      # contenedores de la red del recurso alcanzan a nginx; para acotarlo,
+      # usar la subred exacta (docker network inspect <uuid-del-recurso>).
+      NGINX_TRUSTED_PROXIES: ${NGINX_TRUSTED_PROXIES:-10.0.0.0/8 172.16.0.0/12 192.168.0.0/16}
+    expose:
+      - "8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  uploads:

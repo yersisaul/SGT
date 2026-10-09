@@ -294,13 +294,15 @@
       se puede deshacer.
     </p>
 
-    <app-select
-      label="Especialidad"
-      placeholder="Selecciona la especialidad"
-      [options]="especialidadOptions()"
-      [ngModel]="generarRequerimientoEspecialidad()"
-      (ngModelChange)="generarRequerimientoEspecialidad.set($event)"
-    />
+    <div class="field">
+      <app-select
+        label="Especialidad"
+        placeholder="Selecciona la especialidad"
+        [options]="especialidadOptions()"
+        [ngModel]="generarRequerimientoEspecialidad()"
+        (ngModelChange)="generarRequerimientoEspecialidad.set($event)"
+      />
+    </div>
 
     <div class="field">
       <label for="req-desc-origen" class="field-label">Descripción del Requerimiento</label>

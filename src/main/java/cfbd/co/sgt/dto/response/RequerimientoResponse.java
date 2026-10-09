@@ -11,6 +11,8 @@ import lombok.Setter;
 public class RequerimientoResponse {
     private UUID id_requerimiento;
     private UUID id_usuario;
+    /** Creador, ya resuelto: así el frontend no necesita usuario.read (igual que SolicitudResponse). */
+    private String nombre_usuario;
     private UUID id_estado;
     private UUID id_especialidad;
     /** Solicitud de origen, si el Requerimiento se generó desde una (ver

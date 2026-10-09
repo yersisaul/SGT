@@ -1,6 +1,8 @@
 .shell {
   display: flex;
   height: 100vh;
+  /* dvh: en móvil sigue al alto visible real (barra de direcciones incluida). */
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -15,6 +17,12 @@
   flex: 1;
   overflow: auto;
   padding: var(--space-6);
+  /*
+   * Bloque contenedor de los elementos absolutos del contenido (p. ej. los
+   * captions .sr-only de las tablas de KPI): sin esto se posicionan respecto
+   * al documento y estiran el scroll de la página por debajo del shell.
+   */
+  position: relative;
 }
 
 .backdrop {
@@ -26,7 +34,7 @@
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.45);
+    background: var(--color-overlay);
     border: none;
     z-index: 150;
     cursor: pointer;

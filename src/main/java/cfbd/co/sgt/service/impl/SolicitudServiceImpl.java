@@ -445,6 +445,7 @@ public class SolicitudServiceImpl implements SolicitudService {
         RequerimientoResponse response = new RequerimientoResponse();
         response.setId_requerimiento(requerimiento.getId_requerimiento());
         response.setId_usuario(requerimiento.getUsuario().getId_usuario());
+        response.setNombre_usuario(nombreCompleto(requerimiento.getUsuario()));
         response.setId_estado(requerimiento.getEstado().getId_estado());
         response.setId_especialidad(requerimiento.getEspecialidad().getId_especialidad());
         response.setId_solicitud(requerimiento.getSolicitud() != null ? requerimiento.getSolicitud().getId_solicitud() : null);

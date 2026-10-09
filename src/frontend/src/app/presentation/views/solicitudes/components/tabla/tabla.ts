@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { LucideArrowUpDown, LucideChevronLeft, LucideChevronRight, LucideSearch, LucideTrash } from '@lucide/angular';
+import { LucideArrowUpDown, LucideChevronLeft, LucideChevronRight, LucideSearch, LucideTrash } from '../../../../../shared/icons/lucide-icons';
 
 import { Badge } from '../../../../../shared/components/badge/badge';
 import { Button } from '../../../../../shared/components/button/button';

@@ -7,9 +7,74 @@
 /*
  * SGT — Design tokens (aprobados en la propuesta de Design System).
  * Ver artifact de referencia para el detalle de la decisión de cada valor.
+ *
+ * Temas: el oscuro es el predeterminado (`:root` sin atributo o
+ * `data-theme="dark"`); el claro se activa con `data-theme="light"` en <html>.
+ * ThemeService (core/services/theme.service.ts) gestiona el atributo y el
+ * script inline de index.html lo aplica antes del primer pintado.
+ * Los componentes solo consumen roles semánticos: nunca hex directos.
  */
+
+/* ── Tema oscuro (predeterminado) ─────────────────────────────────────── */
 :root {
-  /* Color — primitivos */
+  color-scheme: dark;
+
+  /* Color — roles base. --color-primary es la "tinta fuerte" (títulos). */
+  --color-primary: #f1f5f9;
+  --color-primary-foreground: #0b1220;
+  --color-accent: #38bdf8;
+  --color-accent-hover: #7dd3fc;
+  --color-accent-foreground: #062435;
+  --color-bg: #0b1220;
+  --color-card: #111a2b;
+  --color-border: #22304a;
+  --color-foreground: #e2e8f0;
+  --color-muted-foreground: #a3b1c6;
+  --color-subtle-foreground: #8391a7;
+
+  /* Color — semántico de estado (tintas claras sobre fondos profundos) */
+  --status-neutral-fg: #cbd5e1;
+  --status-neutral-bg: #1c2638;
+  --status-info-fg: #93c5fd;
+  --status-info-bg: #142a4d;
+  --status-success-fg: #86efac;
+  --status-success-bg: #0f2e22;
+  --status-warning-fg: #fcd34d;
+  --status-warning-bg: #33260d;
+  --status-danger-fg: #fca5a5;
+  --status-danger-bg: #3a1519;
+
+  /* Superficies sólidas con texto blanco (botón peligro, toasts) */
+  --color-on-solid: #ffffff;
+  --color-danger-solid: #dc2626;
+  --color-danger-solid-hover: #b91c1c;
+  --color-success-solid: #15803d;
+
+  /* Superficie invertida (toast informativo) y avatar */
+  --color-inverse-bg: #e2e8f0;
+  --color-inverse-fg: #0f172a;
+  --color-avatar-bg: #1e3a5f;
+  --color-avatar-fg: #e0f2fe;
+
+  /* Sidebar: la superficie más profunda, separada por un borde sutil */
+  --color-sidebar-bg: #070c17;
+  --color-sidebar-border: #1a2438;
+  --color-sidebar-fg: #b4c0d3;
+  --color-sidebar-fg-strong: #ffffff;
+  --color-sidebar-section: #76859c;
+  --color-sidebar-hover: rgba(255, 255, 255, 0.05);
+  --color-sidebar-active: rgba(56, 189, 248, 0.12);
+
+  /* Capas y sombras */
+  --color-overlay: rgba(2, 6, 15, 0.7);
+  --shadow-card-hover: 0 4px 14px rgba(0, 0, 0, 0.35);
+  --shadow-elevated: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+/* ── Tema claro ───────────────────────────────────────────────────────── */
+:root[data-theme='light'] {
+  color-scheme: light;
+
   --color-primary: #0f172a;
   --color-primary-foreground: #ffffff;
   --color-accent: #0369a1;
@@ -20,9 +85,8 @@
   --color-border: #e2e8f0;
   --color-foreground: #0f172a;
   --color-muted-foreground: #475569;
-  --color-subtle-foreground: #94a3b8;
+  --color-subtle-foreground: #64748b;
 
-  /* Color — semántico de estado */
   --status-neutral-fg: #475569;
   --status-neutral-bg: #f1f5f9;
   --status-info-fg: #1d4ed8;
@@ -34,6 +98,31 @@
   --status-danger-fg: #b91c1c;
   --status-danger-bg: #fee2e2;
 
+  --color-on-solid: #ffffff;
+  --color-danger-solid: #b91c1c;
+  --color-danger-solid-hover: #991b1b;
+  --color-success-solid: #15803d;
+
+  --color-inverse-bg: #0f172a;
+  --color-inverse-fg: #ffffff;
+  --color-avatar-bg: #0f172a;
+  --color-avatar-fg: #ffffff;
+
+  /* El sidebar se mantiene oscuro en tema claro (diseño original aprobado) */
+  --color-sidebar-bg: #0f172a;
+  --color-sidebar-border: transparent;
+  --color-sidebar-fg: #cbd5e1;
+  --color-sidebar-fg-strong: #ffffff;
+  --color-sidebar-section: #7d8ca3;
+  --color-sidebar-hover: rgba(255, 255, 255, 0.06);
+  --color-sidebar-active: rgba(255, 255, 255, 0.1);
+
+  --color-overlay: rgba(15, 23, 42, 0.45);
+  --shadow-card-hover: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-elevated: 0 12px 32px rgba(15, 23, 42, 0.18);
+}
+
+:root {
   /* Tipografía */
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -52,8 +141,7 @@
   --radius-md: 6px;
   --radius-lg: 10px;
 
-  /* Sombra — reservada a elementos flotantes (modal/dropdown) */
-  --shadow-elevated: 0 12px 32px rgba(15, 23, 42, 0.18);
+  /* Sombra — --shadow-elevated (modal/dropdown) se define por tema arriba */
 
   /* Layout */
   --header-height: 64px;
@@ -74,6 +162,45 @@ body {
   outline-offset: 2px;
 }
 
+/* Texto solo para lectores de pantalla (captions de tablas, etiquetas, etc.) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Superficies del navegador alineadas con el tema */
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  color: var(--color-primary);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/*
+ * Transición suave solo durante el cambio de tema (ThemeService añade la
+ * clase ~250 ms); así no se ralentizan los hover del resto de la app.
+ */
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease,
+    fill 220ms ease !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -81,5 +208,11 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* Excepción: el spinner es la única señal de "cargando"; gira más lento. */
+  .spinner {
+    animation-duration: 1.6s !important;
+    animation-iteration-count: infinite !important;
   }
 }

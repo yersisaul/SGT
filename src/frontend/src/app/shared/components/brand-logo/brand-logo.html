@@ -1,0 +1,20 @@
+<span class="logo-wrap" [class.logo-auto]="surface() === 'auto'">
+  <img
+    class="logo logo-on-dark"
+    [src]="onDarkSrc()"
+    [width]="size().w"
+    [height]="size().h"
+    alt="CFBD — Custom Field Business Development"
+    decoding="async"
+  />
+  @if (surface() === 'auto') {
+    <img
+      class="logo logo-on-light"
+      [src]="onLightSrc()"
+      [width]="size().w"
+      [height]="size().h"
+      alt="CFBD — Custom Field Business Development"
+      decoding="async"
+    />
+  }
+</span>

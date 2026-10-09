@@ -4,6 +4,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 
 import { AuthService } from '../../../../core/auth/auth.service';
+import { APP_VERSION } from '../../../../core/config/app-version';
+import { BrandLogo } from '../../../../shared/components/brand-logo/brand-logo';
 import { Button } from '../../../../shared/components/button/button';
 import { Card } from '../../../../shared/components/card/card';
 import { Input } from '../../../../shared/components/input/input';
@@ -20,7 +22,7 @@ interface LoginErrorBody {
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule, Button, Card, Input],
+  imports: [ReactiveFormsModule, BrandLogo, Button, Card, Input],
   templateUrl: './login.html',
   styleUrl: './login.css',
 })
@@ -29,6 +31,7 @@ export class Login {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
+  protected readonly version = APP_VERSION;
   protected readonly submitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
 

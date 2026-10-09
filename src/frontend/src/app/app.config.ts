@@ -7,12 +7,13 @@ import { provideClientHydration, withEventReplay } from '@angular/platform-brows
 import { API_BASE_URL } from './core/config/api-config';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
+import { environment } from '../environments/environment';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes), provideClientHydration(withEventReplay()),
     provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
-    { provide: API_BASE_URL, useValue: 'http://localhost:8080/api' },
+    { provide: API_BASE_URL, useValue: environment.apiBaseUrl },
   ]
 };

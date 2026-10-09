@@ -47,7 +47,12 @@
 
   <div class="requerimiento-form-actions">
     <app-button type="button" variant="secondary" (click)="cancel.emit()">Cancelar</app-button>
-    <app-button type="submit" variant="primary" [loading]="submitting()">
+    <app-button
+      type="submit"
+      variant="primary"
+      [disabled]="mode() === 'edit' && !hayCambios()"
+      [loading]="submitting()"
+    >
       {{ mode() === 'create' ? 'Crear requerimiento' : 'Guardar cambios' }}
     </app-button>
   </div>

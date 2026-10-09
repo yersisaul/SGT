@@ -9,13 +9,19 @@ import {
   LucideLayoutDashboard,
   LucideListChecks,
   LucideLogOut,
+  LucideMoon,
   LucideShieldCheck,
+  LucideSun,
   LucideUsers,
   LucideWrench,
-} from '@lucide/angular';
+} from '../../../shared/icons/lucide-icons';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { ModuloOperativo } from '../../../core/auth/permisos-base';
 import { NotificacionStreamService } from '../../../core/services/notificacion-stream.service';
+import { APP_VERSION } from '../../../core/config/app-version';
+import { ThemeService } from '../../../core/services/theme.service';
+import { BrandLogo } from '../../../shared/components/brand-logo/brand-logo';
 
 type NavIcon =
   | 'dashboard'
@@ -35,6 +41,8 @@ interface NavItem {
   icon: NavIcon;
   /** Permiso requerido para ver el ítem. Sin permiso definido = visible para cualquier usuario autenticado. */
   permission?: string;
+  /** Módulo operativo: visible si el usuario puede actuar sobre él (AuthService.puedeOperarModulo). */
+  modulo?: ModuloOperativo;
 }
 
 /**
@@ -44,19 +52,11 @@ interface NavItem {
  */
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', route: '/app/dashboard', icon: 'dashboard' },
-  {
-    label: 'Solicitudes',
-    route: '/app/solicitudes',
-    icon: 'solicitudes',
-    permission: 'solicitud.read',
-  },
-  {
-    label: 'Requerimientos',
-    route: '/app/requerimientos',
-    icon: 'requerimientos',
-    permission: 'requerimiento.read',
-  },
-  { label: 'Órdenes', route: '/app/ordenes', icon: 'ordenes', permission: 'orden.read' },
+  // Todos los roles tienen el .read de estos módulos (LECTURA_BASE): el menú
+  // aparece solo a quien puede crear, editar, eliminar u operar sobre ellos.
+  { label: 'Solicitudes', route: '/app/solicitudes', icon: 'solicitudes', modulo: 'solicitudes' },
+  { label: 'Requerimientos', route: '/app/requerimientos', icon: 'requerimientos', modulo: 'requerimientos' },
+  { label: 'Órdenes', route: '/app/ordenes', icon: 'ordenes', modulo: 'ordenes' },
 ];
 
 /**
@@ -97,6 +97,9 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
     LucideBoxes,
     LucideLayers,
     LucideListChecks,
+    LucideSun,
+    LucideMoon,
+    BrandLogo,
   ],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.css',
@@ -104,6 +107,7 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
 export class Sidebar {
   private readonly authService = inject(AuthService);
   private readonly stream = inject(NotificacionStreamService);
+  private readonly themeService = inject(ThemeService);
 
   /** OT en mi cola + asignadas sin confirmar (se actualiza por SSE, FR-028). */
   readonly pendientesOrdenes = this.stream.pendientes;
@@ -112,12 +116,24 @@ export class Sidebar {
   readonly navigate = output<void>();
 
   readonly navItems = computed(() =>
-    NAV_ITEMS.filter((item) => !item.permission || this.authService.hasPermission(item.permission)),
+    NAV_ITEMS.filter((item) =>
+      item.modulo
+        ? this.authService.puedeOperarModulo(item.modulo)
+        : !item.permission || this.authService.hasPermission(item.permission),
+    ),
   );
 
   readonly adminNavItems = computed(() =>
     ADMIN_NAV_ITEMS.filter((item) => !item.permission || this.authService.hasPermission(item.permission)),
   );
+
+  readonly version = APP_VERSION;
+
+  readonly isDark = computed(() => this.themeService.theme() === 'dark');
+
+  toggleTheme(): void {
+    this.themeService.toggle();
+  }
 
   logout(): void {
     this.authService.logout();

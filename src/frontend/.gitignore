@@ -42,3 +42,6 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Versión generada desde APP_VERSION (scripts/generate-version.mjs)
+/src/app/core/config/app-version.ts

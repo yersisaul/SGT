@@ -1,0 +1,28 @@
+:host {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.logo-wrap {
+  display: block;
+  width: 100%;
+}
+
+.logo {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* En modo 'auto' solo una de las dos versiones es visible según el tema. */
+.logo-on-light {
+  display: none;
+}
+
+:host-context(html[data-theme='light']) .logo-auto .logo-on-dark {
+  display: none;
+}
+
+:host-context(html[data-theme='light']) .logo-auto .logo-on-light {
+  display: block;
+}

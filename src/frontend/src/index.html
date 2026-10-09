@@ -1,12 +1,22 @@
 <!doctype html>
-<html lang="en">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <title>Inicio</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1220">
   <link rel="icon" type="image/x-icon" href="software.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Aplica el tema guardado antes del primer pintado (evita el destello). Oscuro por defecto. -->
+  <script>
+    try {
+      if (localStorage.getItem('sgt_theme') === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f8fafc');
+      }
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <app-root></app-root>

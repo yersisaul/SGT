@@ -3,19 +3,14 @@
     <div class="admin-title-group">
       <div>
         <h1 class="admin-title">Permisos</h1>
-        <p class="admin-subtitle">Catálogo de permisos (recurso.acción) que se asignan a los Roles</p>
+        <p class="admin-subtitle">
+          Catálogo de permisos (recurso.acción) del sistema. Se asignan a cada Rol desde la vista de Roles.
+        </p>
       </div>
       @if (!loading()) {
         <span class="admin-count">{{ filtrados().length }}</span>
       }
     </div>
-
-    @if (canCreate) {
-      <app-button variant="primary" (click)="openCreate()">
-        <svg lucidePlus [size]="16" aria-hidden="true"></svg>
-        Nuevo permiso
-      </app-button>
-    }
   </header>
 
   <div class="admin-toolbar">
@@ -54,28 +49,20 @@
               <th>Acción</th>
               <th>Código</th>
               <th>Descripción</th>
-              <th class="admin-tabla-col-acciones">Acciones</th>
             </tr>
           </thead>
           <tbody>
             @for (item of filtrados(); track item.id_permiso) {
-              <tr class="admin-tabla-row" (click)="openEdit(item)">
+              <tr>
                 <td>{{ recurso(item.codigo) }}</td>
                 <td>{{ accion(item.codigo) }}</td>
-                <td><span class="admin-permiso-codigo">{{ item.codigo }}</span></td>
-                <td class="admin-tabla-secundario">{{ item.descripcion || '—' }}</td>
-                <td class="admin-tabla-col-acciones">
-                  @if (canUpdate) {
-                    <button type="button" class="admin-icon-btn" aria-label="Editar permiso" (click)="$event.stopPropagation(); openEdit(item)">
-                      <svg lucidePencil [size]="14" aria-hidden="true"></svg>
-                    </button>
-                  }
-                  @if (canDelete) {
-                    <button type="button" class="admin-icon-btn" aria-label="Eliminar permiso" (click)="$event.stopPropagation(); requestDelete(item)">
-                      <svg lucideTrash [size]="14" aria-hidden="true"></svg>
-                    </button>
+                <td>
+                  <span class="admin-permiso-codigo">{{ item.codigo }}</span>
+                  @if (esLecturaBase(item.codigo)) {
+                    <app-badge variant="info">Todos los roles</app-badge>
                   }
                 </td>
+                <td class="admin-tabla-secundario">{{ item.descripcion || '—' }}</td>
               </tr>
             }
           </tbody>
@@ -84,36 +71,3 @@
     </div>
   }
 </div>
-
-<app-dialog
-  variant="modal"
-  [title]="dialogMode() === 'create' ? 'Crear permiso' : 'Editar permiso'"
-  [open]="dialogMode() !== null"
-  (closed)="closeDialog()"
->
-  @if (dialogMode(); as mode) {
-    <app-permiso-formulario
-      [mode]="mode"
-      [initial]="dialogTarget()"
-      [submitting]="formSubmitting()"
-      (submitForm)="handleFormSubmit($event)"
-      (cancel)="closeDialog()"
-    />
-  }
-</app-dialog>
-
-<app-dialog variant="modal" title="Eliminar permiso" [open]="confirmTarget() !== null" (closed)="cancelDelete()">
-  @if (confirmTarget(); as target) {
-    <p class="confirm-text">
-      ¿Seguro que deseas eliminar el permiso <strong>{{ target.codigo }}</strong>? Si algún Rol lo tiene asignado,
-      el sistema rechazará la eliminación.
-    </p>
-    @if (deleteError()) {
-      <div class="confirm-error" role="alert">{{ deleteError() }}</div>
-    }
-    <div class="confirm-actions">
-      <app-button variant="secondary" [disabled]="deleteSubmitting()" (click)="cancelDelete()">Cancelar</app-button>
-      <app-button variant="danger" [loading]="deleteSubmitting()" (click)="confirmDeleteAction()">Eliminar</app-button>
-    </div>
-  }
-</app-dialog>

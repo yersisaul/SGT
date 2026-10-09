@@ -44,6 +44,39 @@
   background: var(--color-bg);
 }
 
+/* Campana: enlace a Órdenes con el contador de pendientes */
+.bell {
+  position: relative;
+  text-decoration: none;
+}
+
+.bell-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  /* Anillo del color del header: separa el badge del icono en ambos temas */
+  box-shadow: 0 0 0 2px var(--color-card);
+  background: var(--color-danger-solid);
+  color: var(--color-on-solid);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  animation: bell-badge-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes bell-badge-in {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
 .header-divider {
   width: 1px;
   height: 24px;
@@ -60,8 +93,8 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--color-primary);
-  color: #ffffff;
+  background: var(--color-avatar-bg);
+  color: var(--color-avatar-fg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -84,6 +117,22 @@
 .user-role {
   font-size: 11px;
   color: var(--color-subtle-foreground);
+}
+
+.menu-toggle,
+.icon-btn {
+  min-width: 40px;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (pointer: coarse) {
+  .menu-toggle,
+  .icon-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
 
 @media (max-width: 1023px) {

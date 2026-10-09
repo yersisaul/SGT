@@ -7,6 +7,7 @@ import { Observable, tap } from 'rxjs';
 import { API_BASE_URL } from '../config/api-config';
 import { AuthResponse, LoginRequest, SessionUser } from '../models/auth.model';
 import { decodeJwt, isTokenExpired } from './jwt.util';
+import { ModuloOperativo, PERMISOS_DE_MODULO } from './permisos-base';
 
 const TOKEN_KEY = 'sgt_access_token';
 const USER_KEY = 'sgt_user';
@@ -42,6 +43,11 @@ export class AuthService {
 
   hasPermission(permission: string): boolean {
     return this.permisos().includes(permission);
+  }
+
+  /** Menú/acceso de un módulo operativo: requiere poder actuar sobre él (ver PERMISOS_DE_MODULO). */
+  puedeOperarModulo(modulo: ModuloOperativo): boolean {
+    return PERMISOS_DE_MODULO[modulo].some((permiso) => this.hasPermission(permiso));
   }
 
   private setSession(response: AuthResponse): void {

@@ -172,53 +172,55 @@
       </div>
     </section>
 
-    <section aria-labelledby="distribucion-heading">
-      <h2 id="distribucion-heading" class="section-title">Distribución y actividad</h2>
-      <div class="distribucion-grid">
-        @if (canViewSolicitudes && solicitudesPorPrioridad().length > 0) {
-          <app-card class="distribucion-card">
-            <h3 class="distribucion-title">
-              <svg lucideTrendingUp [size]="16" aria-hidden="true"></svg>
-              Solicitudes por prioridad
-            </h3>
-            @for (item of solicitudesPorPrioridad(); track item.prioridad) {
+    @if (tieneDistribucion()) {
+      <section aria-labelledby="distribucion-heading">
+        <h2 id="distribucion-heading" class="section-title">Distribución y actividad</h2>
+        <div class="distribucion-grid">
+          @if (canViewSolicitudes && solicitudesPorPrioridad().length > 0) {
+            <app-card class="distribucion-card">
+              <h3 class="distribucion-title">
+                <svg lucideTrendingUp [size]="16" aria-hidden="true"></svg>
+                Solicitudes por prioridad
+              </h3>
+              @for (item of solicitudesPorPrioridad(); track item.prioridad) {
+                <div class="distribucion-row">
+                  <app-badge [variant]="prioridadBadgeVariant(item.prioridad)">{{ item.prioridad }}</app-badge>
+                  <span>{{ item.cantidad }}</span>
+                </div>
+              }
+            </app-card>
+          }
+
+          @if (canViewOrdenes && ordenesTotal() > 0) {
+            <app-card class="distribucion-card">
+              <h3 class="distribucion-title">
+                <svg lucideTrendingUp [size]="16" aria-hidden="true"></svg>
+                Origen de las órdenes
+              </h3>
               <div class="distribucion-row">
-                <app-badge [variant]="prioridadBadgeVariant(item.prioridad)">{{ item.prioridad }}</app-badge>
-                <span>{{ item.cantidad }}</span>
+                <span>Desde Solicitud (bajo contrato)</span>
+                <span>{{ ordenesOrigenSolicitud() }}</span>
               </div>
-            }
-          </app-card>
-        }
+              <div class="distribucion-row">
+                <span>Desde Requerimiento (aprobado)</span>
+                <span>{{ ordenesOrigenRequerimiento() }}</span>
+              </div>
+            </app-card>
+          }
 
-        @if (canViewOrdenes && ordenesTotal() > 0) {
-          <app-card class="distribucion-card">
-            <h3 class="distribucion-title">
-              <svg lucideTrendingUp [size]="16" aria-hidden="true"></svg>
-              Origen de las órdenes
-            </h3>
-            <div class="distribucion-row">
-              <span>Desde Solicitud (bajo contrato)</span>
-              <span>{{ ordenesOrigenSolicitud() }}</span>
-            </div>
-            <div class="distribucion-row">
-              <span>Desde Requerimiento (aprobado)</span>
-              <span>{{ ordenesOrigenRequerimiento() }}</span>
-            </div>
-          </app-card>
-        }
-
-        @if (canViewOrdenes && tiempoPromedioCierreHoras() !== null) {
-          <app-card class="distribucion-card">
-            <h3 class="distribucion-title">
-              <svg lucideClock [size]="16" aria-hidden="true"></svg>
-              Tiempo promedio de cierre
-            </h3>
-            <p class="distribucion-destacado">{{ tiempoPromedioCierreHoras()! | number: '1.0-1' }} horas</p>
-            <p class="distribucion-nota">Calculado sobre las {{ kpiOrdenesFinalizadas() }} órdenes ya cerradas.</p>
-          </app-card>
-        }
-      </div>
-    </section>
+          @if (canViewOrdenes && tiempoPromedioCierreHoras() !== null) {
+            <app-card class="distribucion-card">
+              <h3 class="distribucion-title">
+                <svg lucideClock [size]="16" aria-hidden="true"></svg>
+                Tiempo promedio de cierre
+              </h3>
+              <p class="distribucion-destacado">{{ tiempoPromedioCierreHoras()! | number: '1.0-1' }} horas</p>
+              <p class="distribucion-nota">Calculado sobre las {{ kpiOrdenesFinalizadas() }} órdenes ya cerradas.</p>
+            </app-card>
+          }
+        </div>
+      </section>
+    }
 
     @if (actividadReciente().length > 0) {
       <section aria-labelledby="actividad-heading">
@@ -259,6 +261,7 @@
                 <svg lucideListChecks [size]="20" aria-hidden="true"></svg>
               }
               <div class="module-name">{{ atajo.label }}</div>
+              <svg lucideChevronRight [size]="18" class="module-chevron" aria-hidden="true"></svg>
             </app-card>
           </a>
         }

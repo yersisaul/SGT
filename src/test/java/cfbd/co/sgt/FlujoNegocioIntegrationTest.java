@@ -273,6 +273,9 @@ class FlujoNegocioIntegrationTest {
         // Solo se cierra lo confirmado ("En progreso").
         perform(post(ot + "/cerrar"), tokenOperaciones3, Map.of(), status().isConflict());
         perform(post(ot + "/verificar"), tokenOperaciones3, Map.of("corresponde", true), status().isOk());
+        // En progreso ya no se reasigna, ni siquiera el responsable.
+        perform(post(ot + "/reasignar"), tokenOperaciones3,
+                Map.of("id_especialidad_destino", idEspecialidadA.toString(), "motivo", "tarde"), status().isConflict());
 
         perform(post(ot + "/cerrar"), tokenDespachador, Map.of(), status().isForbidden());
         perform(post(ot + "/cerrar"), tokenOperaciones1, Map.of(), status().isNotFound());

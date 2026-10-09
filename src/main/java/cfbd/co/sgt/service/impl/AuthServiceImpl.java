@@ -1,6 +1,7 @@
 package cfbd.co.sgt.service.impl;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -13,6 +14,7 @@ import cfbd.co.sgt.dto.LoginResponse;
 import cfbd.co.sgt.model.Usuario;
 import cfbd.co.sgt.repository.UsuarioRepository;
 import cfbd.co.sgt.security.JwtService;
+import cfbd.co.sgt.security.Permisos;
 import cfbd.co.sgt.service.EmailNormalizador;
 import cfbd.co.sgt.service.AuthService;
 import lombok.RequiredArgsConstructor;
@@ -37,8 +39,10 @@ public class AuthServiceImpl implements AuthService {
             throw new BadCredentialsException("Credenciales inválidas");
         }
 
-        List<String> permisos = usuario.getRol().getRolPermisos().stream()
-                .map(rp -> rp.getPermiso().getCodigo())
+        List<String> permisos = Stream.concat(
+                        usuario.getRol().getRolPermisos().stream().map(rp -> rp.getPermiso().getCodigo()),
+                        Permisos.LECTURA_BASE.stream())
+                .distinct()
                 .toList();
 
         String accessToken = jwtService.generarToken(

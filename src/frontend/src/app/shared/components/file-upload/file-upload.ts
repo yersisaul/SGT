@@ -1,6 +1,6 @@
 import { Component, DestroyRef, computed, effect, forwardRef, inject, input, output, signal } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { LucideCircleAlert, LucidePaperclip, LucideUpload, LucideX } from '@lucide/angular';
+import { LucideCircleAlert, LucidePaperclip, LucideUpload, LucideX } from '../../icons/lucide-icons';
 
 import { ArchivoService } from '../../../core/services/archivo.service';
 import { Spinner } from '../spinner/spinner';

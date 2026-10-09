@@ -366,6 +366,8 @@ public class RequerimientoServiceImpl implements RequerimientoService {
         RequerimientoResponse response = new RequerimientoResponse();
         response.setId_requerimiento(requerimiento.getId_requerimiento());
         response.setId_usuario(requerimiento.getUsuario().getId_usuario());
+        response.setNombre_usuario((requerimiento.getUsuario().getNombres() + " "
+                + requerimiento.getUsuario().getApellidos()).trim());
         response.setId_estado(requerimiento.getEstado().getId_estado());
         response.setId_especialidad(requerimiento.getEspecialidad().getId_especialidad());
         response.setId_solicitud(requerimiento.getSolicitud() != null ? requerimiento.getSolicitud().getId_solicitud() : null);

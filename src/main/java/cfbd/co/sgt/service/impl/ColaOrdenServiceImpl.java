@@ -47,8 +47,10 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ColaOrdenServiceImpl implements ColaOrdenService {
 
+    // "En progreso" no: el ejecutor ya verificó que le corresponde y la está
+    // atendiendo (observación 2026-10-09).
     private static final Set<String> ESTADOS_REASIGNABLES = Set.of(
-            EstadosNegocio.PENDIENTE, EstadosNegocio.ASIGNADA, EstadosNegocio.DEVUELTA, EstadosNegocio.EN_PROGRESO);
+            EstadosNegocio.PENDIENTE, EstadosNegocio.ASIGNADA, EstadosNegocio.DEVUELTA);
 
     private final OrdenRepository ordenRepository;
     private final EspecialidadRepository especialidadRepository;

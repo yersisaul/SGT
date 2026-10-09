@@ -16,8 +16,10 @@ import { authGuard } from './core/guards/auth.guard';
 import { permissionGuard } from './core/guards/permission.guard';
 
 export const routes: Routes = [
-  { path: '', component: Home },
-  { path: 'login', component: Login },
+  // { path: '', component: Home },
+  { path: '', component: Login },
+  //{ path: 'login', component: Login },
+
   {
     path: 'app',
     component: AppShell,

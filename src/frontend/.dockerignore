@@ -1,0 +1,7 @@
+node_modules
+dist
+.angular
+.vscode
+*.log
+# Se regenera en el build a partir de APP_VERSION
+src/app/core/config/app-version.ts

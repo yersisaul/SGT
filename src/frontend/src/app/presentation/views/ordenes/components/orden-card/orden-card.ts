@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, input, output } from '@angular/core';
-import { LucidePaperclip, LucideTrash } from '@lucide/angular';
+import { LucidePaperclip, LucideTrash } from '../../../../../shared/icons/lucide-icons';
 
 import { Badge } from '../../../../../shared/components/badge/badge';
 import { estadoBadgeVariant } from '../../../../../shared/utils/estado-badge.util';

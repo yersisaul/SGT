@@ -27,7 +27,7 @@
             <div
               class="summary-bar-fill"
               [class]="'fill-' + badgeVariant(item.estado)"
-              [style.width.%]="percent(item.cantidad)"
+              [style.transform]="'scaleX(' + percent(item.cantidad) / 100 + ')'"
             ></div>
           </div>
           <span class="summary-row-count">{{ item.cantidad }}</span>

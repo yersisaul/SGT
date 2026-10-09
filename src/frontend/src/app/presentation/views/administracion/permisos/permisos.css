@@ -1,1 +1,5 @@
 @import '../administracion.css';
+
+.admin-permiso-codigo + app-badge {
+  margin-left: var(--space-2);
+}

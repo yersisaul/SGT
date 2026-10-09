@@ -55,7 +55,13 @@
     @if (mode() === 'create') {
       <app-button type="button" variant="secondary" (click)="cancel.emit()">Cancelar</app-button>
     }
-    <app-button type="submit" variant="primary" [fullWidth]="mode() === 'edit'" [loading]="submitting()">
+    <app-button
+      type="submit"
+      variant="primary"
+      [fullWidth]="mode() === 'edit'"
+      [disabled]="mode() === 'edit' && !hayCambios()"
+      [loading]="submitting()"
+    >
       {{ mode() === 'create' ? 'Crear solicitud' : 'Guardar cambios' }}
     </app-button>
   </div>

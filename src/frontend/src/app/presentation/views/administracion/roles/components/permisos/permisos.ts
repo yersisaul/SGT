@@ -1,5 +1,6 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 
+import { esLecturaBase } from '../../../../../../core/auth/permisos-base';
 import { PermisoResponse } from '../../../../../../core/models/permiso.model';
 import { RolPermisoResponse } from '../../../../../../core/models/rol-permiso.model';
 import { RolPermisoService } from '../../../../../../core/services/rol-permiso.service';
@@ -39,6 +40,9 @@ export class Permisos {
 
   protected readonly pendientes = signal<Set<string>>(new Set());
 
+  /** Lecturas base: marcadas y bloqueadas, las otorga el backend a todo rol. */
+  protected readonly esLecturaBase = esLecturaBase;
+
   protected readonly grupos = computed<PermisoGrupo[]>(() => {
     const porRecurso = new Map<string, PermisoResponse[]>();
     for (const permiso of this.catalogoPermisos()) {
@@ -65,7 +69,7 @@ export class Permisos {
   }
 
   protected toggle(permiso: PermisoResponse, checked: boolean): void {
-    if (!this.canManage() || this.estaPendiente(permiso.id_permiso)) return;
+    if (!this.canManage() || esLecturaBase(permiso.codigo) || this.estaPendiente(permiso.id_permiso)) return;
 
     this.setPendiente(permiso.id_permiso, true);
 

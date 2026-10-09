@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { LucideCircleAlert, LucideInbox, LucideLayoutGrid, LucideLock, LucideTable } from '@lucide/angular';
+import { LucideCircleAlert, LucideInbox, LucideLayoutGrid, LucideLock, LucideTable } from '../../../shared/icons/lucide-icons';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
@@ -214,7 +214,10 @@ export class Ordenes {
       lista.push(view);
       agrupado.set(view.raw.id_estado, lista);
     }
-    return [...this.estadosOrden()]
+    // "Devuelta" solo se ve en la tabla: es una excepción del flujo y una
+    // quinta columna no cabe en el tablero (observación 2026-10-09).
+    return this.estadosOrden()
+      .filter((estado) => !esEstadoDevuelta(estado.nombre))
       .sort((a, b) => estadoOrderRank(a.nombre) - estadoOrderRank(b.nombre))
       .map((estado) => ({
         estadoId: estado.id_estado,
@@ -251,7 +254,9 @@ export class Ordenes {
         soyResponsable &&
         (esEstadoPendiente(view.estadoNombre) || esEstadoDevuelta(view.estadoNombre)),
       verificar: this.canVerificar && soyEjecutor && esEstadoAsignada(view.estadoNombre),
-      reasignar: this.canReasignar && (soyResponsable || this.canVerTodo),
+      // En progreso ya no se reasigna: el ejecutor confirmó que le corresponde.
+      reasignar:
+        this.canReasignar && (soyResponsable || this.canVerTodo) && !esEstadoEnProgreso(view.estadoNombre),
       cerrar: this.canCerrar && soyEjecutor && esEstadoEnProgreso(view.estadoNombre),
       informe: this.canUpdate && soyEjecutor && esEstadoEnProgreso(view.estadoNombre),
     };

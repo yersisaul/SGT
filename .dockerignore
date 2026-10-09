@@ -1,0 +1,4 @@
+# Contexto del build del backend: solo pom.xml y src/main.
+*
+!pom.xml
+!src/main/

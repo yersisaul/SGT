@@ -1,7 +1,11 @@
 <aside class="sidebar" [class.sidebar-open]="open()">
   <div class="sidebar-brand">
-    <div class="sidebar-logo">S</div>
-    <span class="sidebar-title">SGT</span>
+    <app-brand-logo class="sidebar-logo" variant="mark" surface="dark" />
+    <span class="sidebar-brand-divider" aria-hidden="true"></span>
+    <div class="sidebar-product">
+      <span class="sidebar-title">SGT</span>
+      <span class="sidebar-subtitle">Gestión de tickets</span>
+    </div>
   </div>
 
   <nav class="sidebar-nav" aria-label="Navegación principal">
@@ -59,8 +63,24 @@
     }
   </nav>
 
-  <button type="button" class="nav-item logout-btn" (click)="logout()">
-    <svg lucideLogOut [size]="18" class="nav-icon" aria-hidden="true"></svg>
-    Cerrar sesión
-  </button>
+  <div class="sidebar-footer">
+    <button type="button" class="nav-item logout-btn" (click)="logout()">
+      <svg lucideLogOut [size]="18" class="nav-icon" aria-hidden="true"></svg>
+      Cerrar sesión
+    </button>
+    <button
+      type="button"
+      class="theme-toggle"
+      (click)="toggleTheme()"
+      [attr.aria-label]="isDark() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
+      [attr.title]="isDark() ? 'Tema claro' : 'Tema oscuro'"
+    >
+      @if (isDark()) {
+        <svg lucideSun [size]="18" aria-hidden="true"></svg>
+      } @else {
+        <svg lucideMoon [size]="18" aria-hidden="true"></svg>
+      }
+    </button>
+  </div>
+  <p class="sidebar-version">SGT v{{ version }}</p>
 </aside>

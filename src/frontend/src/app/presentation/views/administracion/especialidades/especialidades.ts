@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { LucideCircleAlert, LucidePencil, LucidePlus, LucideSearch, LucideTrash, LucideUsers } from '@lucide/angular';
+import { LucideCircleAlert, LucidePencil, LucidePlus, LucideSearch, LucideTrash, LucideUsers } from '../../../../shared/icons/lucide-icons';
 import { forkJoin } from 'rxjs';
 
 import { AuthService } from '../../../../core/auth/auth.service';

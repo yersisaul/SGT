@@ -1,0 +1,106 @@
+# SGT — nginx: estáticos de Angular + proxy inverso de la API.
+# ${NGINX_CLIENT_MAX_BODY_SIZE} lo sustituye envsubst al arrancar el contenedor.
+# $sgt_proxy_confiable y la IP real del cliente (set_real_ip_from) los define
+# conf.d/00-proxies-confiables.conf, que proxies-confiables.sh genera al
+# arrancar a partir de NGINX_TRUSTED_PROXIES.
+
+# Esquema y puerto públicos con los que llegó el navegador. Si la petición viene
+# de un proxy confiable (Traefik en Coolify, que termina TLS), se toman de sus
+# X-Forwarded-*; si no, de la propia conexión (HTTP_PORT, no el 8080 interno).
+# Sin ellos Spring reconstruye otro origen (http, host:80) y responde 403 CORS
+# cuando el Origin del navegador es https o lleva otro puerto.
+map "$sgt_proxy_confiable|$http_x_forwarded_proto" $sgt_forwarded_proto {
+    "~^1\|(?<sgt_proto_proxy>https?)$" $sgt_proto_proxy;
+    default                            $scheme;
+}
+
+map "$sgt_proxy_confiable|$http_x_forwarded_port|$sgt_forwarded_proto://$http_host" $sgt_forwarded_port {
+    "~^1\|(?<sgt_puerto_proxy>[0-9]+)\|" $sgt_puerto_proxy;
+    "~:(?<sgt_puerto_host>[0-9]+)$"      $sgt_puerto_host;
+    "~\|https://"                        443;
+    default                              80;
+}
+
+# "resolve" vuelve a consultar el DNS de Docker: si el backend se recrea con
+# otra IP (redespliegue en Coolify), nginx la sigue sin reiniciar el frontend.
+upstream sgt_backend {
+    zone sgt_backend 64k;
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    server backend:8080 resolve;
+    keepalive 16;
+}
+
+server {
+    listen 8080;
+    server_name _;
+    server_tokens off;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Adjuntos: un poco por encima de FILE_MAX_SIZE_MB para que el backend
+    # responda su propio error de validación en lugar de un 413 de nginx.
+    client_max_body_size ${NGINX_CLIENT_MAX_BODY_SIZE};
+
+    gzip on;
+    gzip_min_length 1024;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+
+    # Cabeceras de seguridad: solo en los estáticos (cada location las incluye);
+    # en /api ya las envía Spring Security y se duplicarían.
+
+    # Cabeceras comunes hacia el backend. X-Forwarded-For se SOBRESCRIBE con la
+    # IP real (no se concatena) para que un cliente no pueda falsearla: el
+    # backend la usa en el rate limiting (server.forward-headers-strategy=native).
+    # Detrás de un proxy confiable, $remote_addr ya es la IP del cliente que
+    # informó ese proxy (módulo realip), no la del proxy.
+    # Host conserva el puerto público ($http_host, no $host) y X-Forwarded-Port
+    # lo confirma: así el backend ve la petición como del mismo origen.
+    proxy_set_header Host              $http_host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $remote_addr;
+    proxy_set_header X-Forwarded-Proto $sgt_forwarded_proto;
+    proxy_set_header X-Forwarded-Port  $sgt_forwarded_port;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    # Backend caído o inalcanzable: fallar rápido (502) en vez de colgar 60 s.
+    proxy_connect_timeout 5s;
+
+    # Notificaciones en tiempo real (SSE): sin buffer y con timeout largo.
+    location = /api/notificaciones/stream {
+        proxy_pass http://sgt_backend;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 1h;
+        proxy_send_timeout 1h;
+    }
+
+    location /api/ {
+        proxy_pass http://sgt_backend;
+        proxy_read_timeout 120s;
+    }
+
+    # JS/CSS llevan hash en el nombre (outputHashing: all): caché permanente.
+    location ~* \.(?:js|css)$ {
+        try_files $uri =404;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        include /etc/nginx/snippets/security-headers.conf;
+    }
+
+    # Imágenes y fuentes sin hash (logos, favicon): caché corta.
+    location ~* \.(?:png|jpe?g|webp|svg|ico|woff2?)$ {
+        try_files $uri =404;
+        expires 7d;
+        include /etc/nginx/snippets/security-headers.conf;
+    }
+
+    # HTML siempre revalidado, para que un despliegue nuevo se vea al instante.
+    # "/" sirve el login prerenderizado (index.html); el resto de rutas de la
+    # SPA cae en index.csr.html (render en cliente).
+    location / {
+        try_files $uri $uri/ /index.csr.html;
+        add_header Cache-Control "no-cache";
+        include /etc/nginx/snippets/security-headers.conf;
+    }
+}

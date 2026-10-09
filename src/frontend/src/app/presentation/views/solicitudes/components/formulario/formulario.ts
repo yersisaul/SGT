@@ -1,4 +1,4 @@
-import { Component, OnInit, effect, input, output } from '@angular/core';
+import { Component, OnInit, effect, input, output, signal, untracked } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { ActivoCatalogo, EstadoCatalogo } from '../../../../../core/models/catalogo.model';
@@ -68,7 +68,20 @@ export class Formulario implements OnInit {
   protected eliminarImagenActual = false;
   protected urlAdjuntoActual: string | null = null;
 
+  /** En edición, "Guardar cambios" solo se habilita si algo difiere de lo guardado. */
+  protected readonly hayCambios = signal(false);
+  private valorGuardado = '';
+
   constructor() {
+    // Edición: el formulario sigue montado tras guardar (la ficha no se
+    // cierra), así que cada nuevo `initial` redefine la línea base.
+    effect(() => {
+      const solicitudInicial = this.initial();
+      if (this.mode() === 'edit' && solicitudInicial) {
+        untracked(() => this.cargarGuardado(solicitudInicial));
+      }
+    });
+
     // El formulario se proyecta dentro de app-dialog (que solo oculta su
     // contenido con @if interno), así que esta instancia se crea una única
     // vez al montar la vista, antes de que resuelva el forkJoin de catálogos
@@ -85,24 +98,40 @@ export class Formulario implements OnInit {
   }
 
   ngOnInit(): void {
-    const solicitudInicial = this.initial();
-    if (this.mode() === 'edit' && solicitudInicial) {
-      this.form.patchValue({
-        id_activo: solicitudInicial.id_activo,
-        id_especialidad: solicitudInicial.id_especialidad,
-        id_estado: solicitudInicial.id_estado,
-        prioridad: solicitudInicial.prioridad,
-        descripcion: solicitudInicial.descripcion,
-      });
-      this.urlAdjuntoActual = solicitudInicial.url_adjunto;
-    }
-
     this.form.controls.id_activo.valueChanges.subscribe((idActivo) => {
       const activoSeleccionado = this.activos().find((item) => item.id_activo === idActivo);
       if (activoSeleccionado) {
         this.form.controls.id_especialidad.setValue(activoSeleccionado.id_especialidad);
       }
     });
+    this.form.valueChanges.subscribe(() => this.actualizarCambios());
+    this.imagenControl.valueChanges.subscribe(() => this.actualizarCambios());
+  }
+
+  private cargarGuardado(solicitud: SolicitudResponse): void {
+    this.form.patchValue(
+      {
+        id_activo: solicitud.id_activo,
+        id_especialidad: solicitud.id_especialidad,
+        id_estado: solicitud.id_estado,
+        prioridad: solicitud.prioridad,
+        descripcion: solicitud.descripcion,
+      },
+      { emitEvent: false },
+    );
+    this.imagenControl.setValue(null, { emitEvent: false });
+    this.eliminarImagenActual = false;
+    this.urlAdjuntoActual = solicitud.url_adjunto;
+    this.valorGuardado = JSON.stringify(this.form.getRawValue());
+    this.hayCambios.set(false);
+  }
+
+  private actualizarCambios(): void {
+    this.hayCambios.set(
+      JSON.stringify(this.form.getRawValue()) !== this.valorGuardado ||
+        this.imagenControl.value !== null ||
+        this.eliminarImagenActual,
+    );
   }
 
   protected get activoOptions(): SelectOption[] {
@@ -122,6 +151,7 @@ export class Formulario implements OnInit {
 
   protected onEliminarImagenActual(): void {
     this.eliminarImagenActual = true;
+    this.actualizarCambios();
   }
 
   protected submit(): void {

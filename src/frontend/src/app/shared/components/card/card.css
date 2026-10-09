@@ -1,8 +1,11 @@
+/*
+ * La caja vive en el propio host (sin div interno): así las clases de layout
+ * que cada vista pone en <app-card> (flex, gap, grid…) actúan directamente
+ * sobre el contenido proyectado.
+ */
 :host {
   display: block;
-}
-
-.card {
+  min-width: 0;
   background: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);

@@ -18,31 +18,44 @@
   box-shadow: var(--shadow-elevated);
   font-size: 14px;
   font-weight: 500;
-  background: var(--color-primary);
-  color: #ffffff;
+  background: var(--color-inverse-bg);
+  color: var(--color-inverse-fg);
 }
 
 .toast-success {
-  background: var(--status-success-fg);
+  background: var(--color-success-solid);
+  color: var(--color-on-solid);
 }
 
 .toast-error {
-  background: var(--status-danger-fg);
+  background: var(--color-danger-solid);
+  color: var(--color-on-solid);
 }
 
 .toast-info {
-  background: var(--color-primary);
+  background: var(--color-inverse-bg);
 }
 
 .toast-close {
   margin-left: auto;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
+  border-radius: var(--radius-sm);
   color: inherit;
-  font-size: 18px;
-  line-height: 1;
   cursor: pointer;
-  padding: 0 var(--space-1);
+  opacity: 0.8;
+  transition: opacity 150ms ease, background-color 150ms ease;
+}
+
+.toast-close:hover {
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 14%, transparent);
 }
 
 @media (max-width: 640px) {

@@ -6,17 +6,20 @@
       <div class="admin-permisos-grupo-titulo">{{ grupo.recurso }}</div>
       <div class="admin-permisos-lista">
         @for (permiso of grupo.items; track permiso.id_permiso) {
+          @let base = esLecturaBase(permiso.codigo);
           <div class="admin-permiso-item">
             <input
               type="checkbox"
               [id]="'permiso-' + permiso.id_permiso"
-              [checked]="estaAsignado(permiso.id_permiso)"
-              [disabled]="!canManage() || estaPendiente(permiso.id_permiso)"
+              [checked]="base || estaAsignado(permiso.id_permiso)"
+              [disabled]="base || !canManage() || estaPendiente(permiso.id_permiso)"
               (change)="toggle(permiso, $any($event.target).checked)"
             />
             <label [for]="'permiso-' + permiso.id_permiso">
               <span class="admin-permiso-codigo">{{ permiso.codigo }}</span>
-              @if (permiso.descripcion) {
+              @if (base) {
+                <span class="admin-tabla-secundario"> — incluido por defecto en todos los roles</span>
+              } @else if (permiso.descripcion) {
                 <span class="admin-tabla-secundario"> — {{ permiso.descripcion }}</span>
               }
             </label>

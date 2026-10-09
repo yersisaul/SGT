@@ -9,10 +9,20 @@
   </button>
 
   <div class="header-actions">
-    <button type="button" class="icon-btn" aria-label="Notificaciones">
-      <svg lucideBell [size]="20" aria-hidden="true"></svg>
-    </button>
-    <div class="header-divider"></div>
+    @if (puedeVerOrdenes()) {
+      <a
+        routerLink="/app/ordenes"
+        class="icon-btn bell"
+        [attr.aria-label]="bellLabel()"
+        [attr.title]="bellLabel()"
+      >
+        <svg lucideBell [size]="20" aria-hidden="true"></svg>
+        @if (pendientes() > 0) {
+          <span class="bell-badge" aria-hidden="true">{{ pendientes() > 99 ? '99+' : pendientes() }}</span>
+        }
+      </a>
+      <div class="header-divider"></div>
+    }
     @if (user(); as currentUser) {
       <div class="user-info">
         <div class="user-avatar" aria-hidden="true">{{ initials() }}</div>

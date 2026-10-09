@@ -5,6 +5,8 @@
 export interface RequerimientoResponse {
   id_requerimiento: string;
   id_usuario: string;
+  /** Creador ya resuelto por el backend (no requiere usuario.read). */
+  nombre_usuario: string;
   id_estado: string;
   id_especialidad: string;
   /** Solicitud de origen (Requerimiento.solicitud), si se generó desde una

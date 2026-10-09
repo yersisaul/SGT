@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import {
   LucideActivity,
   LucideBoxes,
+  LucideChevronRight,
   LucideClipboardList,
   LucideClock,
   LucideKeyRound,
@@ -12,7 +13,7 @@ import {
   LucideShieldCheck,
   LucideTrendingUp,
   LucideUsers,
-} from '@lucide/angular';
+} from '../../../shared/icons/lucide-icons';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { NotificacionStreamService } from '../../../core/services/notificacion-stream.service';
@@ -105,6 +106,7 @@ function contarPorEstado(nombres: string[]): EstadoCantidad[] {
     LucideClock,
     LucideTrendingUp,
     LucideActivity,
+    LucideChevronRight,
   ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
@@ -120,9 +122,11 @@ export class Dashboard {
 
   readonly user = this.authService.user;
 
-  protected readonly canViewSolicitudes = this.authService.hasPermission('solicitud.read');
-  protected readonly canViewRequerimientos = this.authService.hasPermission('requerimiento.read');
-  protected readonly canViewOrdenes = this.authService.hasPermission('orden.read');
+  // Mismo criterio que el menú: todos tienen el .read (LECTURA_BASE), así que
+  // el bloque de cada módulo se muestra a quien puede operar sobre él.
+  protected readonly canViewSolicitudes = this.authService.puedeOperarModulo('solicitudes');
+  protected readonly canViewRequerimientos = this.authService.puedeOperarModulo('requerimientos');
+  protected readonly canViewOrdenes = this.authService.puedeOperarModulo('ordenes');
   /** Perfil ejecutor: ve su cola y sus OT asignadas (PRD FR-034). */
   protected readonly esEjecutor = this.authService.hasPermission('orden.tomar');
   protected readonly canViewKpis = this.authService.hasPermission('kpi.read');
@@ -262,6 +266,13 @@ export class Dashboard {
     }, 0);
     return totalHoras / cerradas.length;
   });
+
+  /** Evita mostrar el título "Distribución y actividad" sobre una sección vacía. */
+  protected readonly tieneDistribucion = computed(
+    () =>
+      (this.canViewSolicitudes && this.solicitudesPorPrioridad().length > 0) ||
+      (this.canViewOrdenes && (this.ordenesTotal() > 0 || this.tiempoPromedioCierreHoras() !== null)),
+  );
 
   protected readonly actividadReciente = computed<ActividadItem[]>(() => {
     const items: ActividadItem[] = [

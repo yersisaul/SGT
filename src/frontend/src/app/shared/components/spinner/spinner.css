@@ -14,9 +14,10 @@
   border-width: 2px;
 }
 
+/* Sobre superficies sólidas (botón primario/peligro): hereda el color del texto. */
 .spinner-inverted {
-  border-color: rgba(255, 255, 255, 0.35);
-  border-top-color: #ffffff;
+  border-color: color-mix(in srgb, currentColor 35%, transparent);
+  border-top-color: currentColor;
 }
 
 @keyframes spin {

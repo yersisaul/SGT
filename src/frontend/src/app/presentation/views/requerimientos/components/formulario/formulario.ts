@@ -1,4 +1,4 @@
-import { Component, OnInit, effect, input, output } from '@angular/core';
+import { Component, OnInit, effect, input, output, signal, untracked } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { EspecialidadCatalogo, EstadoCatalogo } from '../../../../../core/models/catalogo.model';
@@ -56,7 +56,20 @@ export class Formulario implements OnInit {
   protected eliminarImagenActual = false;
   protected urlAdjuntoActual: string | null = null;
 
+  /** En edición, "Guardar cambios" solo se habilita si algo difiere de lo guardado. */
+  protected readonly hayCambios = signal(false);
+  private valorGuardado = '';
+
   constructor() {
+    // Edición: el formulario sigue montado tras guardar (la ficha no se
+    // cierra), así que cada nuevo `initial` redefine la línea base.
+    effect(() => {
+      const requerimientoInicial = this.initial();
+      if (this.mode() === 'edit' && requerimientoInicial) {
+        untracked(() => this.cargarGuardado(requerimientoInicial));
+      }
+    });
+
     // El formulario se proyecta dentro de app-dialog (que solo oculta su
     // contenido con @if interno), así que esta instancia se crea una única
     // vez al montar la vista, antes de que resuelva el forkJoin de catálogos
@@ -77,15 +90,32 @@ export class Formulario implements OnInit {
   }
 
   ngOnInit(): void {
-    const requerimientoInicial = this.initial();
-    if (this.mode() === 'edit' && requerimientoInicial) {
-      this.form.patchValue({
-        id_especialidad: requerimientoInicial.id_especialidad,
-        id_estado: requerimientoInicial.id_estado,
-        descripcion: requerimientoInicial.descripcion,
-      });
-      this.urlAdjuntoActual = requerimientoInicial.url_adjunto;
-    }
+    this.form.valueChanges.subscribe(() => this.actualizarCambios());
+    this.imagenControl.valueChanges.subscribe(() => this.actualizarCambios());
+  }
+
+  private cargarGuardado(requerimiento: RequerimientoResponse): void {
+    this.form.patchValue(
+      {
+        id_especialidad: requerimiento.id_especialidad,
+        id_estado: requerimiento.id_estado,
+        descripcion: requerimiento.descripcion,
+      },
+      { emitEvent: false },
+    );
+    this.imagenControl.setValue(null, { emitEvent: false });
+    this.eliminarImagenActual = false;
+    this.urlAdjuntoActual = requerimiento.url_adjunto;
+    this.valorGuardado = JSON.stringify(this.form.getRawValue());
+    this.hayCambios.set(false);
+  }
+
+  private actualizarCambios(): void {
+    this.hayCambios.set(
+      JSON.stringify(this.form.getRawValue()) !== this.valorGuardado ||
+        this.imagenControl.value !== null ||
+        this.eliminarImagenActual,
+    );
   }
 
   protected get especialidadOptions(): SelectOption[] {
@@ -106,6 +136,7 @@ export class Formulario implements OnInit {
 
   protected onEliminarImagenActual(): void {
     this.eliminarImagenActual = true;
+    this.actualizarCambios();
   }
 
   protected submit(): void {

@@ -1,7 +1,7 @@
 <div class="login-page">
   <app-card class="login-card">
     <div class="login-header">
-      <div class="login-logo" aria-hidden="true">S</div>
+      <app-brand-logo class="login-logo" variant="full" />
       <h1 class="login-title">Ingresar a SGT</h1>
       <p class="login-subtitle">Sistema de Gestión de Tickets</p>
     </div>
@@ -41,4 +41,5 @@
       </app-button>
     </form>
   </app-card>
+  <p class="login-version">SGT v{{ version }}</p>
 </div>
