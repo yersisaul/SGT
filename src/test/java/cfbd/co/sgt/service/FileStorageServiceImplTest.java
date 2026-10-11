@@ -35,7 +35,7 @@ class FileStorageServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new FileStorageServiceImpl(tempDir.toString(), 1, 1);
+        service = new FileStorageServiceImpl(tempDir.toString(), 1, 1, 2);
     }
 
     private MultipartFile imagenValida() {
@@ -89,6 +89,39 @@ class FileStorageServiceImplTest {
         MultipartFile grande = new MockMultipartFile("file", "grande.png", "image/png", doceMb);
         assertThatThrownBy(() -> service.store(grande, TipoRecursoArchivo.ACTIVOS, UUID.randomUUID()))
                 .isInstanceOf(FileStorageException.class);
+    }
+
+    @Test
+    void losPdfDelSitioWebUsanSuPropioLimiteDeTamano() {
+        // 1,5 MB: supera el límite de adjuntos (1 MB) pero no el de documentos web (2 MB).
+        byte[] unoYMedioMb = new byte[1536 * 1024];
+        UUID id = UUID.randomUUID();
+        MultipartFile brochure = new MockMultipartFile("file", "brochure.pdf", "application/pdf", unoYMedioMb);
+        String referencia = service.store(brochure, TipoRecursoArchivo.WEB_DOCUMENTOS, id);
+        assertThat(referencia).startsWith("web/documentos/" + id + "/").endsWith(".pdf");
+
+        MultipartFile adjunto = new MockMultipartFile("file", "informe.pdf", "application/pdf", unoYMedioMb);
+        assertThatThrownBy(() -> service.store(adjunto, TipoRecursoArchivo.SOLICITUDES, UUID.randomUUID()))
+                .isInstanceOf(FileStorageException.class);
+
+        MultipartFile tresMb = new MockMultipartFile("file", "enorme.pdf", "application/pdf", new byte[3 * 1024 * 1024]);
+        assertThatThrownBy(() -> service.store(tresMb, TipoRecursoArchivo.WEB_DOCUMENTOS, UUID.randomUUID()))
+                .isInstanceOf(FileStorageException.class);
+    }
+
+    @Test
+    void losDocumentosWebSoloAceptanPdfYLasImagenesWebNoAceptanSvg() {
+        assertThatThrownBy(() -> service.store(imagenValida(), TipoRecursoArchivo.WEB_DOCUMENTOS, UUID.randomUUID()))
+                .isInstanceOf(FileStorageException.class);
+
+        MultipartFile svg = new MockMultipartFile("file", "logo.svg", "image/svg+xml",
+                "<svg><script>alert(1)</script></svg>".getBytes(StandardCharsets.UTF_8));
+        assertThatThrownBy(() -> service.store(svg, TipoRecursoArchivo.WEB_PARTNERS, UUID.randomUUID()))
+                .isInstanceOf(FileStorageException.class);
+
+        UUID id = UUID.randomUUID();
+        assertThat(service.store(imagenValida(), TipoRecursoArchivo.WEB_PRODUCTOS, id))
+                .startsWith("web/productos/" + id + "/");
     }
 
     @Test

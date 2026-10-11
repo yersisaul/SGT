@@ -46,6 +46,13 @@ public class Usuario {
     @Column(name = "url_img")
     private String url_img;
 
+    // false = cliente registrado desde el sitio web, pendiente de que un
+    // administrador verifique su compra. El DEFAULT TRUE en la columna deja
+    // habilitados a los usuarios que ya existían al agregarla.
+    @Column(name = "habilitado", nullable = false, columnDefinition = "BOOLEAN NOT NULL DEFAULT TRUE")
+    @Builder.Default
+    private boolean habilitado = true;
+
     // Relación con la entidad Aprobacion (un usuario puede tener muchas aprobaciones)
     @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY)
     @Builder.Default

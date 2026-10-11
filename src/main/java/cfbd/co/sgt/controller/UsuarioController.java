@@ -6,15 +6,18 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RestController;
 import lombok.RequiredArgsConstructor;
 import cfbd.co.sgt.dto.response.UsuarioResponse;
+import cfbd.co.sgt.dto.request.HabilitacionUsuarioRequest;
 import cfbd.co.sgt.dto.request.UsuarioRequest;
 import cfbd.co.sgt.service.UsuarioService;
 import jakarta.validation.Valid;
@@ -25,9 +28,14 @@ import jakarta.validation.Valid;
 public class UsuarioController {
     private final UsuarioService usuarioService;
 
+    // ?habilitado=false lista los clientes registrados desde el sitio web
+    // que esperan habilitación; sin parámetro, todos.
     @PreAuthorize("hasAuthority('usuario.read')")
     @GetMapping
-    public List<UsuarioResponse> getAllUsers() {
+    public List<UsuarioResponse> getAllUsers(@RequestParam(required = false) Boolean habilitado) {
+        if (habilitado != null) {
+            return usuarioService.listarUsuariosPorHabilitado(habilitado);
+        }
         List<UsuarioResponse> usuarios = usuarioService.listarUsuarios();
         return usuarios;
     }
@@ -56,6 +64,13 @@ public class UsuarioController {
     @PutMapping("/{id}")
     public ResponseEntity<UsuarioResponse> updateUser(@Valid @RequestBody UsuarioRequest usuarioDTO, @PathVariable UUID id) {
         return ResponseEntity.status(HttpStatus.OK).body(usuarioService.editarUsuario(usuarioDTO, id));
+    }
+
+    @PreAuthorize("hasAuthority('usuario.update')")
+    @PatchMapping("/{id}/habilitacion")
+    public ResponseEntity<UsuarioResponse> cambiarHabilitacion(@PathVariable UUID id,
+            @Valid @RequestBody HabilitacionUsuarioRequest request) {
+        return ResponseEntity.ok(usuarioService.cambiarHabilitacion(id, request.getHabilitado()));
     }
 
     @PreAuthorize("hasAuthority('usuario.delete')")

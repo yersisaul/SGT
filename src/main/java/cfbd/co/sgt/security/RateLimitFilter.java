@@ -18,12 +18,16 @@ import jakarta.servlet.http.HttpServletResponse;
  * Rate limiting centralizado por ventana fija (1 minuto) en memoria, por
  * IP de cliente. No requiere dependencias externas ni caché distribuido;
  * suficiente para una instancia única. Límite configurable vía
- * RATE_LIMIT_REQUESTS_PER_MINUTE / AUTH_RATE_LIMIT_PER_MINUTE.
+ * RATE_LIMIT_REQUESTS_PER_MINUTE / AUTH_RATE_LIMIT_PER_MINUTE /
+ * PUBLIC_RATE_LIMIT_PER_MINUTE. Cada grupo (auth, sitio web público y resto
+ * de la API) tiene su propio contador, así el tráfico del sitio web no
+ * consume el cupo de quien usa el SGT desde la misma IP.
  */
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final String PREFIJO_AUTH = "/api/auth/";
+    private static final String PREFIJO_PUBLICO = "/api/public/";
 
     private record Ventana(long minuto, AtomicInteger contador) {
     }
@@ -31,21 +35,35 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final ConcurrentHashMap<String, Ventana> ventanas = new ConcurrentHashMap<>();
     private final int limiteGeneralPorMinuto;
     private final int limiteAuthPorMinuto;
+    private final int limitePublicoPorMinuto;
 
     public RateLimitFilter(
             @Value("${app.rate-limit.requests-per-minute:60}") int limiteGeneralPorMinuto,
-            @Value("${app.rate-limit.auth-requests-per-minute:10}") int limiteAuthPorMinuto) {
+            @Value("${app.rate-limit.auth-requests-per-minute:10}") int limiteAuthPorMinuto,
+            @Value("${app.rate-limit.public-requests-per-minute:120}") int limitePublicoPorMinuto) {
         this.limiteGeneralPorMinuto = limiteGeneralPorMinuto;
         this.limiteAuthPorMinuto = limiteAuthPorMinuto;
+        this.limitePublicoPorMinuto = limitePublicoPorMinuto;
     }
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                      @NonNull HttpServletResponse response,
                                      @NonNull FilterChain filterChain) throws ServletException, IOException {
-        boolean esAuth = request.getRequestURI().startsWith(PREFIJO_AUTH);
-        int limite = esAuth ? limiteAuthPorMinuto : limiteGeneralPorMinuto;
-        String clave = (esAuth ? "auth:" : "api:") + request.getRemoteAddr();
+        String uri = request.getRequestURI();
+        String grupo;
+        int limite;
+        if (uri.startsWith(PREFIJO_AUTH)) {
+            grupo = "auth:";
+            limite = limiteAuthPorMinuto;
+        } else if (uri.startsWith(PREFIJO_PUBLICO)) {
+            grupo = "public:";
+            limite = limitePublicoPorMinuto;
+        } else {
+            grupo = "api:";
+            limite = limiteGeneralPorMinuto;
+        }
+        String clave = grupo + request.getRemoteAddr();
 
         long minutoActual = System.currentTimeMillis() / 60_000;
         Ventana ventana = ventanas.compute(clave, (k, actual) ->

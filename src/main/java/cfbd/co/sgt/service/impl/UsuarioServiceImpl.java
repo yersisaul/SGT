@@ -2,8 +2,10 @@ package cfbd.co.sgt.service.impl;
 
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
 import lombok.RequiredArgsConstructor;
 import cfbd.co.sgt.service.EmailNormalizador;
@@ -18,6 +20,7 @@ import cfbd.co.sgt.model.Rol;
 import cfbd.co.sgt.dto.request.UsuarioRequest;
 import cfbd.co.sgt.dto.response.UsuarioResponse;
 import cfbd.co.sgt.mapper.UsuarioMapper;
+import cfbd.co.sgt.security.UsuarioActualProvider;
 import cfbd.co.sgt.exception.ResourceNotFoundException;
 import cfbd.co.sgt.exception.DuplicateResourceException;
 
@@ -29,6 +32,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     private final PasswordEncoder passwordEncoder;
     private final UsuarioMapper usuarioMapper;
     private final FileStorageService fileStorageService;
+    private final UsuarioActualProvider usuarioActualProvider;
 
     @Override
     @Transactional    
@@ -80,6 +84,27 @@ public class UsuarioServiceImpl implements UsuarioService {
         return usuarios.stream()
                 .map(usuarioMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UsuarioResponse> listarUsuariosPorHabilitado(boolean habilitado) {
+        return usuarioRepository.findByHabilitadoOrderByNombresAscApellidosAsc(habilitado).stream()
+                .map(usuarioMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public UsuarioResponse cambiarHabilitacion(UUID id, boolean habilitado) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        // Evita que un administrador se deje a sí mismo sin acceso.
+        if (!habilitado && usuario.getId_usuario().equals(usuarioActualProvider.obtener().getId_usuario())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No puedes deshabilitar tu propia cuenta.");
+        }
+        usuario.setHabilitado(habilitado);
+        return usuarioMapper.toResponse(usuarioRepository.save(usuario));
     }
 
     @Override

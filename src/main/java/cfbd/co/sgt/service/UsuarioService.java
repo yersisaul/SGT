@@ -10,6 +10,10 @@ public interface UsuarioService {
     UsuarioResponse crearUsuario(UsuarioRequest usuario);
     UsuarioResponse editarUsuario(UsuarioRequest usuario, UUID id);
     List<UsuarioResponse> listarUsuarios();
+    /** Filtra por estado de habilitación (false = registros web pendientes). */
+    List<UsuarioResponse> listarUsuariosPorHabilitado(boolean habilitado);
+    /** Habilita o deshabilita la cuenta; nadie puede deshabilitarse a sí mismo. */
+    UsuarioResponse cambiarHabilitacion(UUID id, boolean habilitado);
     /** Usuarios cuyo rol tiene el permiso indicado (p. ej. orden.tomar = pueden integrar un equipo). */
     List<UsuarioResponse> listarUsuariosConPermiso(String codigoPermiso);
     UsuarioResponse buscarUsuarioPorId(UUID id);

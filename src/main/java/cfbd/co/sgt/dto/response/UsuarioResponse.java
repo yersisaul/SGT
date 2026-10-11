@@ -13,5 +13,6 @@ public class UsuarioResponse {
     private String apellidos;
     private String url_img;
     private UUID id_rol;
-    private String nombre_rol;    
+    private String nombre_rol;
+    private boolean habilitado;
 }

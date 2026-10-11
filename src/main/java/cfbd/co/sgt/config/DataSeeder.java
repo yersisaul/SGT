@@ -46,7 +46,11 @@ public class DataSeeder implements ApplicationRunner {
 
     private static final List<String> RECURSOS_CON_CRUD = List.of(
             "usuario", "rol", "solicitud", "requerimiento", "orden",
-            "activo", "especialidad", "estado", "permiso");
+            "activo", "especialidad", "estado", "permiso",
+            // CMS del sitio web público (aprobado 2026-10-10), agrupado por área:
+            // catálogo = producto/servicio; comercial = partner, cliente de
+            // referencia y caso de éxito; novedad = novedad y su categoría.
+            "web_catalogo", "web_comercial", "web_novedad", "web_documento");
     private static final List<String> ACCIONES_CRUD = List.of("read", "create", "update", "delete");
 
     // Recursos que solo exponen un subconjunto de acciones (ver decisión de alcance del CRUD: auditoría/eventos de negocio no se editan ni se borran,
@@ -86,7 +90,9 @@ public class DataSeeder implements ApplicationRunner {
             "especialidad.gestionar_equipo",
             // KPIs (PRD E6).
             "kpi.read",
-            "kpi.export");
+            "kpi.export",
+            // Publicar/archivar una novedad del sitio web (no basta web_novedad.update).
+            "web_novedad.publish");
 
     private final RolService rolService;
     private final PermisoService permisoService;
@@ -212,7 +218,12 @@ public class DataSeeder implements ApplicationRunner {
                         "aprobacion.read",
                         "historial_orden.read", "historial_requerimiento.read", "historial_solicitud.read",
                         "solicitud.read_all", "requerimiento.read_all", "orden.read_all",
-                        "especialidad.gestionar_equipo", "kpi.read", "kpi.export"),
+                        "especialidad.gestionar_equipo", "kpi.read", "kpi.export",
+                        "web_catalogo.read", "web_catalogo.create", "web_catalogo.update", "web_catalogo.delete",
+                        "web_comercial.read", "web_comercial.create", "web_comercial.update", "web_comercial.delete",
+                        "web_novedad.read", "web_novedad.create", "web_novedad.update", "web_novedad.delete",
+                        "web_novedad.publish",
+                        "web_documento.read", "web_documento.create", "web_documento.update", "web_documento.delete"),
                 // CRUD de Solicitud y Requerimiento para todo Operaciones
                 // (observación 2026-10-05); el borrado queda acotado a lo que
                 // el actor puede ver y a registros sin flujo iniciado.

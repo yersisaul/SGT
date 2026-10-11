@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -30,7 +31,8 @@ import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Seguridad stateless basada en JWT. Todo endpoint requiere autenticación
- * salvo /api/auth/login. La autorización fina por permiso se aplica con
+ * salvo /api/auth/login, POST /api/auth/registro-cliente y GET
+ * /api/public/web/** (sitio web público). La autorización fina por permiso se aplica con
  * @PreAuthorize en cada Controller (ver UsuarioController).
  */
 @Configuration
@@ -66,6 +68,11 @@ public class SecurityConfig {
                     // El re-despacho ASYNC del stream SSE ya fue autorizado en la petición original.
                     .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                     .requestMatchers("/api/auth/login").permitAll()
+                    // Auto-registro de clientes desde el sitio web (cuenta deshabilitada).
+                    .requestMatchers(HttpMethod.POST, "/api/auth/registro-cliente").permitAll()
+                    // Sitio web público: solo lectura y solo contenido publicado
+                    // (cada service filtra por publicado). Cualquier otro método → 401.
+                    .requestMatchers(HttpMethod.GET, "/api/public/web/**").permitAll()
                     // Documentación de la API (springdoc/swagger-ui), no datos de negocio.
                     .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                     .anyRequest().authenticated())
@@ -82,7 +89,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(corsAllowedOrigins);
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        // PATCH: publicar/despublicar contenido web, estado de novedades y habilitación de usuarios.
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(false);
 

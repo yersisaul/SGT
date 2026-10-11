@@ -28,11 +28,13 @@ public class FileStorageServiceImpl implements FileStorageService {
     private final Path root;
     private final long imageMaxSizeBytes;
     private final long documentMaxSizeBytes;
+    private final long webDocumentMaxSizeBytes;
 
     public FileStorageServiceImpl(
             @Value("${app.storage.root:./uploads}") String storageRoot,
             @Value("${app.storage.image-max-size-mb:5}") long imageMaxSizeMb,
-            @Value("${app.storage.document-max-size-mb:10}") long documentMaxSizeMb) {
+            @Value("${app.storage.document-max-size-mb:10}") long documentMaxSizeMb,
+            @Value("${app.storage.web-document-max-size-mb:20}") long webDocumentMaxSizeMb) {
         this.root = Paths.get(storageRoot).toAbsolutePath().normalize();
         try {
             Files.createDirectories(this.root);
@@ -41,6 +43,7 @@ public class FileStorageServiceImpl implements FileStorageService {
         }
         this.imageMaxSizeBytes = imageMaxSizeMb * 1024 * 1024;
         this.documentMaxSizeBytes = documentMaxSizeMb * 1024 * 1024;
+        this.webDocumentMaxSizeBytes = webDocumentMaxSizeMb * 1024 * 1024;
     }
 
     @Override
@@ -137,9 +140,11 @@ public class FileStorageServiceImpl implements FileStorageService {
             throw new FileStorageException("Tipo de archivo no permitido: " + contentType);
         }
 
-        long maxBytes = tipo.getCategoria() == TipoRecursoArchivo.Categoria.IMAGEN
-                ? imageMaxSizeBytes
-                : documentMaxSizeBytes;
+        long maxBytes = switch (tipo.getCategoria()) {
+            case IMAGEN -> imageMaxSizeBytes;
+            case ADJUNTO -> documentMaxSizeBytes;
+            case DOCUMENTO_WEB -> webDocumentMaxSizeBytes;
+        };
         if (file.getSize() > maxBytes) {
             throw new FileStorageException(
                     "El archivo excede el tamaño máximo permitido (" + (maxBytes / (1024 * 1024)) + " MB).");

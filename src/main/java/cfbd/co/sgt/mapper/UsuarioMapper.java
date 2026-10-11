@@ -19,6 +19,7 @@ public class UsuarioMapper {
         response.setUrl_img(usuario.getUrl_img() != null ? "/api/archivos/usuarios/" + usuario.getId_usuario() : null);
         response.setId_rol(usuario.getRol().getId_rol());
         response.setNombre_rol(usuario.getRol().getNombre());
+        response.setHabilitado(usuario.isHabilitado());
         return response;
     }
 }
