@@ -61,6 +61,10 @@ services:
       # contenedores de la red del recurso alcanzan a nginx; para acotarlo,
       # usar la subred exacta (docker network inspect <uuid-del-recurso>).
       NGINX_TRUSTED_PROXIES: ${NGINX_TRUSTED_PROXIES:-10.0.0.0/8 172.16.0.0/12 192.168.0.0/16}
+      # Host:puerto del backend para nginx. Si "backend" resuelve a otro
+      # contenedor (502 "Connection refused" con el backend sano), usar el
+      # nombre único: backend-<uuid-del-recurso>:8080 (ver DESPLIEGUE.md).
+      NGINX_BACKEND_UPSTREAM: ${NGINX_BACKEND_UPSTREAM:-backend:8080}
     expose:
       - "8080"
     depends_on:

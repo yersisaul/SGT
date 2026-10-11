@@ -19,6 +19,10 @@ RUN --mount=type=cache,target=/root/.m2 \
 
 FROM eclipse-temurin:21-jre
 
+# Versión visible en Swagger (app.version). docker compose la pasa desde el .env;
+# a mano: docker build --build-arg APP_VERSION=<versión> ...
+ARG APP_VERSION=0.0.0-dev
+
 RUN groupadd --system sgt \
  && useradd --system --gid sgt --home-dir /app --shell /usr/sbin/nologin sgt \
  && mkdir -p /app/uploads \
@@ -29,7 +33,8 @@ COPY --from=build --chown=sgt:sgt /build/app.jar app.jar
 
 # La memoria del heap se adapta al límite del contenedor.
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError" \
-    FILE_STORAGE_PATH=/app/uploads
+    FILE_STORAGE_PATH=/app/uploads \
+    APP_VERSION=${APP_VERSION}
 
 USER sgt
 EXPOSE 8080

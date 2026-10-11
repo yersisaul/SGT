@@ -23,10 +23,13 @@ map "$sgt_proxy_confiable|$http_x_forwarded_port|$sgt_forwarded_proto://$http_ho
 
 # "resolve" vuelve a consultar el DNS de Docker: si el backend se recrea con
 # otra IP (redespliegue en Coolify), nginx la sigue sin reiniciar el frontend.
+# ${NGINX_BACKEND_UPSTREAM} (por defecto backend:8080): en Coolify, si otro
+# contenedor de una red compartida también se llama "backend", usar el nombre
+# único del contenedor (backend-<uuid-del-recurso>:8080).
 upstream sgt_backend {
     zone sgt_backend 64k;
     resolver 127.0.0.11 valid=10s ipv6=off;
-    server backend:8080 resolve;
+    server ${NGINX_BACKEND_UPSTREAM} resolve;
     keepalive 16;
 }
 
@@ -78,6 +81,17 @@ server {
     location /api/ {
         proxy_pass http://sgt_backend;
         proxy_read_timeout 120s;
+    }
+
+    # Swagger UI y OpenAPI (springdoc; se apagan con SWAGGER_ENABLED=false).
+    # "^~" evita que la regla de .js/.css de abajo capture swagger-ui-bundle.js
+    # y lo busque en los estáticos de Angular (404).
+    location ^~ /swagger-ui {
+        proxy_pass http://sgt_backend;
+    }
+
+    location ^~ /v3/api-docs {
+        proxy_pass http://sgt_backend;
     }
 
     # JS/CSS llevan hash en el nombre (outputHashing: all): caché permanente.

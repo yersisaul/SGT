@@ -80,10 +80,12 @@ Usa `docker-compose.coolify.yml` (no `docker-compose.yml`): imágenes publicadas
 1. Construye y publica las imágenes (el frontend **debe** incluir `proxies-confiables.sh`):
 
    ```bash
-   docker build -t yersy78/sgt-backend:<versión> .
+   docker build --build-arg APP_VERSION=<versión> -t yersy78/sgt-backend:<versión> .
    docker build --build-arg APP_VERSION=<versión> -t yersy78/sgt-frontend:<versión> src/frontend
    docker push yersy78/sgt-backend:<versión> && docker push yersy78/sgt-frontend:<versión>
    ```
+
+   La versión que se ve en el login, el menú lateral y Swagger se graba al construir con `--build-arg APP_VERSION`. Re-etiquetar una imagen existente (`docker tag`) **no** la cambia: hay que reconstruir.
 
 2. En el recurso de Coolify, reemplaza el compose por el contenido de `docker-compose.coolify.yml` y define en *Environment Variables* `APP_VERSION`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `SEED_USERS_PASSWORD` y el resto del `.env`.
 3. Asigna el dominio **solo al servicio `frontend`**, con el puerto interno: `https://sgt.azorweb.dev:8080`. Backend y base de datos quedan sin dominio.
@@ -97,6 +99,9 @@ Por qué así:
 | 429 y pantallas a medio cargar con varios usuarios | Rate limit compartido por la IP de Traefik | `NGINX_TRUSTED_PROXIES` |
 | 403 "No tienes permiso" en POST/PUT/DELETE | Spring veía `http` y el navegador enviaba `Origin: https://…` | `NGINX_TRUSTED_PROXIES` (nginx reenvía el `X-Forwarded-Proto` de Traefik) |
 | 502 tras redesplegar solo el backend | nginx guardaba la IP antigua del backend | `server backend:8080 resolve` en el `upstream` |
+| 502 / `connect() failed (111: Connection refused)` en `/api/...` | El backend aún arranca (migración de esquema, seeders) o se reinicia en bucle | Revisar los logs del servicio `backend` hasta `Started SgtApplication`; si se reinicia, buscar `APPLICATION FAILED TO START` / `OutOfMemoryError` |
+| 502 `Connection refused` en `/api` y `/swagger-ui` con el backend sano | El nombre `backend` resuelve a **otro** contenedor de una red compartida (p. ej. *Connect to Predefined Network* activo con otro recurso que también tiene un servicio `backend`) | Comparar `nslookup backend 127.0.0.11` (terminal del frontend) con `hostname -i` (terminal del backend). Si difieren: `NGINX_BACKEND_UPSTREAM=backend-<uuid-del-recurso>:8080` (nombre del contenedor que muestra Coolify) y redesplegar |
+| `/swagger-ui` muestra el login del SGT | nginx servía la SPA en lugar de hacer proxy | `location ^~ /swagger-ui` y `/v3/api-docs` en nginx; entrar por `https://<dominio>/swagger-ui/index.html`. `SWAGGER_ENABLED=false` lo apaga |
 
 Las etiquetas `traefik.*` en el backend no se usan: `/api` entra por nginx, que ya tiene la configuración del SSE. Si se activaran, Traefik enviaría `/api` directo al backend, sin ella y con cabeceras CORS duplicadas.
 

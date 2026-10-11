@@ -9,7 +9,7 @@ name: sgt
 
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:-sgt}
@@ -29,6 +29,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        APP_VERSION: ${APP_VERSION:-0.0.0-dev}
     image: sgt-backend:${APP_VERSION:-latest}
     restart: unless-stopped
     # Todas las variables del .env (JWT, SLA, KPI, rate limit…) y, encima,

@@ -32,5 +32,6 @@ COPY --chmod=755 nginx/proxies-confiables.sh /docker-entrypoint.d/15-proxies-con
 COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html
 
 ENV NGINX_CLIENT_MAX_BODY_SIZE=25m \
-    NGINX_TRUSTED_PROXIES=""
+    NGINX_TRUSTED_PROXIES="" \
+    NGINX_BACKEND_UPSTREAM=backend:8080
 EXPOSE 8080
