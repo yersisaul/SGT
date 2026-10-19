@@ -24,7 +24,6 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class WebProducto extends AuditoriaWeb {
-
     @Id
     @Column(name = "id_producto")
     @GeneratedValue(strategy = GenerationType.UUID)
