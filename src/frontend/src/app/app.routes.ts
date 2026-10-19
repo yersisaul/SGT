@@ -15,11 +15,13 @@ import { Estados } from './presentation/views/administracion/estados/estados';
 import { authGuard } from './core/guards/auth.guard';
 import { permissionGuard } from './core/guards/permission.guard';
 import { AdminProductos } from './presentation/views/admin-productos/admin-productos';
+import { AdminServicios } from './presentation/views/admin-servicios/admin-servicios';
 
 export const routes: Routes = [
   { path: '', component: Home },
   { path: 'login', component: Login },
   { path: 'admin-productos', component: AdminProductos },
+  { path: 'admin-servicios', component: AdminServicios },
   {
     path: 'app',
     component: AppShell,

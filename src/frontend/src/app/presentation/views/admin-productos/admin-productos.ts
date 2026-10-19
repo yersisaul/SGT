@@ -1,13 +1,13 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ProductoMock, Producto } from '../../../shared/services/producto-mock';
 
 @Component({
   selector: 'app-admin-productos',
   standalone: true,
-  imports: [FormsModule, CurrencyPipe, RouterLink],
+  imports: [FormsModule, CurrencyPipe, RouterLink, RouterLinkActive],
   templateUrl: './admin-productos.html',
   styleUrl: './admin-productos.css',
 })

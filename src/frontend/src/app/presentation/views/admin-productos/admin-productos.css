@@ -144,3 +144,8 @@ td img { width: 64px; height: 48px; object-fit: cover; border-radius: 8px; borde
   .sidebar { display: none; }
   .grid { grid-template-columns: 1fr; }
 }
+
+.badge.click { cursor: pointer; }
+.badge.off { background: rgba(139, 155, 184, .15); color: var(--muted); }
+.check { flex-direction: row !important; align-items: center; gap: .5rem !important; color: var(--text) !important; }
+textarea.input { resize: vertical; min-height: 70px; font-family: inherit; }
