@@ -1,0 +1,352 @@
+<div class="admin-page">
+  <header class="admin-header">
+    <div class="admin-title-group">
+      <div>
+        <h1 class="admin-title">Novedades</h1>
+        <p class="admin-subtitle">Noticias y artículos del blog; nacen en borrador y se publican cuando estén listos</p>
+      </div>
+    </div>
+    <div class="nov-acciones">
+      @if (canUpdate || canCreate) {
+        <app-button variant="secondary" (click)="abrirCategorias()">
+          <svg lucideTag [size]="16" aria-hidden="true"></svg>
+          Categorías
+        </app-button>
+      }
+      @if (canCreate) {
+        <app-button variant="primary" (click)="abrirCrear()">
+          <svg lucidePlus [size]="16" aria-hidden="true"></svg>
+          Nueva novedad
+        </app-button>
+      }
+    </div>
+  </header>
+
+  <div class="bandejas" role="tablist" aria-label="Estado de la novedad">
+    @for (opcion of pestanas; track opcion.id) {
+      <button type="button" role="tab" class="bandeja-tab" [class.bandeja-tab-active]="pestana() === opcion.id"
+              [attr.aria-selected]="pestana() === opcion.id" (click)="cambiarPestana(opcion.id)">
+        {{ opcion.etiqueta }}
+        @if (pestana() === opcion.id && !loading()) {
+          <span class="web-filtro-conteo">{{ totalElementos() }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  <div class="admin-toolbar">
+    <div class="admin-search">
+      <svg lucideSearch [size]="16" aria-hidden="true"></svg>
+      <input type="search" placeholder="Buscar en esta página…" [value]="busqueda()"
+             (input)="busqueda.set($any($event.target).value)" aria-label="Buscar novedades" />
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="admin-state">
+      <app-spinner label="Cargando novedades" />
+      <span>Cargando novedades…</span>
+    </div>
+  } @else if (loadError()) {
+    <div class="admin-state admin-state-error" role="alert">
+      <svg lucideCircleAlert [size]="20" aria-hidden="true"></svg>
+      <span>{{ loadError() }}</span>
+      <app-button variant="secondary" (click)="cargar()">Reintentar</app-button>
+    </div>
+  } @else {
+    <div class="admin-tabla-wrapper">
+      @if (filtradas().length === 0) {
+        <p class="admin-tabla-empty">
+          {{ novedades().length === 0 ? 'No hay novedades en esta pestaña.' : 'Ninguna novedad coincide con la búsqueda.' }}
+        </p>
+      } @else {
+        <table class="admin-tabla">
+          <thead>
+            <tr>
+              <th scope="col">Novedad</th>
+              <th scope="col">Estado</th>
+              <th scope="col" class="web-col-secundaria">Publicación</th>
+              <th scope="col" class="web-col-secundaria">Autor</th>
+              <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of filtradas(); track item.id_novedad) {
+              <tr class="admin-tabla-row" (click)="abrirEditar(item)">
+                <td>
+                  <div class="web-celda-principal">
+                    <app-web-miniatura [url]="item.url_portada" [nombre]="item.titulo" />
+                    <div class="web-celda-texto">
+                      <span class="web-celda-titulo">
+                        {{ item.titulo }}
+                        @if (item.destacado) {
+                          <svg lucideStar [size]="13" class="web-destacado" aria-label="Destacada"></svg>
+                        }
+                      </span>
+                      <span class="web-celda-sub">{{ item.nombre_categoria || 'Sin categoría' }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  @switch (estadoVisible(item)) {
+                    @case ('PUBLICADO') {
+                      <span class="web-chip web-chip-exito">Publicada</span>
+                    }
+                    @case ('PROGRAMADO') {
+                      <span class="web-chip web-chip-info">Programada</span>
+                    }
+                    @case ('ARCHIVADO') {
+                      <span class="web-chip">Archivada</span>
+                    }
+                    @default {
+                      <span class="web-chip web-chip-alerta">Borrador</span>
+                    }
+                  }
+                </td>
+                <td class="web-col-secundaria web-num">
+                  {{ item.fecha_publicacion ? (item.fecha_publicacion | date: 'dd/MM/yyyy HH:mm') : '—' }}
+                </td>
+                <td class="web-col-secundaria admin-tabla-secundario">{{ item.nombre_autor || '—' }}</td>
+                <td class="admin-tabla-col-acciones">
+                  @if (canUpdate) {
+                    <button type="button" class="admin-icon-btn web-icon-neutral" [attr.aria-label]="'Editar ' + item.titulo" (click)="$event.stopPropagation(); abrirEditar(item)">
+                      <svg lucidePencil [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                  @if (canDelete) {
+                    <button type="button" class="admin-icon-btn" [attr.aria-label]="'Eliminar ' + item.titulo" (click)="$event.stopPropagation(); pedirEliminar(item)">
+                      <svg lucideTrash [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+
+    @if (totalPaginas() > 1) {
+      <nav class="nov-paginacion" aria-label="Paginación de novedades">
+        <button type="button" class="admin-icon-btn web-icon-neutral" [disabled]="pagina() === 0" aria-label="Página anterior" (click)="irAPagina(pagina() - 1)">
+          <svg lucideChevronLeft [size]="16" aria-hidden="true"></svg>
+        </button>
+        <span class="web-num">Página {{ pagina() + 1 }} de {{ totalPaginas() }}</span>
+        <button type="button" class="admin-icon-btn web-icon-neutral" [disabled]="pagina() + 1 >= totalPaginas()" aria-label="Página siguiente" (click)="irAPagina(pagina() + 1)">
+          <svg lucideChevronRight [size]="16" aria-hidden="true"></svg>
+        </button>
+      </nav>
+    }
+  }
+</div>
+
+<app-dialog
+  variant="drawer"
+  ancho="amplio"
+  [title]="editor() === 'crear' ? 'Nueva novedad' : 'Editar novedad'"
+  [open]="editor() !== null"
+  (closed)="cerrarEditor()"
+>
+  @if (editor()) {
+    <form class="web-form" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+      @if (seleccionada(); as actual) {
+        <div class="nov-estado" [attr.data-estado]="estadoVisible(actual)">
+          <div>
+            <span class="nov-estado-etiqueta">
+              @switch (estadoVisible(actual)) {
+                @case ('PUBLICADO') { Publicada · visible en el sitio }
+                @case ('PROGRAMADO') { Programada }
+                @case ('ARCHIVADO') { Archivada · fuera del sitio }
+                @default { Borrador · solo visible en el panel }
+              }
+            </span>
+            @if (actual.fecha_publicacion && actual.estado === 'PUBLICADO') {
+              <span class="nov-estado-fecha">
+                {{ estadoVisible(actual) === 'PROGRAMADO' ? 'Se publicará el' : 'Desde el' }}
+                {{ actual.fecha_publicacion | date: "dd/MM/yyyy 'a las' HH:mm" }}
+              </span>
+            }
+          </div>
+          @if (canPublish) {
+            <div class="nov-estado-acciones">
+              @if (estadoVisible(actual) !== 'PUBLICADO') {
+                <app-button variant="primary" [loading]="cambiandoEstado()" (click)="publicarAhora()">Publicar ahora</app-button>
+              }
+              @if (actual.estado !== 'ARCHIVADO' && actual.estado !== 'BORRADOR') {
+                <app-button variant="secondary" [disabled]="cambiandoEstado()" (click)="archivar()">Archivar</app-button>
+              }
+              @if (actual.estado !== 'BORRADOR') {
+                <app-button variant="ghost" [disabled]="cambiandoEstado()" (click)="volverABorrador()">Volver a borrador</app-button>
+              }
+            </div>
+            @if (estadoVisible(actual) !== 'PUBLICADO') {
+              <div class="nov-programar">
+                <label class="field-label" for="nov-programar">Programar publicación</label>
+                <div class="nov-programar-fila">
+                  <input id="nov-programar" class="input" type="datetime-local" [value]="fechaProgramada()"
+                         (input)="fechaProgramada.set($any($event.target).value)" />
+                  <app-button variant="secondary" [disabled]="!fechaProgramada() || cambiandoEstado()" (click)="programar()">
+                    Programar
+                  </app-button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+
+      <section class="web-form-seccion" aria-labelledby="nov-sec-contenido">
+        <h3 class="web-form-seccion-titulo" id="nov-sec-contenido">Contenido</h3>
+        <div class="field">
+          <label class="field-label" for="nov-titulo">Título</label>
+          <input id="nov-titulo" class="input" formControlName="titulo" maxlength="200"
+                 [class.input-error]="form.controls.titulo.touched && form.controls.titulo.invalid" />
+          @if (form.controls.titulo.touched && form.controls.titulo.invalid) {
+            <span class="helper helper-error">El título es obligatorio.</span>
+          }
+        </div>
+        <div class="web-form-fila">
+          <div class="field">
+            <label class="field-label" for="nov-categoria">Categoría</label>
+            <select id="nov-categoria" class="select-nativo" formControlName="id_categoria_novedad">
+              <option value="">Sin categoría</option>
+              @for (categoria of categorias(); track categoria.id_categoria_novedad) {
+                <option [value]="categoria.id_categoria_novedad">{{ categoria.nombre }}</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label" for="nov-slug">Slug <span class="field-opcional">(opcional)</span></label>
+            <input id="nov-slug" class="input" formControlName="slug" maxlength="120" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="nov-resumen">Resumen</label>
+          <textarea id="nov-resumen" class="textarea" rows="3" formControlName="resumen" maxlength="500"
+                    placeholder="Se muestra en el listado y al compartir el enlace"></textarea>
+          <span class="contador">{{ form.controls.resumen.value.length }}/500</span>
+        </div>
+        <div class="field">
+          <label class="field-label" for="nov-contenido">Texto completo</label>
+          <textarea id="nov-contenido" class="textarea nov-contenido" rows="12" formControlName="contenido"
+                    placeholder="Texto plano. Separa los párrafos con una línea en blanco."></textarea>
+        </div>
+      </section>
+
+      <section class="web-form-seccion" aria-labelledby="nov-sec-portada">
+        <h3 class="web-form-seccion-titulo" id="nov-sec-portada">Portada</h3>
+        <app-file-upload
+          label="Imagen de portada"
+          tipo="imagen"
+          [maxSizeMb]="5"
+          [currentUrl]="seleccionada()?.url_portada ?? null"
+          [formControl]="portadaControl"
+          (eliminarActual)="marcarQuitarPortada()"
+        />
+        <label class="web-check">
+          <input type="checkbox" formControlName="destacado" />
+          <span>Destacada<small>Aparece primero en el listado del sitio.</small></span>
+        </label>
+        @if (seleccionada(); as actual) {
+          <p class="web-form-auditoria">
+            Última modificación: {{ actual.fecha_actualizacion | date: 'dd/MM/yyyy HH:mm' }}
+            @if (actual.nombre_usuario_actualiza) {
+              por {{ actual.nombre_usuario_actualiza }}
+            }
+          </p>
+        }
+      </section>
+
+      @if (errorFormulario()) {
+        <div class="web-form-error" role="alert">{{ errorFormulario() }}</div>
+      }
+
+      <div class="web-form-acciones">
+        <app-button variant="secondary" [disabled]="guardando()" (click)="cerrarEditor()">Cancelar</app-button>
+        @if (editor() === 'crear' && canPublish) {
+          <app-button variant="secondary" [disabled]="guardando()" (click)="guardar(true)">Guardar y publicar</app-button>
+        }
+        <app-button type="submit" variant="primary" [loading]="guardando()" [disabled]="editor() === 'editar' && !canUpdate">
+          {{ editor() === 'crear' ? 'Guardar borrador' : 'Guardar cambios' }}
+        </app-button>
+      </div>
+    </form>
+  }
+</app-dialog>
+
+<app-dialog variant="modal" title="Categorías de novedades" [open]="categoriasAbiertas()" (closed)="cerrarCategorias()">
+  @if (categoriasAbiertas()) {
+    <div class="nov-categorias">
+      @if (categorias().length === 0) {
+        <p class="vacio">Aún no hay categorías.</p>
+      } @else {
+        <ul class="nov-categorias-lista">
+          @for (categoria of categorias(); track categoria.id_categoria_novedad) {
+            <li class="nov-categoria" [class.nov-categoria-activa]="categoriaEditando() === categoria.id_categoria_novedad">
+              <span class="web-num">{{ categoria.orden }}</span>
+              <span class="nov-categoria-nombre">{{ categoria.nombre }}<span class="web-slug">/{{ categoria.slug }}</span></span>
+              @if (canUpdate) {
+                <button type="button" class="admin-icon-btn web-icon-neutral" [attr.aria-label]="'Editar ' + categoria.nombre" (click)="editarCategoria(categoria)">
+                  <svg lucidePencil [size]="14" aria-hidden="true"></svg>
+                </button>
+              }
+              @if (canDelete) {
+                <button type="button" class="admin-icon-btn" [disabled]="categoriaGuardando()" [attr.aria-label]="'Eliminar ' + categoria.nombre" (click)="eliminarCategoria(categoria)">
+                  <svg lucideTrash [size]="14" aria-hidden="true"></svg>
+                </button>
+              }
+            </li>
+          }
+        </ul>
+      }
+
+      @if ((categoriaEditando() && canUpdate) || (!categoriaEditando() && canCreate)) {
+        <form class="nov-categoria-form" [formGroup]="categoriaForm" (ngSubmit)="guardarCategoria()" novalidate>
+          <span class="web-form-seccion-titulo">{{ categoriaEditando() ? 'Editar categoría' : 'Nueva categoría' }}</span>
+          <div class="nov-categoria-campos">
+            <div class="field">
+              <label class="field-label" for="cat-nombre">Nombre</label>
+              <input id="cat-nombre" class="input" formControlName="nombre" maxlength="100"
+                     [class.input-error]="categoriaForm.controls.nombre.touched && categoriaForm.controls.nombre.invalid" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="cat-slug">Slug <span class="field-opcional">(opcional)</span></label>
+              <input id="cat-slug" class="input" formControlName="slug" maxlength="120" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="cat-orden">Orden</label>
+              <input id="cat-orden" class="input" type="number" min="0" max="9999" formControlName="orden" />
+            </div>
+          </div>
+          @if (categoriaError()) {
+            <div class="web-form-error" role="alert">{{ categoriaError() }}</div>
+          }
+          <div class="confirm-actions">
+            @if (categoriaEditando()) {
+              <app-button variant="ghost" [disabled]="categoriaGuardando()" (click)="nuevaCategoria()">Cancelar edición</app-button>
+            }
+            <app-button type="submit" variant="primary" [loading]="categoriaGuardando()">
+              {{ categoriaEditando() ? 'Guardar' : 'Agregar' }}
+            </app-button>
+          </div>
+        </form>
+      }
+    </div>
+  }
+</app-dialog>
+
+<app-dialog variant="modal" title="Eliminar novedad" [open]="aEliminar() !== null" (closed)="cancelarEliminar()">
+  @if (aEliminar(); as item) {
+    <p class="confirm-text">
+      ¿Eliminar <strong>{{ item.titulo }}</strong>? Si solo quieres retirarla del sitio, archívala: así conservas el
+      texto.
+    </p>
+    @if (errorEliminar()) {
+      <div class="confirm-error" role="alert">{{ errorEliminar() }}</div>
+    }
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="eliminando()" (click)="cancelarEliminar()">Cancelar</app-button>
+      <app-button variant="danger" [loading]="eliminando()" (click)="confirmarEliminar()">Eliminar</app-button>
+    </div>
+  }
+</app-dialog>

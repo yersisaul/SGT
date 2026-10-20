@@ -28,6 +28,11 @@ export class SolicitudService {
     return this.http.get<SolicitudResponse[]>(`${this.apiBaseUrl}/solicitudes`);
   }
 
+  /** CSV con lo que el usuario ve en el listado (GET /solicitudes/exportar, requiere el permiso .read). */
+  exportar(): Observable<Blob> {
+    return this.http.get(`${this.apiBaseUrl}/solicitudes/exportar`, { responseType: 'blob' });
+  }
+
   obtener(id: string): Observable<SolicitudResponse> {
     return this.http.get<SolicitudResponse>(`${this.apiBaseUrl}/solicitudes/${id}`);
   }

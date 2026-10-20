@@ -22,6 +22,7 @@ import cfbd.co.sgt.dto.response.OrdenResponse;
 import cfbd.co.sgt.dto.response.RequerimientoResponse;
 import cfbd.co.sgt.dto.response.ResumenEstadosResponse;
 import cfbd.co.sgt.dto.response.SolicitudResponse;
+import cfbd.co.sgt.service.ExportacionService;
 import cfbd.co.sgt.exception.ResourceNotFoundException;
 import cfbd.co.sgt.service.SolicitudService;
 import jakarta.validation.Valid;
@@ -33,11 +34,19 @@ import lombok.RequiredArgsConstructor;
 public class SolicitudController {
 
     private final SolicitudService solicitudService;
+    private final ExportacionService exportacionService;
 
     @PreAuthorize("hasAuthority('solicitud.read')")
     @GetMapping
     public List<SolicitudResponse> getAllSolicitudes() {
         return solicitudService.listarSolicitudes();
+    }
+
+    // Descarga CSV de lo que el actor ve en el listado (observación 2026-10-19).
+    @PreAuthorize("hasAuthority('solicitud.read')")
+    @GetMapping("/exportar")
+    public ResponseEntity<String> exportar() {
+        return CsvDescarga.de("solicitudes", exportacionService.exportarSolicitudes());
     }
 
     @PreAuthorize("hasAuthority('solicitud.read')")

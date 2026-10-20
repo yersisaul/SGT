@@ -1,7 +1,6 @@
 package cfbd.co.sgt.service;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
@@ -23,15 +22,19 @@ public class CsvExporter {
     private static final String PREFIJOS_FORMULA = "=+-@\t\r";
 
     public String exportar(KpiResponse kpi) {
-        StringBuilder csv = new StringBuilder(BOM);
         List<KpiColumnaResponse> columnas = kpi.columnas();
-        csv.append(columnas.stream().map(this::cabecera).map(this::celda).collect(Collectors.joining(SEPARADOR)))
-                .append(FIN_LINEA);
-        for (Map<String, Object> fila : kpi.filas()) {
-            csv.append(columnas.stream()
-                            .map(columna -> valor(fila.get(columna.clave())))
-                            .collect(Collectors.joining(SEPARADOR)))
-                    .append(FIN_LINEA);
+        return exportar(columnas.stream().map(this::cabecera).toList(),
+                kpi.filas().stream()
+                        .map(fila -> columnas.stream().map(columna -> fila.get(columna.clave())).toList())
+                        .toList());
+    }
+
+    /** Tabla genérica (descarga de Solicitudes, Requerimientos y Órdenes): cada fila en el orden de las cabeceras. */
+    public String exportar(List<String> cabeceras, List<? extends List<?>> filas) {
+        StringBuilder csv = new StringBuilder(BOM);
+        csv.append(cabeceras.stream().map(this::celda).collect(Collectors.joining(SEPARADOR))).append(FIN_LINEA);
+        for (List<?> fila : filas) {
+            csv.append(fila.stream().map(this::valor).collect(Collectors.joining(SEPARADOR))).append(FIN_LINEA);
         }
         return csv.toString();
     }

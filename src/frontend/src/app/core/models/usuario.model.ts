@@ -18,4 +18,6 @@ export interface UsuarioResponse {
   url_img: string | null;
   id_rol: string;
   nombre_rol: string;
+  /** false = registro web pendiente de habilitar (no puede iniciar sesión). */
+  habilitado?: boolean;
 }

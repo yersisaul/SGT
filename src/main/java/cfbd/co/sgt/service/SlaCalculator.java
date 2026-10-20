@@ -3,73 +3,57 @@ package cfbd.co.sgt.service;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import cfbd.co.sgt.model.ClaveSla;
 
 /**
  * Calcula la fecha límite de despacho (fecha_registro + SLA) para Solicitud y
- * Requerimiento. Los valores en horas vienen de variables de entorno nunca hardcodeados.
+ * Requerimiento, y la de atención. Las horas se leen de configuracion_sla
+ * (editables por el Administrador; valor inicial desde variables de entorno).
  */
 @Component
 public class SlaCalculator {
 
-    private final long bajaHoras;
-    private final long mediaHoras;
-    private final long altaHoras;
-    private final long requerimientoHoras;
-    private final long atencionAltaHoras;
-    private final long atencionMediaHoras;
-    private final long atencionBajaHoras;
+    private final ConfiguracionSlaService configuracion;
 
-    public SlaCalculator(
-            @Value("${app.sla.despacho.baja-horas:4}") long bajaHoras,
-            @Value("${app.sla.despacho.media-horas:2}") long mediaHoras,
-            @Value("${app.sla.despacho.alta-horas:1}") long altaHoras,
-            @Value("${app.sla.despacho.requerimiento-horas:2}") long requerimientoHoras,
-            @Value("${app.sla.atencion.alta-horas:8}") long atencionAltaHoras,
-            @Value("${app.sla.atencion.media-horas:24}") long atencionMediaHoras,
-            @Value("${app.sla.atencion.baja-horas:72}") long atencionBajaHoras) {
-        this.atencionAltaHoras = atencionAltaHoras;
-        this.atencionMediaHoras = atencionMediaHoras;
-        this.atencionBajaHoras = atencionBajaHoras;
-        this.bajaHoras = bajaHoras;
-        this.mediaHoras = mediaHoras;
-        this.altaHoras = altaHoras;
-        this.requerimientoHoras = requerimientoHoras;
+    public SlaCalculator(ConfiguracionSlaService configuracion) {
+        this.configuracion = configuracion;
     }
 
     /** Deadline de despacho de una Solicitud según su prioridad (Baja/Media/Alta,
      * case-insensitive). Si la prioridad no es reconocida, se usa el SLA de "Media"
      * por defecto en lugar de fallar. */
     public Instant deadlineSolicitud(Instant fechaRegistro, String prioridad) {
-        return fechaRegistro.plus(horasParaPrioridad(prioridad), ChronoUnit.HOURS);
+        ClaveSla clave = switch (normalizar(prioridad)) {
+            case "baja" -> ClaveSla.DESPACHO_BAJA;
+            case "alta" -> ClaveSla.DESPACHO_ALTA;
+            default -> ClaveSla.DESPACHO_MEDIA;
+        };
+        return sumar(fechaRegistro, clave);
     }
 
     /** Deadline de despacho de un Requerimiento: SLA único fijo, sin diferenciar
      * por prioridad (Requerimiento no tiene ese campo). */
     public Instant deadlineRequerimiento(Instant fechaRegistro) {
-        return fechaRegistro.plus(requerimientoHoras, ChronoUnit.HOURS);
+        return sumar(fechaRegistro, ClaveSla.DESPACHO_REQUERIMIENTO);
     }
 
     /** Deadline de atención (registro de la Solicitud → cierre de su OT), por prioridad (decisión 2026-10-04). */
     public Instant deadlineAtencion(Instant fechaRegistro, String prioridad) {
-        long horas = prioridad == null ? atencionMediaHoras : switch (prioridad.trim().toLowerCase()) {
-            case "alta" -> atencionAltaHoras;
-            case "baja" -> atencionBajaHoras;
-            default -> atencionMediaHoras;
+        ClaveSla clave = switch (normalizar(prioridad)) {
+            case "alta" -> ClaveSla.ATENCION_ALTA;
+            case "baja" -> ClaveSla.ATENCION_BAJA;
+            default -> ClaveSla.ATENCION_MEDIA;
         };
-        return fechaRegistro.plus(horas, ChronoUnit.HOURS);
+        return sumar(fechaRegistro, clave);
     }
 
-    private long horasParaPrioridad(String prioridad) {
-        if (prioridad == null) {
-            return mediaHoras;
-        }
-        return switch (prioridad.trim().toLowerCase()) {
-            case "baja" -> bajaHoras;
-            case "alta" -> altaHoras;
-            case "media" -> mediaHoras;
-            default -> mediaHoras;
-        };
+    private Instant sumar(Instant fechaRegistro, ClaveSla clave) {
+        return fechaRegistro.plus(configuracion.horas(clave), ChronoUnit.HOURS);
+    }
+
+    private static String normalizar(String prioridad) {
+        return prioridad == null ? "" : prioridad.trim().toLowerCase();
     }
 }

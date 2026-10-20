@@ -1,0 +1,134 @@
+.nov-acciones {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.nov-paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  font-size: 13px;
+}
+
+.nov-paginacion .admin-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Panel de estado del editor: el color resume en qué punto del ciclo está. */
+.nov-estado {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--status-warning-fg);
+  background: var(--color-bg);
+}
+
+.nov-estado[data-estado='PUBLICADO'] {
+  border-left-color: var(--status-success-fg);
+}
+
+.nov-estado[data-estado='PROGRAMADO'] {
+  border-left-color: var(--status-info-fg);
+}
+
+.nov-estado[data-estado='ARCHIVADO'] {
+  border-left-color: var(--color-subtle-foreground);
+}
+
+.nov-estado-etiqueta {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.nov-estado-fecha {
+  display: block;
+  font-size: 12px;
+  color: var(--color-muted-foreground);
+  margin-top: 2px;
+}
+
+.nov-estado-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.nov-programar-fila {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.nov-programar-fila .input {
+  max-width: 240px;
+}
+
+.nov-contenido {
+  min-height: 240px;
+}
+
+/* Categorías */
+.nov-categorias {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.nov-categorias-lista {
+  list-style: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.nov-categoria {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 14px;
+}
+
+.nov-categoria:last-child {
+  border-bottom: none;
+}
+
+.nov-categoria-activa {
+  background: var(--status-info-bg);
+}
+
+.nov-categoria-nombre {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.nov-categoria-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.nov-categoria-campos {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr;
+  gap: var(--space-3);
+}
+
+@media (max-width: 640px) {
+  .nov-categoria-campos {
+    grid-template-columns: 1fr;
+  }
+
+  .nov-programar-fila {
+    flex-direction: column;
+  }
+}

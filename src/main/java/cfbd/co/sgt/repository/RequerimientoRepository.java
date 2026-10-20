@@ -43,4 +43,8 @@ public interface RequerimientoRepository extends  JpaRepository<Requerimiento, U
             + "and r.especialidad.id_especialidad in :idsEspecialidad")
     List<Requerimiento> findRegistradosEntre(@Param("desde") Instant desde, @Param("hasta") Instant hasta,
                                              @Param("idsEspecialidad") Collection<UUID> idsEspecialidad);
+
+    // Aviso por correo de SLA vencido: RQ que siguen esperando decisión y aún no se avisaron.
+    @Query("select r from Requerimiento r where r.estado.nombre = :estado and r.fecha_aviso_sla is null")
+    List<Requerimiento> findSinAvisoSlaEnEstado(@Param("estado") String estado);
 }

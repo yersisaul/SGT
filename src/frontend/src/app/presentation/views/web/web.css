@@ -1,0 +1,236 @@
+/*
+ * Estilos comunes de las páginas del panel del sitio web. Cada página carga
+ * además administracion.css (layout, tabla y diálogos del SGT) y
+ * components/web-controles.css (campos, filtros y listas): van en hojas
+ * separadas para respetar el presupuesto de estilos por componente.
+ */
+
+/* ── Página ───────────────────────────────────────────────────────────── */
+.web-celda-principal {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.web-celda-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.web-celda-titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.web-celda-sub {
+  font-size: 12px;
+  color: var(--color-subtle-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 42ch;
+}
+
+.web-slug {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-subtle-foreground);
+}
+
+.web-destacado {
+  color: var(--status-warning-fg);
+}
+
+.web-num {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-muted-foreground);
+}
+
+.web-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 999px;
+  padding: 2px var(--space-2);
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+  white-space: nowrap;
+}
+
+.web-chip-info {
+  background: var(--status-info-bg);
+  color: var(--status-info-fg);
+}
+
+.web-chip-exito {
+  background: var(--status-success-bg);
+  color: var(--status-success-fg);
+}
+
+.web-chip-alerta {
+  background: var(--status-warning-bg);
+  color: var(--status-warning-fg);
+}
+
+.web-chip-peligro {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
+}
+
+.admin-icon-btn.web-icon-neutral:hover {
+  background: var(--color-bg);
+  color: var(--color-foreground);
+}
+
+/* Columnas que se ocultan en pantallas angostas. */
+@media (max-width: 900px) {
+  .web-col-secundaria {
+    display: none;
+  }
+}
+
+/* ── Formulario en drawer ─────────────────────────────────────────────── */
+.web-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.web-form-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.web-form-seccion + .web-form-seccion {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.web-form-seccion-titulo {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted-foreground);
+}
+
+.web-form-fila {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.web-form-fila-3 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-4);
+}
+
+@media (max-width: 640px) {
+  .web-form-fila,
+  .web-form-fila-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.web-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  font-size: 14px;
+  color: var(--color-foreground);
+  cursor: pointer;
+}
+
+.web-check input {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  accent-color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.web-check small {
+  display: block;
+  font-size: 12px;
+  color: var(--color-subtle-foreground);
+  margin-top: 2px;
+}
+
+.web-form-acciones {
+  position: sticky;
+  bottom: calc(var(--space-5) * -1);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) 0 var(--space-5);
+  margin-bottom: calc(var(--space-5) * -1);
+  background: var(--color-card);
+  border-top: 1px solid var(--color-border);
+}
+
+.web-form-auditoria {
+  font-size: 12px;
+  color: var(--color-subtle-foreground);
+}
+
+.web-form-error {
+  font-size: 13px;
+  color: var(--status-danger-fg);
+  background: var(--status-danger-bg);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+}
+
+/* ── Pestañas (mismo estilo que las bandejas de Órdenes) ──────────────── */
+.bandejas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.bandeja-tab {
+  padding: var(--space-2) var(--space-4);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted-foreground);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.bandeja-tab:hover {
+  color: var(--color-foreground);
+}
+
+.bandeja-tab:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.bandeja-tab-active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
+.web-campo-corto {
+  max-width: 140px;
+}
+
+.web-campo-orden {
+  max-width: 160px;
+}

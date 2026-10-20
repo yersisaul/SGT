@@ -1,0 +1,173 @@
+<div class="admin-page">
+  <header class="admin-header">
+    <div class="admin-title-group">
+      <div>
+        <h1 class="admin-title">Clientes</h1>
+        <p class="admin-subtitle">Organizaciones que confían en CFBD; sus logos se muestran en el sitio</p>
+      </div>
+    </div>
+    @if (canCreate) {
+      <app-button variant="primary" (click)="abrirCrear()">
+        <svg lucidePlus [size]="16" aria-hidden="true"></svg>
+        Nuevo cliente
+      </app-button>
+    }
+  </header>
+
+  <app-web-toolbar placeholder="Buscar por nombre o sector…" [conteo]="conteo()" [(busqueda)]="busqueda" [(filtro)]="filtro" />
+
+  @if (loading()) {
+    <div class="admin-state">
+      <app-spinner label="Cargando clientes" />
+      <span>Cargando clientes…</span>
+    </div>
+  } @else if (loadError()) {
+    <div class="admin-state admin-state-error" role="alert">
+      <svg lucideCircleAlert [size]="20" aria-hidden="true"></svg>
+      <span>{{ loadError() }}</span>
+      <app-button variant="secondary" (click)="cargar()">Reintentar</app-button>
+    </div>
+  } @else {
+    <div class="admin-tabla-wrapper">
+      @if (filtrados().length === 0) {
+        <p class="admin-tabla-empty">
+          {{ items().length === 0 ? 'Aún no hay clientes de referencia.' : 'Ningún cliente coincide con la búsqueda.' }}
+        </p>
+      } @else {
+        <table class="admin-tabla">
+          <thead>
+            <tr>
+              <th scope="col">Cliente</th>
+              <th scope="col" class="web-col-secundaria">Sector</th>
+              <th scope="col">Orden</th>
+              <th scope="col">Sitio</th>
+              <th scope="col" class="web-col-secundaria">Actualizado</th>
+              <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of filtrados(); track item.id_cliente_referencia) {
+              <tr class="admin-tabla-row" (click)="abrirEditar(item)">
+                <td>
+                  <div class="web-celda-principal">
+                    <app-web-miniatura [url]="item.url_logo" [nombre]="item.nombre" [contener]="true" />
+                    <span class="web-celda-titulo">{{ item.nombre }}</span>
+                  </div>
+                </td>
+                <td class="web-col-secundaria admin-tabla-secundario">{{ item.sector || '—' }}</td>
+                <td class="web-num">{{ item.orden }}</td>
+                <td>
+                  <app-publicado-switch
+                    [publicado]="item.publicado"
+                    [etiqueta]="item.nombre"
+                    [disabled]="!canUpdate"
+                    [cargando]="publicando() === item.id_cliente_referencia"
+                    (cambiar)="alternarPublicacion(item, $event)"
+                  />
+                </td>
+                <td class="web-col-secundaria admin-tabla-secundario">{{ item.fecha_actualizacion | date: 'dd/MM/yyyy' }}</td>
+                <td class="admin-tabla-col-acciones">
+                  @if (item.url_sitio) {
+                    <a class="admin-icon-btn web-icon-neutral" [href]="item.url_sitio" target="_blank" rel="noopener noreferrer"
+                       [attr.aria-label]="'Abrir el sitio de ' + item.nombre" (click)="$event.stopPropagation()">
+                      <svg lucideExternalLink [size]="14" aria-hidden="true"></svg>
+                    </a>
+                  }
+                  @if (canUpdate) {
+                    <button type="button" class="admin-icon-btn web-icon-neutral" [attr.aria-label]="'Editar ' + item.nombre" (click)="$event.stopPropagation(); abrirEditar(item)">
+                      <svg lucidePencil [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                  @if (canDelete) {
+                    <button type="button" class="admin-icon-btn" [attr.aria-label]="'Eliminar ' + item.nombre" (click)="$event.stopPropagation(); pedirEliminar(item)">
+                      <svg lucideTrash [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+</div>
+
+<app-dialog
+  variant="drawer"
+  [title]="editor() === 'crear' ? 'Nuevo cliente' : 'Editar ' + (seleccionado()?.nombre ?? 'cliente')"
+  [open]="editor() !== null"
+  (closed)="cerrarEditor()"
+>
+  @if (editor()) {
+    <form class="web-form" [formGroup]="form" (ngSubmit)="enviar()" novalidate>
+      <section class="web-form-seccion">
+        <div class="field">
+          <label class="field-label" for="cli-nombre">Nombre</label>
+          <input id="cli-nombre" class="input" formControlName="nombre" maxlength="150"
+                 [class.input-error]="form.controls.nombre.touched && form.controls.nombre.invalid" />
+          @if (form.controls.nombre.touched && form.controls.nombre.invalid) {
+            <span class="helper helper-error">El nombre es obligatorio.</span>
+          }
+        </div>
+        <div class="web-form-fila-3">
+          <div class="field">
+            <label class="field-label" for="cli-sector">Sector <span class="field-opcional">(opcional)</span></label>
+            <input id="cli-sector" class="input" formControlName="sector" maxlength="100" placeholder="Municipalidad, minería…" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="cli-orden">Orden</label>
+            <input id="cli-orden" class="input" type="number" min="0" max="9999" formControlName="orden" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="cli-url">Sitio web <span class="field-opcional">(opcional)</span></label>
+          <input id="cli-url" class="input" type="url" formControlName="url_sitio" placeholder="https://…"
+                 [class.input-error]="form.controls.url_sitio.touched && form.controls.url_sitio.invalid" />
+          @if (form.controls.url_sitio.touched && form.controls.url_sitio.invalid) {
+            <span class="helper helper-error">Debe empezar con http:// o https://</span>
+          }
+        </div>
+        <app-file-upload
+          label="Logo"
+          tipo="imagen"
+          [maxSizeMb]="5"
+          [currentUrl]="seleccionado()?.url_logo ?? null"
+          [formControl]="archivoControl"
+          (eliminarActual)="marcarQuitarArchivo()"
+        />
+        <label class="web-check">
+          <input type="checkbox" formControlName="publicado" />
+          <span>Publicado<small>Visible en la franja de clientes del sitio.</small></span>
+        </label>
+      </section>
+
+      @if (errorFormulario()) {
+        <div class="web-form-error" role="alert">{{ errorFormulario() }}</div>
+      }
+
+      <div class="web-form-acciones">
+        <app-button variant="secondary" [disabled]="guardando()" (click)="cerrarEditor()">Cancelar</app-button>
+        <app-button type="submit" variant="primary" [loading]="guardando()" [disabled]="editor() === 'editar' && !canUpdate">
+          {{ editor() === 'crear' ? 'Crear cliente' : 'Guardar cambios' }}
+        </app-button>
+      </div>
+    </form>
+  }
+</app-dialog>
+
+<app-dialog variant="modal" title="Eliminar cliente" [open]="aEliminar() !== null" (closed)="cancelarEliminar()">
+  @if (aEliminar(); as item) {
+    <p class="confirm-text">
+      ¿Eliminar <strong>{{ item.nombre }}</strong>? Si está vinculado a un caso de éxito, el sistema rechazará la
+      eliminación.
+    </p>
+    @if (errorEliminar()) {
+      <div class="confirm-error" role="alert">{{ errorEliminar() }}</div>
+    }
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="eliminando()" (click)="cancelarEliminar()">Cancelar</app-button>
+      <app-button variant="danger" [loading]="eliminando()" (click)="confirmarEliminar()">Eliminar</app-button>
+    </div>
+  }
+</app-dialog>

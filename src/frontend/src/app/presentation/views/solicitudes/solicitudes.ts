@@ -15,6 +15,8 @@ import {
 import { ArchivoService } from '../../../core/services/archivo.service';
 import { CatalogoService } from '../../../core/services/catalogo.service';
 import { SolicitudService } from '../../../core/services/solicitud.service';
+import { UsuarioService } from '../../../core/services/usuario.service';
+import { ExportButton } from '../../../shared/components/export-button/export-button';
 import { Button } from '../../../shared/components/button/button';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Select, SelectOption } from '../../../shared/components/select/select';
@@ -45,6 +47,7 @@ type DialogMode = 'create' | 'edit' | null;
     DatePipe,
     FormsModule,
     Button,
+    ExportButton,
     Dialog,
     Select,
     Spinner,
@@ -63,8 +66,10 @@ type DialogMode = 'create' | 'edit' | null;
 export class Solicitudes {
   private readonly authService = inject(AuthService);
   private readonly solicitudService = inject(SolicitudService);
+  protected readonly exportarCsv = () => this.solicitudService.exportar();
   private readonly archivoService = inject(ArchivoService);
   private readonly catalogoService = inject(CatalogoService);
+  private readonly usuarioService = inject(UsuarioService);
   private readonly notifications = inject(NotificationService);
 
   protected readonly canCreate = this.authService.hasPermission('solicitud.create');
@@ -73,6 +78,13 @@ export class Solicitudes {
   protected readonly canGenerarOrden = this.authService.hasPermission('solicitud.generar_orden');
   protected readonly canGenerarRequerimiento = this.authService.hasPermission('solicitud.generar_requerimiento');
   protected readonly canReadHistorial = this.authService.hasPermission('historial_solicitud.read');
+  // Con alcance global (Despachador/Administrador) se registra a nombre de un
+  // Cliente; el backend solo respeta id_usuario en ese caso (observación 2026-10-19).
+  private readonly canElegirSolicitante =
+    this.authService.hasPermission('solicitud.read_all') && this.authService.hasPermission('usuario.read');
+
+  /** Clientes habilitados + "a mi nombre" al final. Vacío si no aplica. */
+  protected readonly solicitantes = signal<SelectOption[]>([]);
 
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
@@ -215,6 +227,7 @@ export class Solicitudes {
 
   constructor() {
     this.loadAll();
+    this.loadSolicitantes();
 
     effect(() => {
       if (!this.loading() && !this.estadosDisponibles() && this.viewMode() === 'kanban') {
@@ -264,7 +277,7 @@ export class Solicitudes {
     const { request, archivo, eliminarArchivo } = submission;
 
     if (this.dialogMode() === 'create') {
-      const payload: SolicitudRequest = { ...request, id_usuario: currentUser.id };
+      const payload: SolicitudRequest = { ...request, id_usuario: request.id_usuario || currentUser.id };
       this.solicitudService.crear(payload).subscribe({
         next: (creada) =>
           this.gestionarArchivoYFinalizar(creada, archivo, eliminarArchivo, (actualizada) => {
@@ -519,6 +532,21 @@ export class Solicitudes {
         this.historialLoading.set(false);
       },
       error: () => this.historialLoading.set(false),
+    });
+  }
+
+  private loadSolicitantes(): void {
+    const actual = this.authService.user();
+    if (!this.canElegirSolicitante || !actual) return;
+    this.usuarioService.listar().subscribe({
+      next: (usuarios) => {
+        const clientes = usuarios
+          .filter((u) => u.nombre_rol?.toLowerCase() === 'cliente' && u.habilitado !== false)
+          .map((u) => ({ value: u.id_usuario, label: `${u.nombres} ${u.apellidos} · ${u.email}` }));
+        this.solicitantes.set([...clientes, { value: actual.id, label: 'A mi nombre' }]);
+      },
+      // Sin la lista se registra a nombre propio, como antes.
+      error: () => this.solicitantes.set([]),
     });
   }
 

@@ -8,6 +8,7 @@ import { API_BASE_URL } from '../config/api-config';
 import { AuthResponse, LoginRequest, SessionUser } from '../models/auth.model';
 import { decodeJwt, isTokenExpired } from './jwt.util';
 import { ModuloOperativo, PERMISOS_DE_MODULO } from './permisos-base';
+import { PERMISOS_LECTURA_WEB, RUTA_LOGIN_WEB, RUTA_PANEL_WEB } from './permisos-web';
 
 const TOKEN_KEY = 'sgt_access_token';
 const USER_KEY = 'sgt_user';
@@ -32,9 +33,16 @@ export class AuthService {
     );
   }
 
+  /** Cierra la sesión y vuelve al login del contexto actual (SGT o panel del sitio web). */
   logout(): void {
+    const enPanelWeb = this.router.url.startsWith(RUTA_PANEL_WEB);
     this.clearSession();
-    this.router.navigate(['/login']);
+    this.router.navigate([enPanelWeb ? RUTA_LOGIN_WEB : '/login']);
+  }
+
+  /** Cierra la sesión sin navegar (p. ej. el login del panel web rechaza a quien no tiene permisos web_*). */
+  descartarSesion(): void {
+    this.clearSession();
   }
 
   getToken(): string | null {
@@ -43,6 +51,11 @@ export class AuthService {
 
   hasPermission(permission: string): boolean {
     return this.permisos().includes(permission);
+  }
+
+  /** Acceso al panel del sitio web: alguna lectura web_* (PERMISOS_LECTURA_WEB). */
+  puedeAdministrarWeb(): boolean {
+    return PERMISOS_LECTURA_WEB.some((permiso) => this.hasPermission(permiso));
   }
 
   /** Menú/acceso de un módulo operativo: requiere poder actuar sobre él (ver PERMISOS_DE_MODULO). */

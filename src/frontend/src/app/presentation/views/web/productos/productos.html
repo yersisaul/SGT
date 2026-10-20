@@ -1,0 +1,264 @@
+<div class="admin-page">
+  <header class="admin-header">
+    <div class="admin-title-group">
+      <div>
+        <h1 class="admin-title">Productos</h1>
+        <p class="admin-subtitle">Catálogo de soluciones propias que se muestra en el sitio, en el orden indicado</p>
+      </div>
+    </div>
+    @if (canCreate) {
+      <app-button variant="primary" (click)="abrirCrear()">
+        <svg lucidePlus [size]="16" aria-hidden="true"></svg>
+        Nuevo producto
+      </app-button>
+    }
+  </header>
+
+  <app-web-toolbar
+    placeholder="Buscar por nombre o slug…"
+    [conteo]="conteo()"
+    [(busqueda)]="busqueda"
+    [(filtro)]="filtro"
+  />
+
+  @if (loading()) {
+    <div class="admin-state">
+      <app-spinner label="Cargando productos" />
+      <span>Cargando productos…</span>
+    </div>
+  } @else if (loadError()) {
+    <div class="admin-state admin-state-error" role="alert">
+      <svg lucideCircleAlert [size]="20" aria-hidden="true"></svg>
+      <span>{{ loadError() }}</span>
+      <app-button variant="secondary" (click)="cargar()">Reintentar</app-button>
+    </div>
+  } @else {
+    <div class="admin-tabla-wrapper">
+      @if (filtrados().length === 0) {
+        <p class="admin-tabla-empty">
+          {{ items().length === 0 ? 'Aún no hay productos. Crea el primero para mostrarlo en el sitio.' : 'Ningún producto coincide con la búsqueda.' }}
+        </p>
+      } @else {
+        <table class="admin-tabla">
+          <thead>
+            <tr>
+              <th scope="col">Producto</th>
+              <th scope="col" class="web-col-secundaria">Contenido</th>
+              <th scope="col">Orden</th>
+              <th scope="col">Sitio</th>
+              <th scope="col" class="web-col-secundaria">Actualizado</th>
+              <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of filtrados(); track item.id_producto) {
+              <tr class="admin-tabla-row" (click)="abrirEditar(item)">
+                <td>
+                  <div class="web-celda-principal">
+                    <app-web-miniatura [url]="item.url_img" [nombre]="item.nombre" />
+                    <div class="web-celda-texto">
+                      <span class="web-celda-titulo">
+                        {{ item.nombre }}
+                        @if (item.destacado) {
+                          <svg lucideStar [size]="13" class="web-destacado" aria-label="Destacado"></svg>
+                        }
+                      </span>
+                      <span class="web-slug">/{{ item.slug }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td class="web-col-secundaria admin-tabla-secundario">
+                  {{ item.caracteristicas?.length ?? 0 }} características · {{ item.modulos?.length ?? 0 }} módulos
+                </td>
+                <td class="web-num">{{ item.orden }}</td>
+                <td>
+                  <app-publicado-switch
+                    [publicado]="item.publicado"
+                    [etiqueta]="item.nombre"
+                    [disabled]="!canUpdate"
+                    [cargando]="publicando() === item.id_producto"
+                    (cambiar)="alternarPublicacion(item, $event)"
+                  />
+                </td>
+                <td class="web-col-secundaria admin-tabla-secundario">
+                  {{ item.fecha_actualizacion | date: 'dd/MM/yyyy' }}
+                  @if (item.nombre_usuario_actualiza) {
+                    <br />{{ item.nombre_usuario_actualiza }}
+                  }
+                </td>
+                <td class="admin-tabla-col-acciones">
+                  @if (canUpdate) {
+                    <button type="button" class="admin-icon-btn web-icon-neutral" [attr.aria-label]="'Editar ' + item.nombre" (click)="$event.stopPropagation(); abrirEditar(item)">
+                      <svg lucidePencil [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                  @if (canDelete) {
+                    <button type="button" class="admin-icon-btn" [attr.aria-label]="'Eliminar ' + item.nombre" (click)="$event.stopPropagation(); pedirEliminar(item)">
+                      <svg lucideTrash [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+</div>
+
+<app-dialog
+  variant="drawer"
+  ancho="amplio"
+  [title]="editor() === 'crear' ? 'Nuevo producto' : 'Editar ' + (seleccionado()?.nombre ?? 'producto')"
+  [open]="editor() !== null"
+  (closed)="cerrarEditor()"
+>
+  @if (editor()) {
+    <form class="web-form" [formGroup]="form" (ngSubmit)="enviar()" novalidate>
+      <section class="web-form-seccion" aria-labelledby="prod-sec-presentacion">
+        <h3 class="web-form-seccion-titulo" id="prod-sec-presentacion">Presentación</h3>
+        <div class="web-form-fila-3">
+          <div class="field">
+            <label class="field-label" for="prod-nombre">Nombre</label>
+            <input id="prod-nombre" class="input" formControlName="nombre" maxlength="150"
+                   [class.input-error]="form.controls.nombre.touched && form.controls.nombre.invalid" />
+            @if (form.controls.nombre.touched && form.controls.nombre.invalid) {
+              <span class="helper helper-error">El nombre es obligatorio.</span>
+            }
+          </div>
+          <div class="field">
+            <label class="field-label" for="prod-orden">Orden</label>
+            <input id="prod-orden" class="input" type="number" min="0" max="9999" formControlName="orden" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="prod-slug">Slug <span class="field-opcional">(opcional)</span></label>
+          <input id="prod-slug" class="input" formControlName="slug" maxlength="120" placeholder="azor-analytics" />
+          <span class="helper">Dirección del producto en el sitio. Si lo dejas vacío se genera desde el nombre.</span>
+        </div>
+        <div class="field">
+          <label class="field-label" for="prod-subtitulo">Subtítulo <span class="field-opcional">(opcional)</span></label>
+          <input id="prod-subtitulo" class="input" formControlName="subtitulo" maxlength="200" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="prod-corta">Descripción corta</label>
+          <textarea id="prod-corta" class="textarea" rows="2" formControlName="descripcion_corta" maxlength="300"
+                    placeholder="Una o dos frases para la tarjeta del catálogo"></textarea>
+          <span class="contador">{{ form.controls.descripcion_corta.value.length }}/300</span>
+        </div>
+        <div class="field">
+          <label class="field-label" for="prod-descripcion">Descripción completa</label>
+          <textarea id="prod-descripcion" class="textarea" rows="7" formControlName="descripcion"
+                    placeholder="Separa los párrafos con una línea en blanco"></textarea>
+        </div>
+        <div class="field">
+          <label class="field-label" for="prod-video">Video <span class="field-opcional">(opcional)</span></label>
+          <input id="prod-video" class="input" type="url" formControlName="url_video" placeholder="https://www.youtube.com/…"
+                 [class.input-error]="form.controls.url_video.touched && form.controls.url_video.invalid" />
+          @if (form.controls.url_video.touched && form.controls.url_video.invalid) {
+            <span class="helper helper-error">Debe ser una dirección que empiece con https://</span>
+          }
+        </div>
+      </section>
+
+      <section class="web-form-seccion" aria-labelledby="prod-sec-imagen">
+        <h3 class="web-form-seccion-titulo" id="prod-sec-imagen">Imagen</h3>
+        <app-file-upload
+          label="Imagen principal"
+          tipo="imagen"
+          [maxSizeMb]="5"
+          [currentUrl]="seleccionado()?.url_img ?? null"
+          [formControl]="archivoControl"
+          (eliminarActual)="marcarQuitarArchivo()"
+        />
+      </section>
+
+      <section class="web-form-seccion" aria-labelledby="prod-sec-detalle">
+        <h3 class="web-form-seccion-titulo" id="prod-sec-detalle">Características y módulos</h3>
+        <app-lista-texto
+          label="Características"
+          textoAgregar="Agregar característica"
+          vacio="Sin características. Se muestran como lista de beneficios."
+          [max]="30"
+          [(items)]="caracteristicas"
+        />
+
+        <div class="field">
+          <span class="field-label">Módulos</span>
+          @if (modulos().length === 0) {
+            <p class="vacio">Sin módulos. Úsalos para las analíticas o pantallas del producto, agrupadas.</p>
+          }
+          <ol class="lista">
+            @for (modulo of modulos(); track $index; let i = $index) {
+              <li class="fila-bloque">
+                <input class="input" type="text" placeholder="Nombre del módulo" maxlength="150" [value]="modulo.nombre"
+                       [attr.aria-label]="'Nombre del módulo ' + (i + 1)" (input)="editarModulo(i, 'nombre', $any($event.target).value)" />
+                <input class="input" type="text" placeholder="Grupo (p. ej. Tráfico)" maxlength="100" [value]="modulo.grupo ?? ''"
+                       [attr.aria-label]="'Grupo del módulo ' + (i + 1)" (input)="editarModulo(i, 'grupo', $any($event.target).value)" />
+                <button type="button" class="quitar" [attr.aria-label]="'Quitar módulo ' + (i + 1)" (click)="quitarModulo(i)">
+                  <svg lucideX [size]="14" aria-hidden="true"></svg>
+                </button>
+                <textarea class="textarea" rows="2" placeholder="Descripción (opcional)" maxlength="1000" [value]="modulo.descripcion ?? ''"
+                          [attr.aria-label]="'Descripción del módulo ' + (i + 1)" (input)="editarModulo(i, 'descripcion', $any($event.target).value)"></textarea>
+              </li>
+            }
+          </ol>
+          @if (modulos().length < 60) {
+            <button type="button" class="agregar" (click)="agregarModulo()">
+              <svg lucidePlus [size]="14" aria-hidden="true"></svg>
+              Agregar módulo
+            </button>
+          }
+        </div>
+      </section>
+
+      <section class="web-form-seccion" aria-labelledby="prod-sec-publicacion">
+        <h3 class="web-form-seccion-titulo" id="prod-sec-publicacion">Publicación</h3>
+        <label class="web-check">
+          <input type="checkbox" formControlName="publicado" />
+          <span>Publicado<small>Visible en el sitio web (puede tardar hasta un minuto por la caché).</small></span>
+        </label>
+        <label class="web-check">
+          <input type="checkbox" formControlName="destacado" />
+          <span>Destacado<small>Se muestra primero y con mayor protagonismo en la portada.</small></span>
+        </label>
+        @if (seleccionado(); as actual) {
+          <p class="web-form-auditoria">
+            Última modificación: {{ actual.fecha_actualizacion | date: 'dd/MM/yyyy HH:mm' }}
+            @if (actual.nombre_usuario_actualiza) {
+              por {{ actual.nombre_usuario_actualiza }}
+            }
+          </p>
+        }
+      </section>
+
+      @if (errorFormulario()) {
+        <div class="web-form-error" role="alert">{{ errorFormulario() }}</div>
+      }
+
+      <div class="web-form-acciones">
+        <app-button variant="secondary" [disabled]="guardando()" (click)="cerrarEditor()">Cancelar</app-button>
+        <app-button type="submit" variant="primary" [loading]="guardando()" [disabled]="editor() === 'editar' && !canUpdate">
+          {{ editor() === 'crear' ? 'Crear producto' : 'Guardar cambios' }}
+        </app-button>
+      </div>
+    </form>
+  }
+</app-dialog>
+
+<app-dialog variant="modal" title="Eliminar producto" [open]="aEliminar() !== null" (closed)="cancelarEliminar()">
+  @if (aEliminar(); as item) {
+    <p class="confirm-text">
+      ¿Eliminar <strong>{{ item.nombre }}</strong>? Desaparece del sitio y no se puede deshacer. Si solo quieres
+      retirarlo temporalmente, ocúltalo en vez de eliminarlo.
+    </p>
+    @if (errorEliminar()) {
+      <div class="confirm-error" role="alert">{{ errorEliminar() }}</div>
+    }
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="eliminando()" (click)="cancelarEliminar()">Cancelar</app-button>
+      <app-button variant="danger" [loading]="eliminando()" (click)="confirmarEliminar()">Eliminar</app-button>
+    </div>
+  }
+</app-dialog>

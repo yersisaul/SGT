@@ -1,0 +1,60 @@
+<div class="admin-page">
+  <header class="admin-header">
+    <div>
+      <h1 class="admin-title">Sitio web</h1>
+      <p class="admin-subtitle">
+        {{ nombre ? 'Hola, ' + nombre + '. ' : '' }}Esto es lo que hoy ven los visitantes de www.cfbd.co.
+      </p>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="admin-state">
+      <app-spinner label="Cargando resumen" />
+      <span>Cargando resumen…</span>
+    </div>
+  } @else {
+    @if (pendientes().length > 0) {
+      <section aria-labelledby="res-pendientes">
+        <h2 class="resumen-seccion" id="res-pendientes">Para revisar</h2>
+        <ul class="resumen-pendientes">
+          @for (pendiente of pendientes(); track pendiente.texto) {
+            <li>
+              <a class="resumen-pendiente" [routerLink]="pendiente.ruta" [attr.data-tono]="pendiente.tono">
+                <svg lucideCircleAlert [size]="16" aria-hidden="true"></svg>
+                <span>{{ pendiente.texto }}</span>
+                <svg lucideChevronRight [size]="16" class="resumen-chevron" aria-hidden="true"></svg>
+              </a>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    <section aria-labelledby="res-contenido">
+      <h2 class="resumen-seccion" id="res-contenido">Contenido publicado</h2>
+      @if (tarjetas().length === 0) {
+        <p class="vacio">Tu usuario no tiene acceso a ninguna sección de contenido.</p>
+      } @else {
+        <div class="resumen-grid">
+          @for (tarjeta of tarjetas(); track tarjeta.ruta) {
+            <a class="resumen-link" [routerLink]="tarjeta.ruta">
+              <app-card class="resumen-card">
+                <span class="resumen-etiqueta">{{ tarjeta.etiqueta }}</span>
+                <span class="resumen-valor">
+                  {{ tarjeta.publicados }}<span class="resumen-total"> / {{ tarjeta.total }}</span>
+                </span>
+                <span class="resumen-barra" aria-hidden="true">
+                  <span class="resumen-barra-relleno" [style.width.%]="porcentaje(tarjeta)"></span>
+                </span>
+                <span class="resumen-nota">
+                  {{ tarjeta.total === 0 ? 'Sin registros' : tarjeta.publicados === tarjeta.total ? 'Todo publicado' : tarjeta.total - tarjeta.publicados + ' sin publicar' }}
+                </span>
+              </app-card>
+            </a>
+          }
+        </div>
+      }
+    </section>
+  }
+</div>

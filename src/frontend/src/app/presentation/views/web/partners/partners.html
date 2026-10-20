@@ -1,0 +1,201 @@
+<div class="admin-page">
+  <header class="admin-header">
+    <div class="admin-title-group">
+      <div>
+        <h1 class="admin-title">Partners</h1>
+        <p class="admin-subtitle">Alianzas tecnológicas y marcas compatibles con la plataforma</p>
+      </div>
+    </div>
+    @if (canCreate) {
+      <app-button variant="primary" (click)="abrirCrear()">
+        <svg lucidePlus [size]="16" aria-hidden="true"></svg>
+        Nuevo partner
+      </app-button>
+    }
+  </header>
+
+  <div class="bandejas" role="tablist" aria-label="Tipo de partner">
+    <button type="button" role="tab" class="bandeja-tab" [class.bandeja-tab-active]="tipoFiltro() === 'TODOS'"
+            [attr.aria-selected]="tipoFiltro() === 'TODOS'" (click)="tipoFiltro.set('TODOS')">
+      Todos <span class="web-filtro-conteo">{{ filtrados().length }}</span>
+    </button>
+    @for (tipo of tipos; track tipo) {
+      <button type="button" role="tab" class="bandeja-tab" [class.bandeja-tab-active]="tipoFiltro() === tipo"
+              [attr.aria-selected]="tipoFiltro() === tipo" (click)="tipoFiltro.set(tipo)">
+        {{ tipoLabel[tipo] }} <span class="web-filtro-conteo">{{ contarTipo(tipo) }}</span>
+      </button>
+    }
+  </div>
+
+  <app-web-toolbar placeholder="Buscar por nombre o categoría…" [conteo]="conteo()" [(busqueda)]="busqueda" [(filtro)]="filtro" />
+
+  @if (loading()) {
+    <div class="admin-state">
+      <app-spinner label="Cargando partners" />
+      <span>Cargando partners…</span>
+    </div>
+  } @else if (loadError()) {
+    <div class="admin-state admin-state-error" role="alert">
+      <svg lucideCircleAlert [size]="20" aria-hidden="true"></svg>
+      <span>{{ loadError() }}</span>
+      <app-button variant="secondary" (click)="cargar()">Reintentar</app-button>
+    </div>
+  } @else {
+    <div class="admin-tabla-wrapper">
+      @if (visibles().length === 0) {
+        <p class="admin-tabla-empty">
+          {{ items().length === 0 ? 'Aún no hay partners registrados.' : 'Ningún partner coincide con los filtros.' }}
+        </p>
+      } @else {
+        <table class="admin-tabla">
+          <thead>
+            <tr>
+              <th scope="col">Partner</th>
+              <th scope="col">Tipo</th>
+              <th scope="col">Orden</th>
+              <th scope="col">Sitio</th>
+              <th scope="col" class="web-col-secundaria">Actualizado</th>
+              <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of visibles(); track item.id_partner) {
+              <tr class="admin-tabla-row" (click)="abrirEditar(item)">
+                <td>
+                  <div class="web-celda-principal">
+                    <app-web-miniatura [url]="item.url_logo" [nombre]="item.nombre" [contener]="true" />
+                    <div class="web-celda-texto">
+                      <span class="web-celda-titulo">{{ item.nombre }}</span>
+                      <span class="web-celda-sub">{{ item.categoria || 'Sin categoría' }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="web-chip" [class.web-chip-info]="item.tipo === 'TECNOLOGICO'">{{ tipoLabel[item.tipo] }}</span>
+                </td>
+                <td class="web-num">{{ item.orden }}</td>
+                <td>
+                  <app-publicado-switch
+                    [publicado]="item.publicado"
+                    [etiqueta]="item.nombre"
+                    [disabled]="!canUpdate"
+                    [cargando]="publicando() === item.id_partner"
+                    (cambiar)="alternarPublicacion(item, $event)"
+                  />
+                </td>
+                <td class="web-col-secundaria admin-tabla-secundario">{{ item.fecha_actualizacion | date: 'dd/MM/yyyy' }}</td>
+                <td class="admin-tabla-col-acciones">
+                  @if (item.url_sitio) {
+                    <a class="admin-icon-btn web-icon-neutral" [href]="item.url_sitio" target="_blank" rel="noopener noreferrer"
+                       [attr.aria-label]="'Abrir el sitio de ' + item.nombre" (click)="$event.stopPropagation()">
+                      <svg lucideExternalLink [size]="14" aria-hidden="true"></svg>
+                    </a>
+                  }
+                  @if (canUpdate) {
+                    <button type="button" class="admin-icon-btn web-icon-neutral" [attr.aria-label]="'Editar ' + item.nombre" (click)="$event.stopPropagation(); abrirEditar(item)">
+                      <svg lucidePencil [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                  @if (canDelete) {
+                    <button type="button" class="admin-icon-btn" [attr.aria-label]="'Eliminar ' + item.nombre" (click)="$event.stopPropagation(); pedirEliminar(item)">
+                      <svg lucideTrash [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+</div>
+
+<app-dialog
+  variant="drawer"
+  [title]="editor() === 'crear' ? 'Nuevo partner' : 'Editar ' + (seleccionado()?.nombre ?? 'partner')"
+  [open]="editor() !== null"
+  (closed)="cerrarEditor()"
+>
+  @if (editor()) {
+    <form class="web-form" [formGroup]="form" (ngSubmit)="enviar()" novalidate>
+      <section class="web-form-seccion">
+        <div class="field">
+          <label class="field-label" for="part-nombre">Nombre</label>
+          <input id="part-nombre" class="input" formControlName="nombre" maxlength="150"
+                 [class.input-error]="form.controls.nombre.touched && form.controls.nombre.invalid" />
+          @if (form.controls.nombre.touched && form.controls.nombre.invalid) {
+            <span class="helper helper-error">El nombre es obligatorio.</span>
+          }
+        </div>
+        <div class="web-form-fila">
+          <div class="field">
+            <label class="field-label" for="part-tipo">Tipo</label>
+            <select id="part-tipo" class="select-nativo" formControlName="tipo">
+              @for (tipo of tipos; track tipo) {
+                <option [value]="tipo">{{ tipoLabel[tipo] }}</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label" for="part-orden">Orden</label>
+            <input id="part-orden" class="input" type="number" min="0" max="9999" formControlName="orden" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="part-categoria">Categoría <span class="field-opcional">(opcional)</span></label>
+          <input id="part-categoria" class="input" formControlName="categoria" maxlength="100" placeholder="VMS, hardware, cámaras…" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="part-descripcion">Descripción <span class="field-opcional">(opcional)</span></label>
+          <textarea id="part-descripcion" class="textarea" rows="3" formControlName="descripcion" maxlength="1000"></textarea>
+        </div>
+        <div class="field">
+          <label class="field-label" for="part-url">Sitio web <span class="field-opcional">(opcional)</span></label>
+          <input id="part-url" class="input" type="url" formControlName="url_sitio" placeholder="https://…"
+                 [class.input-error]="form.controls.url_sitio.touched && form.controls.url_sitio.invalid" />
+          @if (form.controls.url_sitio.touched && form.controls.url_sitio.invalid) {
+            <span class="helper helper-error">Debe empezar con http:// o https://</span>
+          }
+        </div>
+        <app-file-upload
+          label="Logo"
+          tipo="imagen"
+          [maxSizeMb]="5"
+          [currentUrl]="seleccionado()?.url_logo ?? null"
+          [formControl]="archivoControl"
+          (eliminarActual)="marcarQuitarArchivo()"
+        />
+        <p class="admin-field-hint">PNG o WebP con fondo transparente; sin SVG.</p>
+        <label class="web-check">
+          <input type="checkbox" formControlName="publicado" />
+          <span>Publicado<small>Visible en el sitio web.</small></span>
+        </label>
+      </section>
+
+      @if (errorFormulario()) {
+        <div class="web-form-error" role="alert">{{ errorFormulario() }}</div>
+      }
+
+      <div class="web-form-acciones">
+        <app-button variant="secondary" [disabled]="guardando()" (click)="cerrarEditor()">Cancelar</app-button>
+        <app-button type="submit" variant="primary" [loading]="guardando()" [disabled]="editor() === 'editar' && !canUpdate">
+          {{ editor() === 'crear' ? 'Crear partner' : 'Guardar cambios' }}
+        </app-button>
+      </div>
+    </form>
+  }
+</app-dialog>
+
+<app-dialog variant="modal" title="Eliminar partner" [open]="aEliminar() !== null" (closed)="cancelarEliminar()">
+  @if (aEliminar(); as item) {
+    <p class="confirm-text">¿Eliminar <strong>{{ item.nombre }}</strong> y su logo? No se puede deshacer.</p>
+    @if (errorEliminar()) {
+      <div class="confirm-error" role="alert">{{ errorEliminar() }}</div>
+    }
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="eliminando()" (click)="cancelarEliminar()">Cancelar</app-button>
+      <app-button variant="danger" [loading]="eliminando()" (click)="confirmarEliminar()">Eliminar</app-button>
+    </div>
+  }
+</app-dialog>

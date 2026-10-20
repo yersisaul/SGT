@@ -17,6 +17,15 @@ export class UsuarioService {
     return this.http.get<UsuarioResponse[]>(`${this.apiBaseUrl}/usuarios`);
   }
 
+  /** ?habilitado=false: clientes registrados desde el sitio web que esperan habilitación. */
+  listarPorHabilitado(habilitado: boolean): Observable<UsuarioResponse[]> {
+    return this.http.get<UsuarioResponse[]>(`${this.apiBaseUrl}/usuarios`, { params: { habilitado: String(habilitado) } });
+  }
+
+  cambiarHabilitacion(id: string, habilitado: boolean): Observable<UsuarioResponse> {
+    return this.http.patch<UsuarioResponse>(`${this.apiBaseUrl}/usuarios/${id}/habilitacion`, { habilitado });
+  }
+
   crear(request: UsuarioRequest): Observable<UsuarioResponse> {
     return this.http.post<UsuarioResponse>(`${this.apiBaseUrl}/usuarios`, request);
   }

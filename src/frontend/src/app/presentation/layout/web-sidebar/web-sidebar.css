@@ -1,0 +1,11 @@
+/* El pie del panel web lleva además el enlace de vuelta al SGT, en su propia fila. */
+.sidebar-footer {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.web-sidebar-footer-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}

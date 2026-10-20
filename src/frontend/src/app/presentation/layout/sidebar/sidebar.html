@@ -56,6 +56,8 @@
             <svg lucideLayers [size]="18" class="nav-icon" aria-hidden="true"></svg>
           } @else if (item.icon === 'estados') {
             <svg lucideListChecks [size]="18" class="nav-icon" aria-hidden="true"></svg>
+          } @else if (item.icon === 'sla') {
+            <svg lucideClock [size]="18" class="nav-icon" aria-hidden="true"></svg>
           }
           {{ item.label }}
         </a>

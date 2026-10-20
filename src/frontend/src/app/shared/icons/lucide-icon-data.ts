@@ -409,3 +409,142 @@ export const xIcon: LucideIconNode = {
     ['path', { d: 'm6 6 12 12' }],
   ],
 };
+
+export const globeIcon: LucideIconNode = {
+  name: 'globe',
+  node: [
+    ['circle', { cx: '12', cy: '12', r: '10' }],
+    ['path', { d: 'M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20' }],
+    ['path', { d: 'M2 12h20' }],
+  ],
+};
+
+export const packageIcon: LucideIconNode = {
+  name: 'package',
+  node: [
+    ['path', { d: 'M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z' }],
+    ['path', { d: 'M12 22V12' }],
+    ['path', { d: 'm3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7' }],
+    ['path', { d: 'm7.5 4.27 9 5.15' }],
+  ],
+};
+
+export const briefcaseIcon: LucideIconNode = {
+  name: 'briefcase',
+  node: [
+    ['path', { d: 'M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16' }],
+    ['rect', { width: '20', height: '14', x: '2', y: '6', rx: '2' }],
+  ],
+};
+
+export const handshakeIcon: LucideIconNode = {
+  name: 'handshake',
+  node: [
+    ['path', { d: 'm11 17 2 2a1 1 0 1 0 3-3' }],
+    ['path', { d: 'm14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4' }],
+    ['path', { d: 'm21 3 1 11h-2' }],
+    ['path', { d: 'M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3' }],
+    ['path', { d: 'M3 4h8' }],
+  ],
+};
+
+export const building2Icon: LucideIconNode = {
+  name: 'building-2',
+  node: [
+    ['path', { d: 'M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z' }],
+    ['path', { d: 'M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2' }],
+    ['path', { d: 'M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2' }],
+    ['path', { d: 'M10 6h4' }],
+    ['path', { d: 'M10 10h4' }],
+    ['path', { d: 'M10 14h4' }],
+    ['path', { d: 'M10 18h4' }],
+  ],
+};
+
+export const awardIcon: LucideIconNode = {
+  name: 'award',
+  node: [
+    ['path', { d: 'm15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526' }],
+    ['circle', { cx: '12', cy: '8', r: '6' }],
+  ],
+};
+
+export const newspaperIcon: LucideIconNode = {
+  name: 'newspaper',
+  node: [
+    ['path', { d: 'M15 18h-5' }],
+    ['path', { d: 'M18 14h-8' }],
+    ['path', { d: 'M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2' }],
+    ['rect', { width: '8', height: '4', x: '10', y: '6', rx: '1' }],
+  ],
+};
+
+export const fileTextIcon: LucideIconNode = {
+  name: 'file-text',
+  node: [
+    ['path', { d: 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z' }],
+    ['path', { d: 'M14 2v4a2 2 0 0 0 2 2h4' }],
+    ['path', { d: 'M10 9H8' }],
+    ['path', { d: 'M16 13H8' }],
+    ['path', { d: 'M16 17H8' }],
+  ],
+};
+
+export const userCheckIcon: LucideIconNode = {
+  name: 'user-check',
+  node: [
+    ['path', { d: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' }],
+    ['circle', { cx: '9', cy: '7', r: '4' }],
+    ['path', { d: 'm16 11 2 2 4-4' }],
+  ],
+};
+
+export const eyeIcon: LucideIconNode = {
+  name: 'eye',
+  node: [
+    ['path', { d: 'M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0' }],
+    ['circle', { cx: '12', cy: '12', r: '3' }],
+  ],
+};
+
+export const eyeOffIcon: LucideIconNode = {
+  name: 'eye-off',
+  node: [
+    ['path', { d: 'M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49' }],
+    ['path', { d: 'M14.084 14.158a3 3 0 0 1-4.242-4.242' }],
+    ['path', { d: 'M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143' }],
+    ['path', { d: 'm2 2 20 20' }],
+  ],
+};
+
+export const externalLinkIcon: LucideIconNode = {
+  name: 'external-link',
+  node: [
+    ['path', { d: 'M15 3h6v6' }],
+    ['path', { d: 'M10 14 21 3' }],
+    ['path', { d: 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6' }],
+  ],
+};
+
+export const starIcon: LucideIconNode = {
+  name: 'star',
+  node: [
+    ['path', { d: 'M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z' }],
+  ],
+};
+
+export const tagIcon: LucideIconNode = {
+  name: 'tag',
+  node: [
+    ['path', { d: 'M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z' }],
+    ['circle', { cx: '7.5', cy: '7.5', r: '.5' }],
+  ],
+};
+
+export const arrowLeftIcon: LucideIconNode = {
+  name: 'arrow-left',
+  node: [
+    ['path', { d: 'm12 19-7-7 7-7' }],
+    ['path', { d: 'M19 12H5' }],
+  ],
+};

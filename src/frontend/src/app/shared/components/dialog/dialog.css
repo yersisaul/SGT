@@ -31,6 +31,10 @@
   border-radius: 0;
 }
 
+.dialog-panel-drawer.dialog-panel-amplio {
+  width: min(680px, 100vw);
+}
+
 .dialog-header {
   display: flex;
   align-items: center;

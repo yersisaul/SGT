@@ -1,0 +1,93 @@
+<div class="admin-page">
+  <header class="admin-header">
+    <div class="admin-title-group">
+      <div>
+        <h1 class="admin-title">Registros web</h1>
+        <p class="admin-subtitle">Clientes que pidieron una cuenta desde el sitio; verifica que hayan comprado antes de habilitarlos</p>
+      </div>
+      @if (!loading()) {
+        <span class="admin-count">{{ pendientes().length }}</span>
+      }
+    </div>
+  </header>
+
+  <div class="admin-toolbar">
+    <div class="admin-search">
+      <svg lucideSearch [size]="16" aria-hidden="true"></svg>
+      <input type="search" placeholder="Buscar por nombre o correo…" [value]="busqueda()"
+             (input)="busqueda.set($any($event.target).value)" aria-label="Buscar registros" />
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="admin-state">
+      <app-spinner label="Cargando registros" />
+      <span>Cargando registros…</span>
+    </div>
+  } @else if (loadError()) {
+    <div class="admin-state admin-state-error" role="alert">
+      <svg lucideCircleAlert [size]="20" aria-hidden="true"></svg>
+      <span>{{ loadError() }}</span>
+      <app-button variant="secondary" (click)="cargar()">Reintentar</app-button>
+    </div>
+  } @else if (pendientes().length === 0) {
+    <div class="admin-state">
+      <svg lucideUserCheck [size]="28" aria-hidden="true"></svg>
+      <span>No hay registros pendientes. Los nuevos aparecerán aquí.</span>
+    </div>
+  } @else {
+    <div class="admin-tabla-wrapper">
+      @if (filtrados().length === 0) {
+        <p class="admin-tabla-empty">Ningún registro coincide con la búsqueda.</p>
+      } @else {
+        <table class="admin-tabla">
+          <thead>
+            <tr>
+              <th scope="col">Nombre</th>
+              <th scope="col">Correo</th>
+              <th scope="col" class="web-col-secundaria">Rol</th>
+              <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (usuario of filtrados(); track usuario.id_usuario) {
+              <tr>
+                <td><span class="web-celda-titulo">{{ usuario.nombres }} {{ usuario.apellidos }}</span></td>
+                <td class="admin-tabla-secundario">{{ usuario.email }}</td>
+                <td class="web-col-secundaria"><span class="web-chip web-chip-alerta">{{ usuario.nombre_rol }} · pendiente</span></td>
+                <td class="admin-tabla-col-acciones">
+                  <div class="confirm-actions">
+                    @if (canDelete) {
+                      <app-button variant="ghost" [disabled]="procesando() === usuario.id_usuario" (click)="pedirRechazo(usuario)">
+                        Rechazar
+                      </app-button>
+                    }
+                    <app-button variant="primary" [loading]="procesando() === usuario.id_usuario" (click)="habilitar(usuario)">
+                      Habilitar
+                    </app-button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+</div>
+
+<app-dialog variant="modal" title="Rechazar registro" [open]="aRechazar() !== null" (closed)="cancelarRechazo()">
+  @if (aRechazar(); as usuario) {
+    <p class="confirm-text">
+      Se eliminará la cuenta pendiente de <strong>{{ usuario.nombres }} {{ usuario.apellidos }}</strong>
+      ({{ usuario.email }}). Podrá volver a registrarse desde el sitio.
+    </p>
+    @if (errorRechazo()) {
+      <div class="confirm-error" role="alert">{{ errorRechazo() }}</div>
+    }
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="rechazando()" (click)="cancelarRechazo()">Cancelar</app-button>
+      <app-button variant="danger" [loading]="rechazando()" (click)="confirmarRechazo()">Eliminar registro</app-button>
+    </div>
+  }
+</app-dialog>

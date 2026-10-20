@@ -1,0 +1,183 @@
+<div class="admin-page">
+  <header class="admin-header">
+    <div class="admin-title-group">
+      <div>
+        <h1 class="admin-title">Brochures y documentos</h1>
+        <p class="admin-subtitle">PDF descargables del sitio: brochures, fichas técnicas y presentaciones</p>
+      </div>
+    </div>
+    @if (canCreate) {
+      <app-button variant="primary" (click)="abrirCrear()">
+        <svg lucidePlus [size]="16" aria-hidden="true"></svg>
+        Nuevo documento
+      </app-button>
+    }
+  </header>
+
+  <app-web-toolbar placeholder="Buscar por título o producto…" [conteo]="conteo()" [(busqueda)]="busqueda" [(filtro)]="filtro" />
+
+  @if (loading()) {
+    <div class="admin-state">
+      <app-spinner label="Cargando documentos" />
+      <span>Cargando documentos…</span>
+    </div>
+  } @else if (loadError()) {
+    <div class="admin-state admin-state-error" role="alert">
+      <svg lucideCircleAlert [size]="20" aria-hidden="true"></svg>
+      <span>{{ loadError() }}</span>
+      <app-button variant="secondary" (click)="cargar()">Reintentar</app-button>
+    </div>
+  } @else {
+    <div class="admin-tabla-wrapper">
+      @if (filtrados().length === 0) {
+        <p class="admin-tabla-empty">
+          {{ items().length === 0 ? 'Aún no hay documentos.' : 'Ningún documento coincide con la búsqueda.' }}
+        </p>
+      } @else {
+        <table class="admin-tabla">
+          <thead>
+            <tr>
+              <th scope="col">Documento</th>
+              <th scope="col">Tipo</th>
+              <th scope="col" class="web-col-secundaria">Producto</th>
+              <th scope="col">Sitio</th>
+              <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of filtrados(); track item.id_documento) {
+              <tr class="admin-tabla-row" (click)="abrirEditar(item)">
+                <td>
+                  <div class="web-celda-principal">
+                    <svg lucideFileText [size]="22" aria-hidden="true" class="web-num"></svg>
+                    <div class="web-celda-texto">
+                      <span class="web-celda-titulo">{{ item.titulo }}</span>
+                      @if (item.url_archivo) {
+                        <span class="web-celda-sub">{{ item.nombre_original }} · {{ tamano(item.tamano_bytes) }}</span>
+                      } @else {
+                        <span class="web-chip web-chip-alerta">Sin PDF</span>
+                      }
+                    </div>
+                  </div>
+                </td>
+                <td><span class="web-chip">{{ tipoLabel[item.tipo] }}</span></td>
+                <td class="web-col-secundaria admin-tabla-secundario">{{ item.nombre_producto || 'General' }}</td>
+                <td>
+                  <app-publicado-switch
+                    [publicado]="item.publicado"
+                    [etiqueta]="item.titulo"
+                    [disabled]="!canUpdate || !item.url_archivo"
+                    [cargando]="publicando() === item.id_documento"
+                    (cambiar)="alternarPublicacion(item, $event)"
+                  />
+                </td>
+                <td class="admin-tabla-col-acciones">
+                  @if (item.url_archivo) {
+                    <button type="button" class="admin-icon-btn web-icon-neutral" [attr.aria-label]="'Ver PDF de ' + item.titulo" (click)="$event.stopPropagation(); verPdf(item)">
+                      <svg lucideEye [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                  @if (canUpdate) {
+                    <button type="button" class="admin-icon-btn web-icon-neutral" [attr.aria-label]="'Editar ' + item.titulo" (click)="$event.stopPropagation(); abrirEditar(item)">
+                      <svg lucidePencil [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                  @if (canDelete) {
+                    <button type="button" class="admin-icon-btn" [attr.aria-label]="'Eliminar ' + item.titulo" (click)="$event.stopPropagation(); pedirEliminar(item)">
+                      <svg lucideTrash [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+</div>
+
+<app-dialog
+  variant="drawer"
+  [title]="editor() === 'crear' ? 'Nuevo documento' : 'Editar documento'"
+  [open]="editor() !== null"
+  (closed)="cerrarEditor()"
+>
+  @if (editor()) {
+    <form class="web-form" [formGroup]="form" (ngSubmit)="enviar()" novalidate>
+      <section class="web-form-seccion">
+        <div class="field">
+          <label class="field-label" for="doc-titulo">Título</label>
+          <input id="doc-titulo" class="input" formControlName="titulo" maxlength="200"
+                 [class.input-error]="form.controls.titulo.touched && form.controls.titulo.invalid" />
+          @if (form.controls.titulo.touched && form.controls.titulo.invalid) {
+            <span class="helper helper-error">El título es obligatorio.</span>
+          }
+        </div>
+        <div class="web-form-fila">
+          <div class="field">
+            <label class="field-label" for="doc-tipo">Tipo</label>
+            <select id="doc-tipo" class="select-nativo" formControlName="tipo">
+              @for (tipo of tipos; track tipo) {
+                <option [value]="tipo">{{ tipoLabel[tipo] }}</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label" for="doc-producto">Producto <span class="field-opcional">(opcional)</span></label>
+            <select id="doc-producto" class="select-nativo" formControlName="id_producto">
+              <option value="">General (sin producto)</option>
+              @for (producto of productos(); track producto.id_producto) {
+                <option [value]="producto.id_producto">{{ producto.nombre }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="doc-descripcion">Descripción <span class="field-opcional">(opcional)</span></label>
+          <textarea id="doc-descripcion" class="textarea" rows="3" formControlName="descripcion" maxlength="500"></textarea>
+        </div>
+        <app-file-upload
+          [label]="seleccionado()?.url_archivo ? 'Archivo PDF (reemplazar)' : 'Archivo PDF'"
+          tipo="pdf"
+          [maxSizeMb]="maxPdfMb"
+          [currentUrl]="seleccionado()?.url_archivo ?? null"
+          [formControl]="archivoControl"
+        />
+        <p class="admin-field-hint">Solo PDF, hasta {{ maxPdfMb }} MB. Al descargarlo, el visitante ve el nombre original del archivo.</p>
+        <div class="field web-campo-orden">
+          <label class="field-label" for="doc-orden">Orden</label>
+          <input id="doc-orden" class="input" type="number" min="0" max="9999" formControlName="orden" />
+        </div>
+        <label class="web-check">
+          <input type="checkbox" formControlName="publicado" />
+          <span>Publicado<small>Requiere un PDF; si lo subes ahora se publica al terminar de cargarlo.</small></span>
+        </label>
+      </section>
+
+      @if (errorFormulario()) {
+        <div class="web-form-error" role="alert">{{ errorFormulario() }}</div>
+      }
+
+      <div class="web-form-acciones">
+        <app-button variant="secondary" [disabled]="guardando()" (click)="cerrarEditor()">Cancelar</app-button>
+        <app-button type="submit" variant="primary" [loading]="guardando()" [disabled]="editor() === 'editar' && !canUpdate">
+          {{ editor() === 'crear' ? 'Crear documento' : 'Guardar cambios' }}
+        </app-button>
+      </div>
+    </form>
+  }
+</app-dialog>
+
+<app-dialog variant="modal" title="Eliminar documento" [open]="aEliminar() !== null" (closed)="cancelarEliminar()">
+  @if (aEliminar(); as item) {
+    <p class="confirm-text">¿Eliminar <strong>{{ item.titulo }}</strong> y su PDF? No se puede deshacer.</p>
+    @if (errorEliminar()) {
+      <div class="confirm-error" role="alert">{{ errorEliminar() }}</div>
+    }
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="eliminando()" (click)="cancelarEliminar()">Cancelar</app-button>
+      <app-button variant="danger" [loading]="eliminando()" (click)="confirmarEliminar()">Eliminar</app-button>
+    </div>
+  }
+</app-dialog>

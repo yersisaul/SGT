@@ -71,3 +71,29 @@
   border-radius: var(--radius-sm);
   padding: var(--space-3);
 }
+
+/* Panel del sitio web: misma tarjeta, con una etiqueta de contexto sobre el título. */
+.login-contexto {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-accent);
+  background: var(--status-info-bg);
+  border-radius: 999px;
+  padding: 2px var(--space-3);
+  margin-bottom: var(--space-1);
+}
+
+.login-alterno {
+  font-size: 13px;
+  color: var(--color-muted-foreground);
+  text-decoration: none;
+}
+
+.login-alterno:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+}

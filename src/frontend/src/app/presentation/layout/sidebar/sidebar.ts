@@ -4,6 +4,7 @@ import {
   LucideBoxes,
   LucideClipboardCheck,
   LucideClipboardList,
+  LucideClock,
   LucideKeyRound,
   LucideLayers,
   LucideLayoutDashboard,
@@ -33,7 +34,8 @@ type NavIcon =
   | 'permisos'
   | 'activos'
   | 'especialidades'
-  | 'estados';
+  | 'estados'
+  | 'sla';
 
 interface NavItem {
   label: string;
@@ -79,6 +81,7 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
     permission: 'especialidad.read',
   },
   { label: 'Estados', route: '/app/administracion/estados', icon: 'estados', permission: 'estado.read' },
+  { label: 'Tiempos de SLA', route: '/app/administracion/sla', icon: 'sla', permission: 'sla.read' },
 ];
 
 @Component({
@@ -89,6 +92,7 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
     LucideLayoutDashboard,
     LucideClipboardList,
     LucideClipboardCheck,
+    LucideClock,
     LucideWrench,
     LucideLogOut,
     LucideUsers,

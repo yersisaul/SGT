@@ -337,3 +337,138 @@ export class LucideWrench extends LucideIconBase {
 export class LucideX extends LucideIconBase {
   protected readonly icon = data.xIcon;
 }
+
+@Component({
+  selector: 'svg[lucideGlobe]',
+  template: LUCIDE_ICON_TEMPLATE,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LucideGlobe extends LucideIconBase {
+  protected readonly icon = data.globeIcon;
+}
+
+@Component({
+  selector: 'svg[lucidePackage]',
+  template: LUCIDE_ICON_TEMPLATE,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LucidePackage extends LucideIconBase {
+  protected readonly icon = data.packageIcon;
+}
+
+@Component({
+  selector: 'svg[lucideBriefcase]',
+  template: LUCIDE_ICON_TEMPLATE,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LucideBriefcase extends LucideIconBase {
+  protected readonly icon = data.briefcaseIcon;
+}
+
+@Component({
+  selector: 'svg[lucideHandshake]',
+  template: LUCIDE_ICON_TEMPLATE,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LucideHandshake extends LucideIconBase {
+  protected readonly icon = data.handshakeIcon;
+}
+
+@Component({
+  selector: 'svg[lucideBuilding2]',
+  template: LUCIDE_ICON_TEMPLATE,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LucideBuilding2 extends LucideIconBase {
+  protected readonly icon = data.building2Icon;
+}
+
+@Component({
+  selector: 'svg[lucideAward]',
+  template: LUCIDE_ICON_TEMPLATE,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LucideAward extends LucideIconBase {
+  protected readonly icon = data.awardIcon;
+}
+
+@Component({
+  selector: 'svg[lucideNewspaper]',
+  template: LUCIDE_ICON_TEMPLATE,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LucideNewspaper extends LucideIconBase {
+  protected readonly icon = data.newspaperIcon;
+}
+
+@Component({
+  selector: 'svg[lucideFileText]',
+  template: LUCIDE_ICON_TEMPLATE,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LucideFileText extends LucideIconBase {
+  protected readonly icon = data.fileTextIcon;
+}
+
+@Component({
+  selector: 'svg[lucideUserCheck]',
+  template: LUCIDE_ICON_TEMPLATE,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LucideUserCheck extends LucideIconBase {
+  protected readonly icon = data.userCheckIcon;
+}
+
+@Component({
+  selector: 'svg[lucideEye]',
+  template: LUCIDE_ICON_TEMPLATE,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LucideEye extends LucideIconBase {
+  protected readonly icon = data.eyeIcon;
+}
+
+@Component({
+  selector: 'svg[lucideEyeOff]',
+  template: LUCIDE_ICON_TEMPLATE,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LucideEyeOff extends LucideIconBase {
+  protected readonly icon = data.eyeOffIcon;
+}
+
+@Component({
+  selector: 'svg[lucideExternalLink]',
+  template: LUCIDE_ICON_TEMPLATE,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LucideExternalLink extends LucideIconBase {
+  protected readonly icon = data.externalLinkIcon;
+}
+
+@Component({
+  selector: 'svg[lucideStar]',
+  template: LUCIDE_ICON_TEMPLATE,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LucideStar extends LucideIconBase {
+  protected readonly icon = data.starIcon;
+}
+
+@Component({
+  selector: 'svg[lucideTag]',
+  template: LUCIDE_ICON_TEMPLATE,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LucideTag extends LucideIconBase {
+  protected readonly icon = data.tagIcon;
+}
+
+@Component({
+  selector: 'svg[lucideArrowLeft]',
+  template: LUCIDE_ICON_TEMPLATE,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LucideArrowLeft extends LucideIconBase {
+  protected readonly icon = data.arrowLeftIcon;
+}

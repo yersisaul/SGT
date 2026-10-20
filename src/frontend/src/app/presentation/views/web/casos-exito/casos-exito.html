@@ -1,0 +1,245 @@
+<div class="admin-page">
+  <header class="admin-header">
+    <div class="admin-title-group">
+      <div>
+        <h1 class="admin-title">Casos de éxito</h1>
+        <p class="admin-subtitle">Proyectos implementados con sus resultados medibles</p>
+      </div>
+    </div>
+    @if (canCreate) {
+      <app-button variant="primary" (click)="abrirCrear()">
+        <svg lucidePlus [size]="16" aria-hidden="true"></svg>
+        Nuevo caso
+      </app-button>
+    }
+  </header>
+
+  <app-web-toolbar placeholder="Buscar por título, cliente o producto…" [conteo]="conteo()" [(busqueda)]="busqueda" [(filtro)]="filtro" />
+
+  @if (loading()) {
+    <div class="admin-state">
+      <app-spinner label="Cargando casos de éxito" />
+      <span>Cargando casos de éxito…</span>
+    </div>
+  } @else if (loadError()) {
+    <div class="admin-state admin-state-error" role="alert">
+      <svg lucideCircleAlert [size]="20" aria-hidden="true"></svg>
+      <span>{{ loadError() }}</span>
+      <app-button variant="secondary" (click)="cargar()">Reintentar</app-button>
+    </div>
+  } @else {
+    <div class="admin-tabla-wrapper">
+      @if (filtrados().length === 0) {
+        <p class="admin-tabla-empty">
+          {{ items().length === 0 ? 'Aún no hay casos de éxito.' : 'Ningún caso coincide con la búsqueda.' }}
+        </p>
+      } @else {
+        <table class="admin-tabla">
+          <thead>
+            <tr>
+              <th scope="col">Caso</th>
+              <th scope="col" class="web-col-secundaria">Cliente · producto</th>
+              <th scope="col" class="web-col-secundaria">Fecha</th>
+              <th scope="col">Sitio</th>
+              <th scope="col"><span class="sr-only">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of filtrados(); track item.id_caso_exito) {
+              <tr class="admin-tabla-row" (click)="abrirEditar(item)">
+                <td>
+                  <div class="web-celda-principal">
+                    <app-web-miniatura [url]="item.url_img" [nombre]="item.titulo" />
+                    <div class="web-celda-texto">
+                      <span class="web-celda-titulo">
+                        {{ item.titulo }}
+                        @if (item.destacado) {
+                          <svg lucideStar [size]="13" class="web-destacado" aria-label="Destacado"></svg>
+                        }
+                      </span>
+                      <span class="web-celda-sub">{{ item.metricas?.length ?? 0 }} métricas · /{{ item.slug }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td class="web-col-secundaria admin-tabla-secundario">
+                  {{ item.nombre_cliente || 'Sin cliente' }}<br />{{ item.nombre_producto || 'Sin producto' }}
+                </td>
+                <td class="web-col-secundaria web-num">{{ item.fecha_caso ? (item.fecha_caso | date: 'MMM yyyy') : '—' }}</td>
+                <td>
+                  <app-publicado-switch
+                    [publicado]="item.publicado"
+                    [etiqueta]="item.titulo"
+                    [disabled]="!canUpdate"
+                    [cargando]="publicando() === item.id_caso_exito"
+                    (cambiar)="alternarPublicacion(item, $event)"
+                  />
+                </td>
+                <td class="admin-tabla-col-acciones">
+                  @if (canUpdate) {
+                    <button type="button" class="admin-icon-btn web-icon-neutral" [attr.aria-label]="'Editar ' + item.titulo" (click)="$event.stopPropagation(); abrirEditar(item)">
+                      <svg lucidePencil [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                  @if (canDelete) {
+                    <button type="button" class="admin-icon-btn" [attr.aria-label]="'Eliminar ' + item.titulo" (click)="$event.stopPropagation(); pedirEliminar(item)">
+                      <svg lucideTrash [size]="14" aria-hidden="true"></svg>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+</div>
+
+<app-dialog
+  variant="drawer"
+  ancho="amplio"
+  [title]="editor() === 'crear' ? 'Nuevo caso de éxito' : 'Editar caso de éxito'"
+  [open]="editor() !== null"
+  (closed)="cerrarEditor()"
+>
+  @if (editor()) {
+    <form class="web-form" [formGroup]="form" (ngSubmit)="enviar()" novalidate>
+      <section class="web-form-seccion" aria-labelledby="caso-sec-historia">
+        <h3 class="web-form-seccion-titulo" id="caso-sec-historia">Historia</h3>
+        <div class="field">
+          <label class="field-label" for="caso-titulo">Título</label>
+          <input id="caso-titulo" class="input" formControlName="titulo" maxlength="200"
+                 [class.input-error]="form.controls.titulo.touched && form.controls.titulo.invalid" />
+          @if (form.controls.titulo.touched && form.controls.titulo.invalid) {
+            <span class="helper helper-error">El título es obligatorio.</span>
+          }
+        </div>
+        <div class="web-form-fila">
+          <div class="field">
+            <label class="field-label" for="caso-slug">Slug <span class="field-opcional">(opcional)</span></label>
+            <input id="caso-slug" class="input" formControlName="slug" maxlength="120" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="caso-fecha">Fecha del caso <span class="field-opcional">(opcional)</span></label>
+            <input id="caso-fecha" class="input" type="date" formControlName="fecha_caso" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="caso-resumen">Resumen</label>
+          <textarea id="caso-resumen" class="textarea" rows="3" formControlName="resumen" maxlength="500"></textarea>
+          <span class="contador">{{ form.controls.resumen.value.length }}/500</span>
+        </div>
+        <div class="field">
+          <label class="field-label" for="caso-contenido">Contenido</label>
+          <textarea id="caso-contenido" class="textarea" rows="7" formControlName="contenido"
+                    placeholder="Contexto, solución y resultados. Separa los párrafos con una línea en blanco."></textarea>
+        </div>
+      </section>
+
+      <section class="web-form-seccion" aria-labelledby="caso-sec-resultados">
+        <h3 class="web-form-seccion-titulo" id="caso-sec-resultados">Resultados</h3>
+        <div class="field">
+          <span class="field-label">Métricas destacadas</span>
+          @if (metricas().length === 0) {
+            <p class="vacio">Agrega cifras como "50 000" · "vecinos registrados".</p>
+          }
+          <ol class="lista">
+            @for (metrica of metricas(); track $index; let i = $index) {
+              <li class="fila">
+                <input class="input web-campo-corto" type="text" placeholder="Valor" maxlength="30" [value]="metrica.valor"
+                       [attr.aria-label]="'Valor de la métrica ' + (i + 1)" (input)="editarMetrica(i, 'valor', $any($event.target).value)" />
+                <input class="input" type="text" placeholder="Etiqueta" maxlength="100" [value]="metrica.etiqueta"
+                       [attr.aria-label]="'Etiqueta de la métrica ' + (i + 1)" (input)="editarMetrica(i, 'etiqueta', $any($event.target).value)" />
+                <button type="button" class="quitar" [attr.aria-label]="'Quitar métrica ' + (i + 1)" (click)="quitarMetrica(i)">
+                  <svg lucideX [size]="14" aria-hidden="true"></svg>
+                </button>
+              </li>
+            }
+          </ol>
+          @if (metricas().length < 10) {
+            <button type="button" class="agregar" (click)="agregarMetrica()">
+              <svg lucidePlus [size]="14" aria-hidden="true"></svg>
+              Agregar métrica
+            </button>
+          }
+        </div>
+        <div class="web-form-fila">
+          <div class="field">
+            <label class="field-label" for="caso-cliente">Cliente <span class="field-opcional">(opcional)</span></label>
+            <select id="caso-cliente" class="select-nativo" formControlName="id_cliente_referencia">
+              <option value="">Sin cliente</option>
+              @for (cliente of clientes(); track cliente.id_cliente_referencia) {
+                <option [value]="cliente.id_cliente_referencia">{{ cliente.nombre }}</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label" for="caso-producto">Producto <span class="field-opcional">(opcional)</span></label>
+            <select id="caso-producto" class="select-nativo" formControlName="id_producto">
+              <option value="">Sin producto</option>
+              @for (producto of productos(); track producto.id_producto) {
+                <option [value]="producto.id_producto">{{ producto.nombre }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="caso-url">Enlace externo <span class="field-opcional">(opcional)</span></label>
+          <input id="caso-url" class="input" type="url" formControlName="url_externa" placeholder="Nota de prensa, video…"
+                 [class.input-error]="form.controls.url_externa.touched && form.controls.url_externa.invalid" />
+          @if (form.controls.url_externa.touched && form.controls.url_externa.invalid) {
+            <span class="helper helper-error">Debe empezar con http:// o https://</span>
+          }
+        </div>
+        <app-file-upload
+          label="Imagen"
+          tipo="imagen"
+          [maxSizeMb]="5"
+          [currentUrl]="seleccionado()?.url_img ?? null"
+          [formControl]="archivoControl"
+          (eliminarActual)="marcarQuitarArchivo()"
+        />
+      </section>
+
+      <section class="web-form-seccion" aria-labelledby="caso-sec-publicacion">
+        <h3 class="web-form-seccion-titulo" id="caso-sec-publicacion">Publicación</h3>
+        <div class="field web-campo-orden">
+          <label class="field-label" for="caso-orden">Orden</label>
+          <input id="caso-orden" class="input" type="number" min="0" max="9999" formControlName="orden" />
+        </div>
+        <label class="web-check">
+          <input type="checkbox" formControlName="publicado" />
+          <span>Publicado<small>Visible en el sitio web.</small></span>
+        </label>
+        <label class="web-check">
+          <input type="checkbox" formControlName="destacado" />
+          <span>Destacado<small>Aparece en la portada.</small></span>
+        </label>
+      </section>
+
+      @if (errorFormulario()) {
+        <div class="web-form-error" role="alert">{{ errorFormulario() }}</div>
+      }
+
+      <div class="web-form-acciones">
+        <app-button variant="secondary" [disabled]="guardando()" (click)="cerrarEditor()">Cancelar</app-button>
+        <app-button type="submit" variant="primary" [loading]="guardando()" [disabled]="editor() === 'editar' && !canUpdate">
+          {{ editor() === 'crear' ? 'Crear caso' : 'Guardar cambios' }}
+        </app-button>
+      </div>
+    </form>
+  }
+</app-dialog>
+
+<app-dialog variant="modal" title="Eliminar caso de éxito" [open]="aEliminar() !== null" (closed)="cancelarEliminar()">
+  @if (aEliminar(); as item) {
+    <p class="confirm-text">¿Eliminar <strong>{{ item.titulo }}</strong>? No se puede deshacer.</p>
+    @if (errorEliminar()) {
+      <div class="confirm-error" role="alert">{{ errorEliminar() }}</div>
+    }
+    <div class="confirm-actions">
+      <app-button variant="secondary" [disabled]="eliminando()" (click)="cancelarEliminar()">Cancelar</app-button>
+      <app-button variant="danger" [loading]="eliminando()" (click)="confirmarEliminar()">Eliminar</app-button>
+    </div>
+  }
+</app-dialog>

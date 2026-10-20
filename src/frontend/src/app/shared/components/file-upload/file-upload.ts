@@ -7,14 +7,18 @@ import { Spinner } from '../spinner/spinner';
 
 let nextFileUploadId = 0;
 
-const EXTENSIONES_PERMITIDAS: Record<'imagen' | 'adjunto', string[]> = {
+type TipoArchivo = 'imagen' | 'adjunto' | 'pdf';
+
+const EXTENSIONES_PERMITIDAS: Record<TipoArchivo, string[]> = {
   imagen: ['jpg', 'jpeg', 'png', 'webp'],
   adjunto: ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
+  pdf: ['pdf'],
 };
 
-const ACCEPT_MIME: Record<'imagen' | 'adjunto', string> = {
+const ACCEPT_MIME: Record<TipoArchivo, string> = {
   imagen: 'image/png,image/jpeg,image/webp',
   adjunto: 'image/png,image/jpeg,image/webp,application/pdf',
+  pdf: 'application/pdf',
 };
 
 /**
@@ -52,7 +56,7 @@ export class FileUpload implements ControlValueAccessor {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly label = input('Archivo');
-  readonly tipo = input<'imagen' | 'adjunto'>('imagen');
+  readonly tipo = input<TipoArchivo>('imagen');
   readonly maxSizeMb = input(5);
   readonly currentUrl = input<string | null>(null);
   readonly errorMessage = input<string | null>(null);

@@ -1,0 +1,110 @@
+<div class="admin-page">
+  <header class="admin-header">
+    <div class="admin-title-group">
+      <div>
+        <h1 class="admin-title">Tiempos de SLA</h1>
+        <p class="admin-subtitle">Plazos de despacho y atención, en horas calendario</p>
+      </div>
+    </div>
+
+    @if (canUpdate && !loading() && !loadError()) {
+      <div class="sla-acciones">
+        @if (cambios().length > 0) {
+          <app-button variant="ghost" [disabled]="saving()" (click)="descartar()">Descartar</app-button>
+        }
+        <app-button
+          variant="primary"
+          [disabled]="cambios().length === 0 || hayErrores()"
+          [loading]="saving()"
+          (click)="guardar()"
+        >
+          {{ cambios().length > 1 ? 'Guardar ' + cambios().length + ' cambios' : 'Guardar cambios' }}
+        </app-button>
+      </div>
+    }
+  </header>
+
+  @if (loading()) {
+    <div class="admin-state">
+      <app-spinner label="Cargando SLA" />
+      <span>Cargando configuración…</span>
+    </div>
+  } @else if (loadError()) {
+    <div class="admin-state admin-state-error" role="alert">
+      <svg lucideCircleAlert [size]="20" aria-hidden="true"></svg>
+      <span>{{ loadError() }}</span>
+      <app-button variant="secondary" (click)="reload()">Reintentar</app-button>
+    </div>
+  } @else {
+    <p class="sla-nota">
+      <svg lucideClock [size]="16" aria-hidden="true"></svg>
+      Los cambios se aplican de inmediato a los límites que ven los usuarios, a los indicadores y al aviso por correo
+      de requerimientos vencidos. No modifican registros ya cerrados.
+    </p>
+
+    @for (grupo of grupos(); track grupo.id) {
+      <section class="sla-grupo" [attr.aria-labelledby]="'sla-' + grupo.id">
+        <div class="sla-grupo-cabecera">
+          <h2 class="sla-grupo-titulo" [id]="'sla-' + grupo.id">{{ grupo.titulo }}</h2>
+          <p class="sla-grupo-descripcion">{{ grupo.descripcion }}</p>
+        </div>
+
+        <ul class="sla-lista">
+          @for (sla of grupo.items; track sla.clave) {
+            <li class="sla-fila" [class.sla-fila-modificada]="modificado(sla)">
+              <div class="sla-fila-texto">
+                <label class="sla-etiqueta" [for]="'sla-input-' + sla.clave">{{ sla.etiqueta }}</label>
+                <span class="sla-meta">
+                  @if (sla.modificado_por && sla.fecha_modificacion) {
+                    Cambiado por {{ sla.modificado_por }} · {{ sla.fecha_modificacion | date: 'dd/MM/yyyy HH:mm' }}
+                  } @else {
+                    Valor inicial
+                  }
+                </span>
+              </div>
+
+              <div class="sla-control">
+                <div class="sla-input-grupo" [class.sla-input-error]="error(sla.clave)">
+                  <input
+                    [id]="'sla-input-' + sla.clave"
+                    type="number"
+                    inputmode="numeric"
+                    [min]="minHoras"
+                    [max]="maxHoras"
+                    step="1"
+                    [value]="valor(sla)"
+                    [disabled]="!canUpdate || saving()"
+                    [attr.aria-invalid]="!!error(sla.clave)"
+                    [attr.aria-describedby]="'sla-ayuda-' + sla.clave"
+                    (input)="editar(sla.clave, $any($event.target).value)"
+                  />
+                  <span class="sla-unidad" aria-hidden="true">h</span>
+                </div>
+                <span class="sla-ayuda" [id]="'sla-ayuda-' + sla.clave" [class.sla-ayuda-error]="error(sla.clave)">
+                  @if (error(sla.clave); as mensaje) {
+                    {{ mensaje }}
+                  } @else if (equivalencia(sla); as dias) {
+                    = {{ dias }}
+                  } @else {
+                    Inicial: {{ sla.horas_por_defecto }} h
+                  }
+                </span>
+              </div>
+
+              @if (canUpdate) {
+                <button
+                  type="button"
+                  class="sla-restablecer"
+                  [disabled]="saving() || valor(sla) === '' + sla.horas_por_defecto"
+                  (click)="restablecer(sla)"
+                >
+                  Restablecer
+                </button>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  }
+</div>

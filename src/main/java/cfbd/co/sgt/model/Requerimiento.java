@@ -61,6 +61,12 @@ public class Requerimiento {
     @Column (name = "url_adjunto")
     private String url_adjunto;
 
+    // Cuándo se avisó por correo a los Administradores que venció el SLA de
+    // decisión (aprobado 2026-10-19); null = aún no avisado. Evita repetir el
+    // aviso tras un reinicio (ver AvisoSlaRequerimientoJob).
+    @Column (name = "fecha_aviso_sla")
+    private Instant fecha_aviso_sla;
+
     // Relación con la entidad Aprobacion (un requerimiento puede tener muchas aprobaciones)
     @OneToMany(mappedBy = "requerimiento", fetch = FetchType.LAZY)
     private List<Aprobacion> aprobaciones = new ArrayList<>();

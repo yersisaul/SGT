@@ -1,0 +1,79 @@
+<aside class="sidebar" [class.sidebar-open]="open()">
+  <div class="sidebar-brand">
+    <app-brand-logo class="sidebar-logo" variant="mark" surface="dark" />
+    <span class="sidebar-brand-divider" aria-hidden="true"></span>
+    <div class="sidebar-product">
+      <span class="sidebar-title">Sitio web</span>
+      <span class="sidebar-subtitle">www.cfbd.co</span>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav" aria-label="Navegación del panel del sitio web">
+    @for (seccion of secciones(); track seccion.titulo) {
+      <div class="sidebar-section">{{ seccion.titulo }}</div>
+      @for (item of seccion.items; track item.route) {
+        <a class="nav-item" [routerLink]="item.route" routerLinkActive="nav-item-active" (click)="onNavigate()">
+          @switch (item.icon) {
+            @case ('resumen') {
+              <svg lucideLayoutDashboard [size]="18" class="nav-icon" aria-hidden="true"></svg>
+            }
+            @case ('productos') {
+              <svg lucidePackage [size]="18" class="nav-icon" aria-hidden="true"></svg>
+            }
+            @case ('servicios') {
+              <svg lucideBriefcase [size]="18" class="nav-icon" aria-hidden="true"></svg>
+            }
+            @case ('casos') {
+              <svg lucideAward [size]="18" class="nav-icon" aria-hidden="true"></svg>
+            }
+            @case ('clientes') {
+              <svg lucideBuilding2 [size]="18" class="nav-icon" aria-hidden="true"></svg>
+            }
+            @case ('partners') {
+              <svg lucideHandshake [size]="18" class="nav-icon" aria-hidden="true"></svg>
+            }
+            @case ('novedades') {
+              <svg lucideNewspaper [size]="18" class="nav-icon" aria-hidden="true"></svg>
+            }
+            @case ('documentos') {
+              <svg lucideFileText [size]="18" class="nav-icon" aria-hidden="true"></svg>
+            }
+            @case ('registros') {
+              <svg lucideUserCheck [size]="18" class="nav-icon" aria-hidden="true"></svg>
+            }
+          }
+          {{ item.label }}
+        </a>
+      }
+    }
+  </nav>
+
+  <div class="sidebar-footer">
+    @if (puedeIrAlSgt()) {
+      <a class="nav-item" routerLink="/app/dashboard" (click)="onNavigate()">
+        <svg lucideArrowLeft [size]="18" class="nav-icon" aria-hidden="true"></svg>
+        Ir a Gestión de tickets
+      </a>
+    }
+    <div class="web-sidebar-footer-row">
+      <button type="button" class="nav-item logout-btn" (click)="logout()">
+        <svg lucideLogOut [size]="18" class="nav-icon" aria-hidden="true"></svg>
+        Cerrar sesión
+      </button>
+      <button
+        type="button"
+        class="theme-toggle"
+        (click)="toggleTheme()"
+        [attr.aria-label]="isDark() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
+        [attr.title]="isDark() ? 'Tema claro' : 'Tema oscuro'"
+      >
+        @if (isDark()) {
+          <svg lucideSun [size]="18" aria-hidden="true"></svg>
+        } @else {
+          <svg lucideMoon [size]="18" aria-hidden="true"></svg>
+        }
+      </button>
+    </div>
+  </div>
+  <p class="sidebar-version">Panel web · SGT v{{ version }}</p>
+</aside>

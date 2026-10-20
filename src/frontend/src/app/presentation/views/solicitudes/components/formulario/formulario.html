@@ -1,4 +1,16 @@
 <form [formGroup]="form" (ngSubmit)="submit()" class="solicitud-form" novalidate>
+  @if (eligeSolicitante) {
+    <app-select
+      label="Cliente solicitante"
+      placeholder="Selecciona a nombre de quién se registra"
+      [options]="solicitantes()"
+      formControlName="id_usuario"
+      [errorMessage]="
+        form.controls.id_usuario.touched && form.controls.id_usuario.invalid ? 'Selecciona el cliente que reporta' : null
+      "
+    />
+  }
+
   <app-select
     label="Activo"
     placeholder="Selecciona un activo"

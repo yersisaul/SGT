@@ -30,6 +30,7 @@ import { CatalogoService } from '../../../core/services/catalogo.service';
 import { OrdenService } from '../../../core/services/orden.service';
 import { RequerimientoService } from '../../../core/services/requerimiento.service';
 import { SolicitudService } from '../../../core/services/solicitud.service';
+import { ExportButton } from '../../../shared/components/export-button/export-button';
 import { Button } from '../../../shared/components/button/button';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { FileUpload } from '../../../shared/components/file-upload/file-upload';
@@ -63,6 +64,7 @@ type DialogMode = 'create' | 'edit' | null;
     FormsModule,
     RouterLink,
     Button,
+    ExportButton,
     Dialog,
     Select,
     Spinner,
@@ -85,6 +87,7 @@ type DialogMode = 'create' | 'edit' | null;
 export class Requerimientos {
   private readonly authService = inject(AuthService);
   private readonly requerimientoService = inject(RequerimientoService);
+  protected readonly exportarCsv = () => this.requerimientoService.exportar();
   private readonly solicitudService = inject(SolicitudService);
   private readonly aprobacionService = inject(AprobacionService);
   private readonly archivoService = inject(ArchivoService);

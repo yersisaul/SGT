@@ -30,6 +30,7 @@ import cfbd.co.sgt.repository.EstadoRepository;
 import cfbd.co.sgt.repository.RolPermisoRepository;
 import cfbd.co.sgt.repository.UsuarioEspecialidadRepository;
 import cfbd.co.sgt.repository.UsuarioRepository;
+import cfbd.co.sgt.service.ConfiguracionSlaService;
 import cfbd.co.sgt.service.PermisoService;
 import cfbd.co.sgt.service.RolService;
 import cfbd.co.sgt.service.UsuarioService;
@@ -92,7 +93,10 @@ public class DataSeeder implements ApplicationRunner {
             "kpi.read",
             "kpi.export",
             // Publicar/archivar una novedad del sitio web (no basta web_novedad.update).
-            "web_novedad.publish");
+            "web_novedad.publish",
+            // Configuración de los SLA desde el panel (aprobado 2026-10-19).
+            "sla.read",
+            "sla.update");
 
     private final RolService rolService;
     private final PermisoService permisoService;
@@ -104,6 +108,7 @@ public class DataSeeder implements ApplicationRunner {
     private final UsuarioRepository usuarioRepository;
     private final UsuarioEspecialidadRepository usuarioEspecialidadRepository;
     private final ActivoEspecialidadRepository activoEspecialidadRepository;
+    private final ConfiguracionSlaService configuracionSlaService;
 
     @Value("${app.seed.default-password:ChangeMe123!}")
     private String defaultPassword;
@@ -119,6 +124,7 @@ public class DataSeeder implements ApplicationRunner {
         seedActivos(especialidades);
         seedUsuarios(roles);
         seedEquipos(especialidades);
+        configuracionSlaService.inicializar();
         log.info("DataSeeder: carga de datos iniciales verificada (permisos={}, roles={}).",
                 permisos.size(), roles.size());
     }
@@ -192,8 +198,10 @@ public class DataSeeder implements ApplicationRunner {
                         "solicitud.read", "solicitud.create", "solicitud.update",
                         "activo.read", "estado.read", "especialidad.read",
                         "orden.read", "historial_orden.read", "historial_solicitud.read"),
+                // solicitud.create: registra Solicitudes a nombre de un Cliente
+                // (observación 2026-10-19; ver SolicitudServiceImpl.solicitante).
                 "Despachador", List.of(
-                        "solicitud.read", "solicitud.update", "solicitud.generar_orden", "solicitud.generar_requerimiento",
+                        "solicitud.read", "solicitud.create", "solicitud.update", "solicitud.generar_orden", "solicitud.generar_requerimiento",
                         "requerimiento.read", "requerimiento.create", "requerimiento.update",
                         "activo.read", "estado.read", "especialidad.read", "usuario.read",
                         "orden.read", "historial_orden.read",
@@ -223,6 +231,7 @@ public class DataSeeder implements ApplicationRunner {
                         "web_comercial.read", "web_comercial.create", "web_comercial.update", "web_comercial.delete",
                         "web_novedad.read", "web_novedad.create", "web_novedad.update", "web_novedad.delete",
                         "web_novedad.publish",
+                        "sla.read", "sla.update",
                         "web_documento.read", "web_documento.create", "web_documento.update", "web_documento.delete"),
                 // CRUD de Solicitud y Requerimiento para todo Operaciones
                 // (observación 2026-10-05); el borrado queda acotado a lo que

@@ -1,0 +1,242 @@
+/*
+ * Controles del panel web compartidos por las páginas y por los componentes
+ * hijos (ListaTexto, WebToolbar), que no heredan los estilos de la página.
+ */
+/* ── Campos (mismo aspecto que app-input / app-select) ─────────────────── */
+.field {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+.field-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-primary);
+  margin-bottom: var(--space-2);
+}
+
+.field-opcional {
+  font-weight: 400;
+  color: var(--color-subtle-foreground);
+}
+
+.input,
+.textarea,
+.select-nativo {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-foreground);
+  width: 100%;
+}
+
+.input,
+.select-nativo {
+  height: 40px;
+  padding: 0 var(--space-3);
+}
+
+.textarea {
+  padding: var(--space-3);
+  resize: vertical;
+  min-height: 96px;
+  line-height: 1.5;
+}
+
+.input:focus-visible,
+.textarea:focus-visible,
+.select-nativo:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--status-info-bg);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--color-subtle-foreground);
+}
+
+.input-error {
+  border-color: var(--status-danger-fg);
+}
+
+.helper {
+  font-size: 12px;
+  color: var(--color-muted-foreground);
+  margin-top: var(--space-2);
+}
+
+.helper-error {
+  color: var(--status-danger-fg);
+}
+
+.contador {
+  font-size: 12px;
+  color: var(--color-subtle-foreground);
+  margin-top: var(--space-1);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Barra de búsqueda (mismas reglas que .admin-toolbar/.admin-search de Administración). */
+.admin-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.admin-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-3);
+  height: 40px;
+  min-width: 260px;
+  color: var(--color-subtle-foreground);
+}
+
+.admin-search input {
+  border: none;
+  outline: none;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-foreground);
+  width: 100%;
+  background: transparent;
+}
+
+/* ── Filtro de publicación ── */
+.web-filtro {
+  display: inline-flex;
+  padding: 3px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.web-filtro button {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-muted-foreground);
+  background: none;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  padding: 6px var(--space-3);
+  cursor: pointer;
+}
+
+.web-filtro button[aria-pressed='true'] {
+  background: var(--status-info-bg);
+  color: var(--color-accent);
+}
+
+.web-filtro-conteo {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+  margin-left: 2px;
+}
+
+/* ── Editores de listas (características, módulos, métricas) ──────────── */
+.lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.fila-bloque {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: var(--space-2);
+  align-items: start;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+.fila-bloque .textarea {
+  grid-column: 1 / 3;
+  min-height: 64px;
+}
+
+@media (max-width: 640px) {
+  .fila-bloque {
+    grid-template-columns: 1fr auto;
+  }
+
+  .fila-bloque .textarea {
+    grid-column: 1 / 2;
+  }
+}
+
+.numero {
+  width: 20px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-subtle-foreground);
+}
+
+.quitar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-muted-foreground);
+  cursor: pointer;
+}
+
+.quitar:hover:not(:disabled) {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
+}
+
+.agregar {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  background: none;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 6px var(--space-3);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.agregar:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+
+.vacio {
+  font-size: 13px;
+  color: var(--color-subtle-foreground);
+}
+

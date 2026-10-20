@@ -10,7 +10,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class SolicitudRequest {
-    /** Ignorado: el solicitante es siempre el usuario autenticado. */
+    /** Solicitante. Solo se respeta al crear y si el actor tiene solicitud.read_all; si no, es el usuario autenticado. */
     private UUID id_usuario;
     @NotNull
     private UUID id_activo;

@@ -17,6 +17,8 @@ export class Dialog {
   readonly open = input(false);
   readonly variant = input<DialogVariant>('modal');
   readonly title = input('');
+  /** 'amplio' ensancha el drawer para formularios largos (panel del sitio web). */
+  readonly ancho = input<'normal' | 'amplio'>('normal');
   readonly closed = output<void>();
 
   @HostListener('document:keydown.escape')

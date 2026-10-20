@@ -29,6 +29,8 @@
         </button>
       </div>
 
+      <app-export-button [fuente]="exportarCsv" prefijo="solicitudes" />
+
       @if (canCreate) {
         <app-button variant="primary" (click)="openCreate()">
           <svg lucidePlus [size]="16" aria-hidden="true"></svg>
@@ -94,6 +96,7 @@
     <app-solicitud-formulario
       mode="create"
       [activos]="activosCatalogo()"
+      [solicitantes]="solicitantes()"
       [estados]="estadosCatalogo()"
       [submitting]="formSubmitting()"
       (submitForm)="handleFormSubmit($event)"

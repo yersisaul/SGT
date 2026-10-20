@@ -47,4 +47,13 @@ class CsvExporterTest {
                 List.of(fila));
         assertThat(exporter.exportar(kpi)).endsWith("\"Desarrollo\",\r\n");
     }
+
+    @Test
+    void exportaTablaGenericaConNulosYFormulas() {
+        String csv = exporter.exportar(List.of("Número", "Descripción", "Horas"),
+                List.of(java.util.Arrays.asList("ST-0001", "@SUMA(A1)", 3), java.util.Arrays.asList("ST-0002", null, null)));
+        assertThat(csv).isEqualTo("﻿\"Número\",\"Descripción\",\"Horas\"\r\n"
+                + "\"ST-0001\",\"'@SUMA(A1)\",3\r\n"
+                + "\"ST-0002\",,\r\n");
+    }
 }

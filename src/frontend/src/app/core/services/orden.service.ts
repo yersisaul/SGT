@@ -30,6 +30,11 @@ export class OrdenService {
     return this.http.get<OrdenResponse[]>(`${this.apiBaseUrl}/ordenes`);
   }
 
+  /** CSV con lo que el usuario ve en el listado (GET /ordenes/exportar, requiere el permiso .read). */
+  exportar(): Observable<Blob> {
+    return this.http.get(`${this.apiBaseUrl}/ordenes/exportar`, { responseType: 'blob' });
+  }
+
   obtener(id: string): Observable<OrdenResponse> {
     return this.http.get<OrdenResponse>(`${this.apiBaseUrl}/ordenes/${id}`);
   }

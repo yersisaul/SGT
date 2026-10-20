@@ -1,0 +1,110 @@
+.resumen-seccion {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted-foreground);
+  margin-bottom: var(--space-4);
+}
+
+.resumen-pendientes {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.resumen-pendiente {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-foreground);
+  text-decoration: none;
+  font-size: 14px;
+  transition: border-color 150ms ease;
+}
+
+.resumen-pendiente[data-tono='alerta'] svg:first-child {
+  color: var(--status-warning-fg);
+}
+
+.resumen-pendiente[data-tono='info'] svg:first-child {
+  color: var(--status-info-fg);
+}
+
+.resumen-pendiente:hover {
+  border-color: var(--color-accent);
+}
+
+.resumen-chevron {
+  margin-left: auto;
+  color: var(--color-subtle-foreground);
+}
+
+.resumen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.resumen-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--radius-lg);
+}
+
+.resumen-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  height: 100%;
+  transition: border-color 150ms ease;
+}
+
+.resumen-link:hover .resumen-card {
+  border-color: var(--color-accent);
+}
+
+.resumen-etiqueta {
+  font-size: 13px;
+  color: var(--color-muted-foreground);
+}
+
+.resumen-valor {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.resumen-total {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-subtle-foreground);
+}
+
+.resumen-barra {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--status-neutral-bg);
+  overflow: hidden;
+}
+
+.resumen-barra-relleno {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--status-success-fg);
+}
+
+.resumen-nota {
+  font-size: 12px;
+  color: var(--color-subtle-foreground);
+}

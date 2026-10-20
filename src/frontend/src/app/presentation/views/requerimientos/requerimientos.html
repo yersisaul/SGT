@@ -29,6 +29,8 @@
         </button>
       </div>
 
+      <app-export-button [fuente]="exportarCsv" prefijo="requerimientos" />
+
       @if (canCreate) {
         <app-button variant="primary" (click)="openCreate()">
           <svg lucidePlus [size]="16" aria-hidden="true"></svg>

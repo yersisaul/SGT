@@ -25,6 +25,11 @@ export class RequerimientoService {
     return this.http.get<RequerimientoResponse[]>(`${this.apiBaseUrl}/requerimientos`);
   }
 
+  /** CSV con lo que el usuario ve en el listado (GET /requerimientos/exportar, requiere el permiso .read). */
+  exportar(): Observable<Blob> {
+    return this.http.get(`${this.apiBaseUrl}/requerimientos/exportar`, { responseType: 'blob' });
+  }
+
   obtener(id: string): Observable<RequerimientoResponse> {
     return this.http.get<RequerimientoResponse>(`${this.apiBaseUrl}/requerimientos/${id}`);
   }

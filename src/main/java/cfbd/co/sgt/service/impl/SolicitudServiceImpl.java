@@ -124,8 +124,7 @@ public class SolicitudServiceImpl implements SolicitudService {
     @Override
     public SolicitudResponse crearSolicitud(SolicitudRequest solicitudDTO) {
         Solicitud solicitud = new Solicitud();
-        // El solicitante es el usuario autenticado, nunca un id enviado por el cliente.
-        solicitud.setUsuario(usuarioAutenticado());
+        solicitud.setUsuario(solicitante(solicitudDTO.getId_usuario()));
         Activo activo = activoRepository.findById(solicitudDTO.getId_activo())
                 .orElseThrow(() -> new ResourceNotFoundException("Activo not found"));
         solicitud.setActivo(activo);
@@ -416,6 +415,24 @@ public class SolicitudServiceImpl implements SolicitudService {
 
     private Usuario usuarioAutenticado() {
         return usuarioActual.obtener();
+    }
+
+    /**
+     * El solicitante es el usuario autenticado. Solo quien tiene alcance global
+     * (Despachador/Administrador) puede registrar a nombre de otro usuario
+     * habilitado, p. ej. un Cliente que reportó por teléfono (observación 2026-10-19).
+     */
+    private Usuario solicitante(UUID idUsuario) {
+        Usuario actor = usuarioAutenticado();
+        if (idUsuario == null || idUsuario.equals(actor.getId_usuario()) || !autorizacion.veTodasLasSolicitudes()) {
+            return actor;
+        }
+        Usuario usuario = usuarioRepository.findById(idUsuario)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario not found"));
+        if (!usuario.isHabilitado()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El usuario solicitante está deshabilitado.");
+        }
+        return usuario;
     }
 
     private SolicitudResponse convertToResponse(Solicitud solicitud) {

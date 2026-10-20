@@ -1,4 +1,4 @@
-import { Component, computed, inject, output } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideBell, LucideMenu } from '../../../shared/icons/lucide-icons';
 
@@ -16,11 +16,13 @@ export class Header {
   private readonly stream = inject(NotificacionStreamService);
 
   readonly toggleSidebar = output<void>();
+  /** En el panel del sitio web no se muestran los avisos de órdenes. */
+  readonly mostrarAvisos = input(true);
 
   readonly user = this.authService.user;
 
   /** La campana lleva a Órdenes: solo si el menú Órdenes está visible. */
-  readonly puedeVerOrdenes = computed(() => this.authService.puedeOperarModulo('ordenes'));
+  readonly puedeVerOrdenes = computed(() => this.mostrarAvisos() && this.authService.puedeOperarModulo('ordenes'));
   /** Mismo contador que el badge del menú (cola + asignadas sin confirmar, vía SSE). */
   readonly pendientes = this.stream.pendientes;
   readonly bellLabel = computed(() => {

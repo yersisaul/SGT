@@ -23,6 +23,7 @@ import { OrdenService } from '../../../core/services/orden.service';
 import { RequerimientoService } from '../../../core/services/requerimiento.service';
 import { SolicitudService } from '../../../core/services/solicitud.service';
 import { Badge } from '../../../shared/components/badge/badge';
+import { ExportButton } from '../../../shared/components/export-button/export-button';
 import { Button } from '../../../shared/components/button/button';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Select, SelectOption } from '../../../shared/components/select/select';
@@ -64,6 +65,7 @@ const ETIQUETA_ASIGNACION: Record<TipoAsignacionOrden, string> = {
     FormsModule,
     Badge,
     Button,
+    ExportButton,
     Dialog,
     Select,
     Spinner,
@@ -82,6 +84,7 @@ const ETIQUETA_ASIGNACION: Record<TipoAsignacionOrden, string> = {
 export class Ordenes {
   private readonly authService = inject(AuthService);
   private readonly ordenService = inject(OrdenService);
+  protected readonly exportarCsv = () => this.ordenService.exportar();
   private readonly archivoService = inject(ArchivoService);
   private readonly solicitudService = inject(SolicitudService);
   private readonly requerimientoService = inject(RequerimientoService);

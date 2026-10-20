@@ -4,6 +4,7 @@
     class="dialog-panel"
     [class.dialog-panel-modal]="variant() === 'modal'"
     [class.dialog-panel-drawer]="variant() === 'drawer'"
+    [class.dialog-panel-amplio]="ancho() === 'amplio'"
     role="dialog"
     aria-modal="true"
     [attr.aria-label]="title()"

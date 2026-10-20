@@ -25,6 +25,7 @@ import cfbd.co.sgt.dto.response.CargaMiembroResponse;
 import cfbd.co.sgt.dto.response.OrdenEscaladaResponse;
 import cfbd.co.sgt.service.escalado.EscaladoColaService;
 import cfbd.co.sgt.dto.response.OrdenResponse;
+import cfbd.co.sgt.service.ExportacionService;
 import cfbd.co.sgt.exception.ResourceNotFoundException;
 import cfbd.co.sgt.service.ColaOrdenService;
 import cfbd.co.sgt.service.OrdenService;
@@ -39,6 +40,7 @@ public class OrdenController {
     private final OrdenService ordenService;
     private final ColaOrdenService colaOrdenService;
     private final EscaladoColaService escaladoColaService;
+    private final ExportacionService exportacionService;
 
     @PreAuthorize("hasAuthority('orden.read')")
     @GetMapping
@@ -85,6 +87,13 @@ public class OrdenController {
     // ---- Cola de OT por especialidad ----
     // El permiso habilita la operación; la regla por recurso (miembro,
     // responsable, ejecutor) la valida ColaOrdenService.
+
+    // Descarga CSV de lo que el actor ve en el listado (observación 2026-10-19).
+    @PreAuthorize("hasAuthority('orden.read')")
+    @GetMapping("/exportar")
+    public ResponseEntity<String> exportar() {
+        return CsvDescarga.de("ordenes", exportacionService.exportarOrdenes());
+    }
 
     @PreAuthorize("hasAuthority('orden.read')")
     @GetMapping("/cola")

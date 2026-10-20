@@ -10,6 +10,7 @@ import { PRIORIDAD_OPTIONS } from '../../../../../shared/utils/prioridad-badge.u
 import { esEstadoEditablePorPut } from '../../solicitud-estados.config';
 
 interface SolicitudForm {
+  id_usuario: FormControl<string>;
   id_activo: FormControl<string>;
   id_especialidad: FormControl<string>;
   id_estado: FormControl<string>;
@@ -17,9 +18,9 @@ interface SolicitudForm {
   descripcion: FormControl<string>;
 }
 
-/** Lo que emite el formulario al guardar: los datos de Solicitud (aún con
- * id_usuario en blanco — lo completa el contenedor, ver Solicitudes.
- * handleFormSubmit) más, por separado, el adjunto nuevo o el pedido de
+/** Lo que emite el formulario al guardar: los datos de Solicitud (id_usuario
+ * solo viene informado si se eligió solicitante; si no, lo completa el
+ * contenedor, ver Solicitudes.handleFormSubmit) más, por separado, el adjunto nuevo o el pedido de
  * quitar el actual. */
 export interface SolicitudFormSubmit {
   request: SolicitudRequest;
@@ -29,8 +30,10 @@ export interface SolicitudFormSubmit {
 
 /**
  * Formulario reactivo para crear/editar Solicitud (contrato real de
- * SolicitudRequest). id_usuario no aparece aquí: en creación se asigna el
- * usuario autenticado y en edición no es reasignable desde este formulario.
+ * SolicitudRequest). El solicitante (id_usuario) solo se elige al crear y
+ * solo si el contenedor pasa `solicitantes` (Despachador/Administrador, con
+ * solicitud.read_all, registran a nombre de un Cliente); en edición no es
+ * reasignable.
  *
  * id_especialidad tampoco se pide como select independiente: en la matriz de
  * permisos real (ver DataSeeder) los roles que crean/actualizan Solicitud
@@ -49,6 +52,8 @@ export class Formulario implements OnInit {
   readonly initial = input<SolicitudResponse | null>(null);
   readonly activos = input<ActivoCatalogo[]>([]);
   readonly estados = input<EstadoCatalogo[]>([]);
+  /** Vacío = el solicitante es el usuario autenticado (no se muestra el campo). */
+  readonly solicitantes = input<SelectOption[]>([]);
   readonly submitting = input(false);
 
   readonly submitForm = output<SolicitudFormSubmit>();
@@ -57,6 +62,7 @@ export class Formulario implements OnInit {
   protected readonly prioridadOptions = PRIORIDAD_OPTIONS;
 
   protected readonly form = new FormGroup<SolicitudForm>({
+    id_usuario: new FormControl('', { nonNullable: true }),
     id_activo: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     id_especialidad: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     id_estado: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -82,6 +88,14 @@ export class Formulario implements OnInit {
       }
     });
 
+    // La lista de solicitantes llega aparte (best-effort): el campo se vuelve
+    // obligatorio solo cuando se muestra.
+    effect(() => {
+      const control = this.form.controls.id_usuario;
+      control.setValidators(this.mode() === 'create' && this.solicitantes().length > 0 ? Validators.required : null);
+      untracked(() => control.updateValueAndValidity({ emitEvent: false }));
+    });
+
     // El formulario se proyecta dentro de app-dialog (que solo oculta su
     // contenido con @if interno), así que esta instancia se crea una única
     // vez al montar la vista, antes de que resuelva el forkJoin de catálogos
@@ -95,6 +109,10 @@ export class Formulario implements OnInit {
         this.form.controls.id_estado.setValue(pendiente?.id_estado ?? estadosDisponibles[0].id_estado);
       }
     });
+  }
+
+  protected get eligeSolicitante(): boolean {
+    return this.mode() === 'create' && this.solicitantes().length > 0;
   }
 
   ngOnInit(): void {
@@ -163,7 +181,7 @@ export class Formulario implements OnInit {
     const value = this.form.getRawValue();
     this.submitForm.emit({
       request: {
-        id_usuario: '',
+        id_usuario: this.eligeSolicitante ? value.id_usuario : '',
         id_activo: value.id_activo,
         id_estado: value.id_estado,
         id_especialidad: value.id_especialidad,
